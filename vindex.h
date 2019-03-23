@@ -44,6 +44,10 @@ private:
          [&val](const Node &n) -> bool { return val == n->data; });
    }
 
+   void _init_first_node(const Node &n) {
+      n->height = 1;
+   }
+
 public:
    bool insert(T val) {
       pair<NodeSetIter, bool> inserted = 
@@ -53,6 +57,10 @@ public:
          return false;
 
       const Node &n = *get<0>(inserted);
+
+      if (_nodes.size() == 1)
+         _init_first_node(n);
+
       return true;
    }
 
@@ -64,7 +72,10 @@ public:
    }
 
    void dump() {
-      for (auto i = _nodes.begin(); i != _nodes.end(); ++i)
-         cout << (*i)->data << endl;
+      for (const Node &n : _nodes)
+         cout << 
+            "(data:" << n->data 
+            << ", height:" << n->height 
+            << ")" << endl;
    }
 };
