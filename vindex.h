@@ -26,7 +26,7 @@ struct _AVLState: public T {
 };
 
 template<typename T>
-class AVL {
+class Vindex {
 private:
    typedef _AVLState<_Node<T>> _AVLNode;
    typedef unique_ptr<_AVLNode> Node;

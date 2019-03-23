@@ -3,10 +3,10 @@
 using namespace std;
 
 int main () {
-   AVL<int> avl;
-   avl.insert(24);
-   avl.insert(54);
-   avl.insert(2);
-   avl.dump();
-   avl.remove(54);
+   Vindex<int> vin;
+   vin.insert(24);
+   vin.insert(54);
+   vin.insert(2);
+   vin.dump();
+   vin.remove(54);
 }
