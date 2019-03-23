@@ -61,13 +61,13 @@ private:
          if (!subtree->left)
             subtree->left = &n;
          else
-            _insert(n, subtree, subtree->left);
+            _insert(n, subtree->left, subtree);
       }
       else {
          if (!subtree->right)
             subtree->right = &n;
          else
-            _insert(n, subtree, subtree->right);
+            _insert(n, subtree->right, subtree);
       }
    }
 
