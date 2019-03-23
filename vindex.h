@@ -11,6 +11,12 @@ template<typename T>
 struct _Node {
    T data;
    _Node(int data = 0): data(data) {}
+   bool operator<(const _Node& n) { return data < n.data; }
+   bool operator>(const _Node& n) { return data > n.data; }
+   bool operator<=(const _Node& n) { return data <= n.data; }
+   bool operator>=(const _Node& n) { return data >= n.data; }
+   bool operator==(const _Node& n) { return data == n.data; }
+   bool operator!=(const _Node& n) { return data != n.data; }
    ~_Node() { cout << "deleting node with " << data << endl; }
 };
 
@@ -29,26 +35,45 @@ template<typename T>
 class Vindex {
 private:
    typedef _AVLState<_Node<T>> _AVLNode;
-   typedef unique_ptr<_AVLNode> Node;
-   typedef unordered_set<Node> NodeSet;
+   typedef unique_ptr<_AVLNode> NodeP;
+   typedef unordered_set<NodeP> NodeSet;
    typedef typename NodeSet::iterator NodeSetIter;
 
    NodeSet _nodes;
+   _AVLNode *_head;
 
-   NodeSetIter _find_if(const function<bool(const Node &)> &pred) {
+   NodeSetIter _find_if(const function<bool(const NodeP &)> &pred) {
       return find_if(_nodes.begin(), _nodes.end(), pred);
    }
 
    NodeSetIter _find(T val) {
       return _find_if(
-         [&val](const Node &n) -> bool { return val == n->data; });
+         [&val](const NodeP &n) -> bool { return val == n->data; });
    }
 
-   void _init_first_node(const Node &n) {
-      n->height = 1;
+   void _init_first_node(_AVLNode &n) {
+      n.height = 1;
+      _head = &n;
+   }
+
+   void _insert(_AVLNode &n, _AVLNode *subtree, _AVLNode *parent = nullptr) {
+      if (n < *subtree) {
+         if (!subtree->left)
+            subtree->left = &n;
+         else
+            _insert(n, subtree, subtree->left);
+      }
+      else {
+         if (!subtree->right)
+            subtree->right = &n;
+         else
+            _insert(n, subtree, subtree->right);
+      }
    }
 
 public:
+   Vindex(): _head(nullptr) {}
+
    bool insert(T val) {
       pair<NodeSetIter, bool> inserted = 
          _nodes.emplace(new _AVLNode(val));
@@ -56,11 +81,8 @@ public:
       if (!get<1>(inserted)) 
          return false;
 
-      const Node &n = *get<0>(inserted);
-
-      if (_nodes.size() == 1)
-         _init_first_node(n);
-
+      const NodeP &n = *get<0>(inserted);
+      _nodes.size() == 1 ? _init_first_node(*n) : _insert(*n, _head);
       return true;
    }
 
@@ -72,10 +94,14 @@ public:
    }
 
    void dump() {
-      for (const Node &n : _nodes)
+      for (const NodeP &n : _nodes)
          cout << 
-            "(data:" << n->data 
-            << ", height:" << n->height 
+            "("
+            << "addr:" << n.get()
+            << ", data:" << n->data
+            << ", height:" << n->height
+            << ", left:" << n->left
+            << ", right:" << n->right
             << ")" << endl;
    }
 };
