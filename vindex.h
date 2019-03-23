@@ -58,16 +58,16 @@ private:
 
    void _insert(_AVLNode &n, _AVLNode *subtree, _AVLNode *parent = nullptr) {
       if (n < *subtree) {
-         if (!subtree->left)
-            subtree->left = &n;
-         else
+         if (subtree->left)
             _insert(n, subtree->left, subtree);
+         else
+            subtree->left = &n;
       }
       else {
-         if (!subtree->right)
-            subtree->right = &n;
-         else
+         if (subtree->right)
             _insert(n, subtree->right, subtree);
+         else
+            subtree->right = &n;
       }
    }
 
