@@ -87,15 +87,11 @@ private:
       }
    }
 
-   string _node_str(_AVLNode &n) {
-      stringstream ss;
-      ss << "(" 
-         << "data: " << n.data 
-         << ", depth: " << n.depth 
-         << ", left: " << (n.left ? to_string(n.left->data) : "null") 
-         << ", right: " << (n.right ? to_string(n.right->data) : "null")
-         << ")";
-      return ss.str();
+   int _nodes_at_lv(int lv) {
+      if (lv < 1)
+         throw invalid_argument("Error: lv must be greater than 0");   
+      double val = pow(2, lv - 1);
+      return _dtoi(val);
    }
 
    bool _is_dq_all_nulls(NodeDQ &dq) {
@@ -141,11 +137,15 @@ private:
       _bfs_print(dq, curr_depth, nodes_printed);
    }
 
-   int _nodes_at_lv(int lv) {
-      if (lv < 1)
-         throw invalid_argument("Error: lv must be greater than 0");   
-      double val = pow(2, lv - 1);
-      return _dtoi(val);
+   string _node_str(_AVLNode &n) {
+      stringstream ss;
+      ss << "(" 
+         << "data: " << n.data 
+         << ", depth: " << n.depth 
+         << ", left: " << (n.left ? to_string(n.left->data) : "null") 
+         << ", right: " << (n.right ? to_string(n.right->data) : "null")
+         << ")";
+      return ss.str();
    }
 
 public:
