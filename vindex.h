@@ -4,8 +4,21 @@
 #include <unordered_set>
 #include <algorithm>
 #include <utility>
+#include <deque>
+#include <cmath>
+#include <sstream>
+#include <stdexcept>
+#include <cassert>
 
 using namespace std;
+
+static int _dtoi(double val) {
+   stringstream ss;
+   ss << val;
+   int val_i;
+   ss >> val_i;
+   return val_i;
+}
 
 template<typename T>
 struct _Node {
@@ -23,12 +36,14 @@ struct _Node {
 template<typename T, typename BASE_TY = decltype(T::data)>
 struct _AVLState: public T {
    int height;
+   int depth;
    _AVLState *left;
    _AVLState *right;
    _AVLState *parent;
 
    _AVLState(BASE_TY data): 
-      T(data), height(0), left(nullptr), right(nullptr), parent(nullptr) {}
+      T(data), depth(0), height(0), 
+      left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
 template<typename T>
@@ -38,6 +53,7 @@ private:
    typedef unique_ptr<_AVLNode> NodeP;
    typedef unordered_set<NodeP> NodeSet;
    typedef typename NodeSet::iterator NodeSetIter;
+   typedef deque<_AVLNode *> NodeDQ;
 
    NodeSet _nodes;
    _AVLNode *_head;
@@ -52,11 +68,11 @@ private:
    }
 
    void _init_first_node(_AVLNode &n) {
-      n.height = 1;
       _head = &n;
    }
 
    void _insert(_AVLNode &n, _AVLNode *subtree, _AVLNode *parent = nullptr) {
+      ++n.depth;
       if (n < *subtree) {
          if (subtree->left)
             _insert(n, subtree->left, subtree);
@@ -71,6 +87,67 @@ private:
       }
    }
 
+   string _node_str(_AVLNode &n) {
+      stringstream ss;
+      ss << "(" 
+         << "data: " << n.data 
+         << ", depth: " << n.depth 
+         << ", left: " << (n.left ? to_string(n.left->data) : "null") 
+         << ", right: " << (n.right ? to_string(n.right->data) : "null")
+         << ")";
+      return ss.str();
+   }
+
+   bool _is_dq_all_nulls(NodeDQ &dq) {
+      auto it = find_if(
+         dq.begin(), dq.end(), [](_AVLNode *n) -> bool { return n; });
+      return it == dq.end();
+   }
+
+   void _on_max_nodes_printed_per_line(
+      NodeDQ &dq, int &curr_depth, int &nodes_printed) {
+      ++curr_depth;
+      nodes_printed = 0;
+      if (_is_dq_all_nulls(dq))
+         dq.clear();
+      cout << endl;
+   }
+
+   void _on_valid_node(NodeDQ &dq, _AVLNode &n) {
+      cout << _node_str(n) << " ";
+      dq.push_back(n.left);
+      dq.push_back(n.right);
+   }
+
+   void _on_null_node(NodeDQ &dq) {
+      cout << "null ";
+      dq.push_back(nullptr);
+      dq.push_back(nullptr);
+   }
+
+   void _bfs_print(
+      NodeDQ &dq, int &curr_depth, int &nodes_printed) {
+      if (dq.empty()) return;
+
+      _AVLNode *n = dq.front();
+      dq.pop_front();
+
+      if (n) _on_valid_node(dq, *n);
+      else _on_null_node(dq);
+      ++nodes_printed;
+
+      if (nodes_printed == _nodes_at_lv(curr_depth))
+         _on_max_nodes_printed_per_line(dq, curr_depth, nodes_printed);
+      _bfs_print(dq, curr_depth, nodes_printed);
+   }
+
+   int _nodes_at_lv(int lv) {
+      if (lv < 1)
+         throw invalid_argument("Error: lv must be greater than 0");   
+      double val = pow(2, lv - 1);
+      return _dtoi(val);
+   }
+
 public:
    Vindex(): _head(nullptr) {}
 
@@ -78,10 +155,12 @@ public:
       pair<NodeSetIter, bool> inserted = 
          _nodes.emplace(new _AVLNode(val));
 
-      if (!get<1>(inserted)) 
-         return false;
+      bool emplace_success = get<1>(inserted);
+      if (!emplace_success) return false;
 
       const NodeP &n = *get<0>(inserted);
+      ++n->depth;
+      ++n->height;
       _nodes.size() == 1 ? _init_first_node(*n) : _insert(*n, _head);
       return true;
    }
@@ -94,14 +173,11 @@ public:
    }
 
    void dump() {
-      for (const NodeP &n : _nodes)
-         cout << 
-            "("
-            << "addr:" << n.get()
-            << ", data:" << n->data
-            << ", height:" << n->height
-            << ", left:" << n->left
-            << ", right:" << n->right
-            << ")" << endl;
+      NodeDQ dq;
+      int curr_depth = 1;
+      int nodes_printed = 0;
+      dq.push_back(_head);
+      _bfs_print(dq, curr_depth, nodes_printed);
+      cout << endl;
    }
 };
