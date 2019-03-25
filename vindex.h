@@ -20,6 +20,10 @@ static int _dtoi(double val) {
    return val_i;
 }
 
+static int max(int a, int b) {
+   return a > b ? a : b;
+}
+
 template<typename T>
 struct _Node {
    T data;
@@ -70,6 +74,12 @@ private:
       _head = &n;
    }
 
+   int _height(_AVLNode *tree) {
+      if (!tree)
+         return 0;
+      return max(_height(tree->left), _height(tree->right)) + 1;
+   }
+
    void _insert(_AVLNode &n, _AVLNode *subtree, _AVLNode *parent = nullptr) {
       ++n.depth;
       if (n < *subtree) {
@@ -84,6 +94,9 @@ private:
          else
             subtree->right = &n;
       }
+
+      subtree->height = 
+         max(_height(subtree->left), _height(subtree->right)) + 1;
    }
 
    int _nodes_at_lv(int lv) {
