@@ -30,7 +30,6 @@ struct _Node {
    bool operator>=(const _Node& n) { return data >= n.data; }
    bool operator==(const _Node& n) { return data == n.data; }
    bool operator!=(const _Node& n) { return data != n.data; }
-   ~_Node() { cout << "deleting node with " << data << endl; }
 };
 
 template<typename T, typename BASE_TY = decltype(T::data)>
@@ -116,7 +115,7 @@ private:
    }
 
    void _on_null_node(NodeDQ &dq) {
-      cout << "null ";
+      cout << "(null) ";
       dq.push_back(nullptr);
       dq.push_back(nullptr);
    }
@@ -141,6 +140,7 @@ private:
       stringstream ss;
       ss << "(" 
          << "data: " << n.data 
+         << ", height: " << n.height 
          << ", depth: " << n.depth 
          << ", left: " << (n.left ? to_string(n.left->data) : "null") 
          << ", right: " << (n.right ? to_string(n.right->data) : "null")
