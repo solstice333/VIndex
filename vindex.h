@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <functional>
-#include <unordered_set>
+#include <map>
 #include <algorithm>
 #include <utility>
 #include <deque>
@@ -20,7 +20,7 @@ static int _dtoi(double val) {
    return val_i;
 }
 
-static int max(int a, int b) {
+static int _max(int a, int b) {
    return a > b ? a : b;
 }
 
@@ -54,21 +54,12 @@ class Vindex {
 private:
    typedef _AVLState<_Node<T>> _AVLNode;
    typedef unique_ptr<_AVLNode> NodeP;
-   typedef unordered_set<NodeP> NodeSet;
-   typedef typename NodeSet::iterator NodeSetIter;
+   typedef map<_AVLNode *, NodeP> NodeCache;
+   typedef typename NodeCache::iterator NodeCacheIter;
    typedef deque<_AVLNode *> NodeDQ;
 
-   NodeSet _nodes;
+   NodeCache _nodes;
    _AVLNode *_head;
-
-   NodeSetIter _find_if(const function<bool(const NodeP &)> &pred) {
-      return find_if(_nodes.begin(), _nodes.end(), pred);
-   }
-
-   NodeSetIter _find(T val) {
-      return _find_if(
-         [&val](const NodeP &n) -> bool { return val == n->data; });
-   }
 
    void _init_first_node(_AVLNode &n) {
       _head = &n;
@@ -77,7 +68,7 @@ private:
    int _height(_AVLNode *tree) {
       if (!tree)
          return 0;
-      return max(_height(tree->left), _height(tree->right)) + 1;
+      return _max(_height(tree->left), _height(tree->right)) + 1;
    }
 
    void _insert(_AVLNode &n, _AVLNode *subtree, _AVLNode *parent = nullptr) {
@@ -96,7 +87,7 @@ private:
       }
 
       subtree->height = 
-         max(_height(subtree->left), _height(subtree->right)) + 1;
+         _max(_height(subtree->left), _height(subtree->right)) + 1;
    }
 
    int _nodes_at_lv(int lv) {
@@ -161,28 +152,34 @@ private:
       return ss.str();
    }
 
+   _AVLNode *_next_in_order(_AVLNode *n) {
+      if (!n.left) 
+         return n;
+      return _next_in_order(n.left);
+   }
+
+   _AVLNode *_find(_AVLNode *subtree, int val) {
+      // if (val < subtree->data)
+      throw runtime_error("not yet implemented");
+      return nullptr;
+   }
+
 public:
    Vindex(): _head(nullptr) {}
 
-   bool insert(T val) {
-      pair<NodeSetIter, bool> inserted = 
-         _nodes.emplace(new _AVLNode(val));
-
-      bool emplace_success = get<1>(inserted);
-      if (!emplace_success) return false;
-
-      const NodeP &n = *get<0>(inserted);
+   void insert(T val) {
+      _AVLNode *n = new _AVLNode(val);
+      _nodes[n] = NodeP(n);
       ++n->depth;
       ++n->height;
       _nodes.size() == 1 ? _init_first_node(*n) : _insert(*n, _head);
-      return true;
    }
 
    void remove(int val) {
-      NodeSetIter rm = _find(val);
-      if (rm == _nodes.end())
-         return;
-      _nodes.erase(rm);
+      NodeCacheIter rm = _find(_head, val);
+      // if (rm == _nodes.end())
+      //    return;
+      // _nodes.erase(rm);
    }
 
    void dump() {
