@@ -73,6 +73,8 @@ private:
 
    void _insert(_AVLNode &n, _AVLNode *subtree, _AVLNode *parent = nullptr) {
       ++n.depth;
+      n.parent = subtree;
+
       if (n < *subtree) {
          if (subtree->left)
             _insert(n, subtree->left, subtree);
@@ -148,20 +150,33 @@ private:
          << ", depth: " << n.depth 
          << ", left: " << (n.left ? to_string(n.left->data) : "null") 
          << ", right: " << (n.right ? to_string(n.right->data) : "null")
+         << ", parent: " << (n.parent ? to_string(n.parent->data) : "null")
          << ")";
       return ss.str();
    }
 
-   _AVLNode *_next_in_order(_AVLNode *n) {
-      if (!n.left) 
+   _AVLNode *_first_in_order(_AVLNode *n) {
+      if (!n || !n->left) 
          return n;
-      return _next_in_order(n.left);
+      return _first_in_order(n->left);
+   }
+
+   _AVLNode *_next_in_order(_AVLNode *n) {
+      if (!n) 
+         return n;
+      return _first_in_order(n->right);
    }
 
    _AVLNode *_find(_AVLNode *subtree, int val) {
-      // if (val < subtree->data)
-      throw runtime_error("not yet implemented");
-      return nullptr;
+      if (!subtree)
+         return nullptr;
+
+      if (val == subtree->data)
+         return subtree;
+      else if (val < subtree->data)
+         return _find(subtree->left, val);
+      else
+         return _find(subtree->right, val);
    }
 
 public:
@@ -176,7 +191,16 @@ public:
    }
 
    void remove(int val) {
-      NodeCacheIter rm = _find(_head, val);
+      _AVLNode *rm = _find(_head, val);
+      _AVLNode *next = _next_in_order(rm);
+      if (rm) {
+         cout << "found something to remove: " << rm->data << endl;
+         if (next)
+            cout << "next in order: " << next->data << endl;
+         else
+            cout << "next in order: null" << endl;
+      }
+      assert(false);
       // if (rm == _nodes.end())
       //    return;
       // _nodes.erase(rm);
