@@ -19,14 +19,13 @@ using namespace std;
 template<typename T>
 struct _Node {
    T data;
-   _Node(int data = 0): data(data) {}
+   _Node(const T& data): data(data) {}
    bool operator<(const _Node& n) { return data < n.data; }
    bool operator>(const _Node& n) { return data > n.data; }
    bool operator<=(const _Node& n) { return data <= n.data; }
    bool operator>=(const _Node& n) { return data >= n.data; }
    bool operator==(const _Node& n) { return data == n.data; }
    bool operator!=(const _Node& n) { return data != n.data; }
-   // ~_Node() { cout << "removed node with data " << data << endl; }
 };
 
 template<typename T, typename BASE_TY = decltype(T::data)>
@@ -191,7 +190,7 @@ private:
       return ss.str();
    }
 
-   _AVLNode *_find(_AVLNode *subtree, int val) {
+   _AVLNode *_find(_AVLNode *subtree, const T& val) {
       if (!subtree)
          return nullptr;
 
@@ -322,7 +321,7 @@ private:
       return child;
    }
 
-   _AVLNode *_remove(int val, _AVLNode* tree) {
+   _AVLNode *_remove(const T& val, _AVLNode* tree) {
       if (val < tree->data)
          tree->left = _remove(val, tree->left);
       else if (val > tree->data)
@@ -346,14 +345,14 @@ private:
 public:
    Vindex(): _head(nullptr) {}
 
-   void insert(T val) {
+   void insert(const T& val) {
       _AVLNode *n = new _AVLNode(val);
       _nodes[n] = NodeP(n);
       ++n->height;
       _nodes.size() == 1 ? _init_first_node(*n) : _insert(*n, _head);
    }
 
-   void remove(int val) {
+   void remove(const T& val) {
       _head = _remove(val, _head);
    }
 
