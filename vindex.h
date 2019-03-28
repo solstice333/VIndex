@@ -35,42 +35,6 @@ struct _AVLState: public T {
    _AVLState *right;
    _AVLState *parent;
 
-   _AVLState *left_safe() {
-      if (!left)
-         throw NullPointerError();
-      return left;
-   }
-
-   void *left_safe(_AVLState *n) {
-      if (n == this)
-         throw PointerToSelfError();
-      left = n; 
-   }
-
-   _AVLState *right_safe() {
-      if (!right)
-         throw NullPointerError();
-      return right;
-   }
-
-   void *right_safe(_AVLState *n) {
-      if (n == this)
-         throw PointerToSelfError();
-      right = n; 
-   }
-
-   _AVLState *parent_safe() {
-      if (!parent)
-         throw NullPointerError();
-      return parent;
-   }
-
-   void *parent_safe(_AVLState *n) {
-      if (n == this)
-         throw PointerToSelfError();
-      parent = n; 
-   }
-
    _AVLState(BASE_TY data): 
       T(data), height(0), 
       left(nullptr), right(nullptr), parent(nullptr) {}
