@@ -32,6 +32,9 @@ public:
 DefineException(NullPointerException)
 #define NullPointerError() NullPointerException(__FILE__, __LINE__)
 
+DefineException(NotNullPointerException)
+#define NotNullPointerError() NotNullPointerException(__FILE__, __LINE__)
+
 DefineException(DetachedNodeException)
 #define DetachedNodeError() DetachedNodeException(__FILE__, __LINE__)
 

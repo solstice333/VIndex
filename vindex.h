@@ -248,50 +248,6 @@ private:
          o = AVLNodeOwner(n);
    }
 
-   // AVLNode *_detach_next_in_order(AVLNode *tree, AVLNode *&next) {
-   //    if (tree->left) {
-   //       tree->left = _detach_next_in_order(tree->left, next);
-   //       tree->height = _height(tree);
-   //       return tree;
-   //    }
-   //    else {
-   //       next = tree;
-   //       if (tree->right)
-   //          return _on_removal_one_child(tree, true);
-   //       else
-   //          return _on_removal_leaf(next, true);
-   //    }
-   // }
-
-   // void _rewire_next(AVLNode *next, AVLNode *temp) {
-   //    next->left = temp->left;
-   //    next->right = temp->right;
-   //    next->parent = temp->parent;
-   //    next->height = temp->height;   
-
-   //    if (next->left)
-   //       next->left->parent = next;
-   //    if (next->right)
-   //       next->right->parent = next;
-   // }
-
-   // AVLNode *_on_removal_two_children(AVLNode *n, bool erase = true) {
-   //    if (!n) 
-   //       throw NullPointerError();
-
-   //    AVLNode *next = nullptr;
-   //    n->right = _detach_next_in_order(n->right, next);
-   //    n->height = _height(n);
-
-   //    if (!next)
-   //       throw NullPointerError();
-   //    _rewire_next(next, n);
-
-   //    if (erase)
-   //       _nodes.erase(n);
-   //    return next;
-   // }
-
    AVLNode *_on_removal_leaf(AVLNode *n, bool detach = false) {
       if (!n) 
          throw NullPointerError();
@@ -320,6 +276,56 @@ private:
       return child;
    }
 
+   AVLNode *_detach_next_in_order(AVLNode *tree, AVLNode *&next) {
+      if (tree->left) {
+         _assign_if_diff(tree->left, 
+            _detach_next_in_order(tree->left_raw(), next));
+         tree->height = _height(tree);
+         return tree;
+      }
+      else {
+         next = tree;
+         if (tree->right)
+            return _on_removal_one_child(tree, true);
+         else
+            return _on_removal_leaf(next, true);
+      }
+   }
+
+   void _rewire_next(AVLNode *next, AVLNode *temp) {
+      if (next->left)
+         throw NotNullPointerError();
+
+      next->left = move(temp->left);
+      next->right = move(temp->right);
+      next->parent = temp->parent;
+      next->height = temp->height;   
+
+      if (next->left)
+         next->left->parent = next;
+      if (next->right)
+         next->right->parent = next;
+   }
+
+   AVLNode *_on_removal_two_children(AVLNode *n, bool detach = false) {
+      if (!n) 
+         throw NullPointerError();
+
+      AVLNode *next = nullptr;
+      _assign_if_diff(n->right, 
+         _detach_next_in_order(n->right_raw(), next));
+      n->height = _height(n);
+
+      if (!next)
+         throw NullPointerError();
+      _rewire_next(next, n);
+
+      if (detach)
+         _act_with_child_owner(n, _detach_from_owner);
+
+      return next;
+   }
+
    AVLNode *_remove(const T& val, AVLNode* tree) {
       if (val < tree->data)
          _assign_if_diff(tree->left, _remove(val, tree->left_raw()));
@@ -333,8 +339,7 @@ private:
          else if (!_num_children(tree))
             tree = _on_removal_leaf(tree);
          else
-            throw NotYetImplementedError();
-            // tree = _on_removal_two_children(tree);
+            tree = _on_removal_two_children(tree);
       }
 
       if (tree)
