@@ -79,7 +79,7 @@ int main () {
    IntVindex vin;
 
    test_insert(vin);
-   // test_leaf_removal(vin);
+   test_leaf_removal(vin);
    // test_insert(vin);
    // test_one_child_removal(vin);
    // test_clear(vin);
