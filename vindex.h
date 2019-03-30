@@ -68,6 +68,10 @@ private:
       return _head.get();
    }
 
+   static void _detach_from_owner(AVLNodeOwner &owner) {
+      owner.release();
+   }
+
    int _height(AVLNode *tree) {
       if (!tree)
          return 0;
@@ -239,16 +243,9 @@ private:
          throw DetachedNodeError();
    } 
 
-   AVLNode *_on_removal_leaf(AVLNode *n, bool detach = false) {
-      if (!n) 
-         throw NullPointerError();
-      if (n->left || n->right)
-         throw NotLeafError();
-      if (detach)
-         _act_with_child_owner(
-            n, [](AVLNodeOwner &owner) { owner.release(); });
-
-      return nullptr;
+   void _assign_if_diff(AVLNodeOwner &o, AVLNode *n) {
+      if (o.get() != n)
+         o = AVLNodeOwner(n);
    }
 
    // AVLNode *_detach_next_in_order(AVLNode *tree, AVLNode *&next) {
@@ -295,24 +292,32 @@ private:
    //    return next;
    // }
 
-   // AVLNode *_on_removal_one_child(AVLNode *n, bool erase = true) {
-   //    if (!n)
-   //       throw NullPointerError();
-   //    if (_num_children(n) != 1)
-   //       throw MustHaveExactlyOneChildError();
+   AVLNode *_on_removal_leaf(AVLNode *n, bool detach = false) {
+      if (!n) 
+         throw NullPointerError();
+      if (n->left || n->right)
+         throw NotLeafError();
+      if (detach)
+         _act_with_child_owner(n, _detach_from_owner);
 
-   //    AVLNode *child = _first_child(n);
-   //    AVLNode *parent = n->parent;
+      return nullptr;
+   }
 
-   //    child->parent = parent ? parent : nullptr;
-   //    if (erase)
-   //       _nodes.erase(n);
-   //    return child;
-   // }
+   AVLNode *_on_removal_one_child(AVLNode *n, bool detach = false) {
+      if (!n)
+         throw NullPointerError();
+      if (_num_children(n) != 1)
+         throw MustHaveExactlyOneChildError();
 
-   void _assign_if_diff(AVLNodeOwner &o, AVLNode *n) {
-      if (o.get() != n)
-         o = AVLNodeOwner(n);
+      AVLNode *child = _first_child(n);
+      AVLNode *parent = n->parent;
+      _act_with_child_owner(child, _detach_from_owner);
+      child->parent = parent ? parent : nullptr;
+
+      if (detach)
+         _act_with_child_owner(n, _detach_from_owner);
+
+      return child;
    }
 
    AVLNode *_remove(const T& val, AVLNode* tree) {
@@ -324,8 +329,7 @@ private:
          if (!tree)
             return tree;
          else if (_num_children(tree) == 1)
-            // tree = _on_removal_one_child(tree);
-            throw NotYetImplementedError();
+            tree = _on_removal_one_child(tree);
          else if (!_num_children(tree))
             tree = _on_removal_leaf(tree);
          else
