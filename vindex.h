@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <string>
+#include <list>
 
 #include "helpers.h"
 #include "custom_exceptions.h"
@@ -61,6 +62,9 @@ private:
    typedef typename NodeCache::iterator NodeCacheIter;
    typedef deque<AVLNode *> NodeDQ;
    typedef _ChildDirection Dxn;
+   typedef list<AVLNode *> NodeList;
+   typedef function<void(AVLNode *)> NodeListener;
+   typedef function<void()> VoidFunc;
 
    AVLNodeOwner _head;
 
@@ -103,56 +107,6 @@ private:
          throw LessThanOneError();
       double val = pow(2, lv - 1);
       return dtoi(val);
-   }
-
-   bool _is_dq_all_nulls(NodeDQ &dq) {
-      auto it = find_if(
-         dq.begin(), dq.end(), [](AVLNode *n) -> bool { return n; });
-      return it == dq.end();
-   }
-
-   void _on_max_nodes_printed_per_line(
-      NodeDQ &dq, int &curr_depth, int &nodes_printed, 
-      stringstream &ss, const string &row_delim = "\n") {
-      ++curr_depth;
-      nodes_printed = 0;
-      if (_is_dq_all_nulls(dq))
-         dq.clear();
-      else
-         ss << row_delim;
-   }
-
-   void _on_valid_node(
-      NodeDQ &dq, AVLNode &n, stringstream &ss, bool last_node) {
-      ss << _node_str(n) << (last_node ? "" : " ");
-      dq.push_back(n.left_raw());
-      dq.push_back(n.right_raw());
-   }
-
-   void _on_null_node(NodeDQ &dq, stringstream &ss, bool last_node) {
-      ss << "(null)" << (last_node ? "" : " ");
-      dq.push_back(nullptr);
-      dq.push_back(nullptr);
-   }
-
-   void _gather_bfs_str(
-      NodeDQ &dq, int &curr_depth, int &nodes_printed, 
-      stringstream &ss, const string &row_delim="\n") {
-      if (dq.empty()) return;
-
-      AVLNode *n = dq.front();
-      dq.pop_front();
-
-      ++nodes_printed;
-      bool last_node = nodes_printed == _nodes_at_lv(curr_depth);
-      if (n) _on_valid_node(dq, *n, ss, last_node);
-      else _on_null_node(dq, ss, last_node);
-
-      if (last_node)
-         _on_max_nodes_printed_per_line(
-            dq, curr_depth, nodes_printed, ss, row_delim);
-
-      _gather_bfs_str(dq, curr_depth, nodes_printed, ss, row_delim);
    }
 
    string _node_str(AVLNode &n) {
@@ -347,6 +301,88 @@ private:
       return tree;
    }
 
+   bool _is_dq_all_nulls(NodeDQ &dq) {
+      auto it = find_if(
+         dq.begin(), dq.end(), [](AVLNode *n) -> bool { return n; });
+      return it == dq.end();
+   }
+
+   void _on_max_nodes_per_line(NodeDQ &dq, const VoidFunc &func) {
+      func();
+      if (_is_dq_all_nulls(dq))
+         dq.clear();
+   }
+
+   void _on_valid_node(NodeDQ &dq, AVLNode *n, const NodeListener &func) {
+      func(n);
+      dq.push_back(n->left_raw());
+      dq.push_back(n->right_raw());
+   }
+
+   void _on_null_node(NodeDQ &dq, const NodeListener &func) {
+      func(nullptr);
+      dq.push_back(nullptr);
+      dq.push_back(nullptr);
+   }
+
+   void _gather_bfs(
+      NodeDQ &dq, int &curr_depth, int &node_cnt, const NodeListener &func) {
+      if (dq.empty()) 
+         return;
+
+      AVLNode *n = dq.front();
+      dq.pop_front();
+
+      if (n) 
+         _on_valid_node(dq, n, func);
+      else 
+         _on_null_node(dq, func);
+
+      if (++node_cnt == _nodes_at_lv(curr_depth))
+         _on_max_nodes_per_line(dq, [&node_cnt, &curr_depth]() { 
+            node_cnt = 0; 
+            ++curr_depth;
+         });
+
+      _gather_bfs(dq, curr_depth, node_cnt, func);
+   }
+
+   NodeList _gather_bfs_list() {
+      NodeDQ dq;
+      NodeList nl;
+      int curr_depth = 1;
+      int node_cnt = 0;
+
+      if (_head_raw())
+         dq.push_back(_head_raw());
+
+      _gather_bfs(dq, curr_depth, node_cnt,
+         [&nl](AVLNode *n) { nl.push_back(n); });
+      return nl;
+   }
+
+   string _gather_bfs_str(const string &delim="|") {
+      NodeList nl = _gather_bfs_list();
+
+      stringstream ss;
+      int node_cnt = 0;
+      int curr_depth = 1;
+
+      for (auto nit = nl.begin(); nit != nl.end(); ++nit) {
+         AVLNode *n = *nit;
+         bool last_node = ++node_cnt == _nodes_at_lv(curr_depth);
+         ss << (n ? _node_str(*n) : "(null)") << (last_node ? "" : " ");
+
+         if (last_node) {
+            if (nit != prev(nl.end()))
+               ss << delim;
+            node_cnt = 0;
+            ++curr_depth;
+         }
+      }
+      return ss.str();
+   }
+
 public:
    Vindex(): _head(nullptr) {}
 
@@ -366,14 +402,7 @@ public:
    }
 
    string bfs_str(const string &delim = "|") {
-      stringstream ss;
-      NodeDQ dq;
-      int curr_depth = 1;
-      int nodes_printed = 0;
-      if (_head_raw() == nullptr) return "";
-      dq.push_back(_head_raw());
-      _gather_bfs_str(dq, curr_depth, nodes_printed, ss, delim);
-      return ss.str();
+      return _gather_bfs_str();
    }
 
    void clear() {
