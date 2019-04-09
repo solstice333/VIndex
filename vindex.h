@@ -82,20 +82,20 @@ private:
       return max(_height(tree->left_raw()), _height(tree->right_raw())) + 1;
    }
 
-   void _insert(AVLNode *n, AVLNode *subtree, AVLNode *parent = nullptr) {
+   void _insert(AVLNodeOwner &n, AVLNode *subtree, AVLNode *parent = nullptr) {
       n->parent = subtree;
 
       if (*n < *subtree) {
          if (subtree->left)
             _insert(n, subtree->left_raw(), subtree);
          else
-            subtree->left = AVLNodeOwner(n);
+            subtree->left = move(n);
       }
       else {
          if (subtree->right)
             _insert(n, subtree->right_raw(), subtree);
          else
-            subtree->right = AVLNodeOwner(n);
+            subtree->right = move(n);
       }
 
       subtree->height = 
@@ -387,11 +387,12 @@ public:
    Vindex(): _head(nullptr) {}
 
    void insert(const T& val) {
-      AVLNode *n = new AVLNode(val);
+      AVLNodeOwner n = make_unique<AVLNode>(val);
       ++n->height;
 
       if (!_head) {
-         _head = AVLNodeOwner(n);
+         _head = move(n);
+         ++_head->height;
          return;
       }
       _insert(n, _head_raw());
