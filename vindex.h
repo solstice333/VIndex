@@ -282,28 +282,32 @@ private:
       return _single_rotation(subtree, Direction::RIGHT);
    }
 
+   AVLNode *_left_right_double_rotation(AVLNode *subtree) {
+      _assign_if_diff(subtree->left, _left_rotation(subtree->left_raw()));
+      return _right_rotation(subtree);
+   }
+
+   AVLNode *_right_left_double_rotation(AVLNode *subtree) {
+      _assign_if_diff(subtree->right, _right_rotation(subtree->right_raw()));
+      return _left_rotation(subtree);
+   }
+
    AVLNode *_rebalance(AVLNode *subtree) {
       int bf = _balance_factor(subtree);
 
       if (_is_too_left_heavy(bf)) {
          if (_is_left_left(subtree))
             subtree = _right_rotation(subtree);
-         else if (_is_left_right(subtree)) {
-            _assign_if_diff(
-               subtree->left, _left_rotation(subtree->left_raw()));
-            subtree = _right_rotation(subtree);
-         }
+         else if (_is_left_right(subtree))
+            subtree = _left_right_double_rotation(subtree);
          else
             throw InvalidHeavyStateError();
       }
       else if (_is_too_right_heavy(bf)) {
          if (_is_right_right(subtree))
             subtree = _left_rotation(subtree);
-         else if (_is_right_left(subtree)) {
-            _assign_if_diff(
-               subtree->right, _right_rotation(subtree->right_raw()));
-            subtree = _left_rotation(subtree);
-         }
+         else if (_is_right_left(subtree))
+            subtree = _right_left_double_rotation(subtree);
          else
             throw InvalidHeavyStateError();
       }
