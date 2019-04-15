@@ -268,6 +268,8 @@ private:
       *ychild = AVLNodeOwner(x);
 
       x->parent = y;
+      if (subtree)
+         subtree->parent = x;
       x->height = _height(x);
       y->height = _height(y);
 
