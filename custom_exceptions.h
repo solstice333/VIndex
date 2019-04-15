@@ -41,6 +41,9 @@ DefineException(DetachedNodeException)
 DefineException(NotChildException)
 #define NotChildError() NotChildException(__FILE__, __LINE__)
 
+DefineException(InvalidDirectionException)
+#define InvalidDirectionError() InvalidDirectionException(__FILE__, __LINE__)
+
 DefineException(PointerToSelfException)
 #define PointerToSelfError() PointerToSelfException(__FILE__, __LINE__)
 
@@ -57,3 +60,6 @@ DefineException(NotLeafException)
 
 DefineException(LessThanOneException)
 #define LessThanOneError() LessThanOneException(__FILE__, __LINE__)
+
+DefineException(InvalidHeavyStateException)
+#define InvalidHeavyStateError() InvalidHeavyStateException(__FILE__, __LINE__)

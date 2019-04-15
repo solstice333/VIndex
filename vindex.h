@@ -51,7 +51,9 @@ struct _AVLState: public T {
       left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
-enum _ChildDirection { LEFT, RIGHT, ROOT };
+namespace Direction {
+   enum Direction { LEFT, RIGHT, ROOT };
+}
 
 template<typename T>
 class Vindex {
@@ -61,45 +63,16 @@ private:
    typedef map<AVLNode *, AVLNodeOwner> NodeCache;
    typedef typename NodeCache::iterator NodeCacheIter;
    typedef deque<AVLNode *> NodeDQ;
-   typedef _ChildDirection Dxn;
    typedef list<AVLNode *> NodeList;
    typedef function<void(AVLNode *)> NodeListener;
    typedef function<void()> VoidFunc;
+   typedef function<void(AVLNodeOwner&)> AVLNodeOwnerFunc;
+   typedef Direction::Direction Direction;
 
    AVLNodeOwner _head;
 
    AVLNode *_head_raw() {
       return _head.get();
-   }
-
-   static void _detach_from_owner(AVLNodeOwner &owner) {
-      owner.release();
-   }
-
-   int _height(AVLNode *tree) {
-      if (!tree)
-         return 0;
-      return max(_height(tree->left_raw()), _height(tree->right_raw())) + 1;
-   }
-
-   void _insert(AVLNodeOwner &n, AVLNode *subtree, AVLNode *parent = nullptr) {
-      n->parent = subtree;
-
-      if (*n < *subtree) {
-         if (subtree->left)
-            _insert(n, subtree->left_raw(), subtree);
-         else
-            subtree->left = move(n);
-      }
-      else {
-         if (subtree->right)
-            _insert(n, subtree->right_raw(), subtree);
-         else
-            subtree->right = move(n);
-      }
-
-      subtree->height = 
-         max(_height(subtree->left_raw()), _height(subtree->right_raw())) + 1;
    }
 
    int _nodes_at_lv(int lv) {
@@ -150,18 +123,18 @@ private:
          return nullptr;
    }
 
-   Dxn _which_child(AVLNode *n) {
+   Direction _which_child(AVLNode *n) {
       if (!n)
          throw NullPointerError();
 
       AVLNode *parent = n->parent;
 
       if (!parent)
-         return Dxn::ROOT;
+         return Direction::ROOT;
       else if (parent->left_raw() == n)
-         return Dxn::LEFT;
+         return Direction::LEFT;
       else if (parent->right_raw() == n)
-         return Dxn::RIGHT;
+         return Direction::RIGHT;
       else
          throw DetachedNodeError();
    }
@@ -183,15 +156,15 @@ private:
    }
 
    void _act_with_child_owner(
-      AVLNode *child, const function<void(AVLNodeOwner&)> &action) {
+      AVLNode *child, const AVLNodeOwnerFunc &action) {
       AVLNode *parent = child->parent;
-      Dxn child_ty = _which_child(child);
+      Direction child_ty = _which_child(child);
 
-      if (child_ty == Dxn::LEFT)
+      if (child_ty == Direction::LEFT)
          action(parent->left);
-      else if (child_ty == Dxn::RIGHT)
+      else if (child_ty == Direction::RIGHT)
          action(parent->right);
-      else if (child_ty == Dxn::ROOT)
+      else if (child_ty == Direction::ROOT)
          action(_head);
       else
          throw DetachedNodeError();
@@ -200,6 +173,161 @@ private:
    void _assign_if_diff(AVLNodeOwner &o, AVLNode *n) {
       if (o.get() != n)
          o = AVLNodeOwner(n);
+   }
+
+   static void _detach_from_owner(AVLNodeOwner &owner) {
+      owner.release();
+   }
+
+   static AVLNode *_detach_from_owner_rtn(AVLNodeOwner &owner) {
+      AVLNode *n = owner.get();
+      owner.release();
+      return n;
+   }
+
+   int _height(AVLNode *tree) {
+      if (!tree)
+         return 0;
+      return max(_height(tree->left_raw()), _height(tree->right_raw())) + 1;
+   }
+
+   bool _is_too_left_heavy(int bf) {
+      return bf < -1;
+   }
+
+   bool _is_too_right_heavy(int bf) {
+      return bf > 1;
+   }
+
+   bool _is_left_heavy(int bf) {
+      return bf < 0;
+   }
+
+   bool _is_right_heavy(int bf) {
+      return bf > 0;
+   }
+
+   int _balance_factor(AVLNode *subtree) {
+      return _height(subtree->right_raw()) - _height(subtree->left_raw());
+   }
+
+   bool _is_left_left(AVLNode *subtree) {
+      return _is_left_heavy(_balance_factor(subtree->left_raw()));
+   }
+
+   bool _is_left_right(AVLNode *subtree) {
+      return _is_right_heavy(_balance_factor(subtree->left_raw()));
+   }
+
+   bool _is_right_right(AVLNode *subtree) {
+      return _is_right_heavy(_balance_factor(subtree->right_raw()));
+   }
+
+   bool _is_right_left(AVLNode *subtree) {
+      return _is_left_heavy(_balance_factor(subtree->right_raw()));
+   }
+
+   AVLNodeOwner *_xchild_by_rotation(AVLNode *x, Direction rot_dxn) {
+      AVLNodeOwner *xchild = nullptr;
+      if (rot_dxn == Direction::LEFT)
+         xchild = &x->left;
+      else if (rot_dxn == Direction::RIGHT)
+         xchild = &x->right;
+      else
+         throw InvalidDirectionError();
+      return xchild;
+   }
+
+   AVLNodeOwner *_ychild_by_rotation(AVLNode *y, Direction rot_dxn) {
+      AVLNodeOwner *ychild = nullptr;
+      if (rot_dxn == Direction::LEFT)
+         ychild = &y->right;
+      else if (rot_dxn = Direction::RIGHT)
+         ychild = &y->left;
+      else
+         throw InvalidDirectionError();     
+      return ychild;
+   }
+
+   AVLNode *_single_rotation(AVLNode *x, Direction rot_dxn) {
+      AVLNode *y = nullptr;
+      AVLNode *subtree = nullptr;
+
+      _act_with_child_owner(x, _detach_from_owner);
+      AVLNodeOwner *xchild = _xchild_by_rotation(x, rot_dxn);
+      y = _detach_from_owner_rtn(*xchild);
+      AVLNodeOwner *ychild = _ychild_by_rotation(y, rot_dxn);
+      subtree = _detach_from_owner_rtn(*ychild);
+
+      if (*xchild)
+         throw NotNullPointerError();
+      *xchild = AVLNodeOwner(subtree);
+
+      if (*ychild)
+         throw NotNullPointerError();
+      *ychild = AVLNodeOwner(x);
+
+      x->parent = y;
+      x->height = _height(x);
+      y->height = _height(y);
+
+      return y;     
+   }
+
+   AVLNode *_right_rotation(AVLNode *subtree) {
+      return _single_rotation(subtree, Direction::LEFT);
+   }
+
+   AVLNode *_left_rotation(AVLNode *subtree) {
+      return _single_rotation(subtree, Direction::RIGHT);
+   }
+
+   AVLNode *_rebalance(AVLNode *subtree) {
+      int bf = _balance_factor(subtree);
+
+      if (_is_too_left_heavy(bf)) {
+         if (_is_left_left(subtree))
+            subtree = _right_rotation(subtree);
+         else if (_is_left_right(subtree)) {
+            _assign_if_diff(
+               subtree->left, _left_rotation(subtree->left_raw()));
+            subtree = _right_rotation(subtree);
+         }
+         else
+            throw InvalidHeavyStateError();
+      }
+      else if (_is_too_right_heavy(bf)) {
+         if (_is_right_right(subtree))
+            subtree = _left_rotation(subtree);
+         else if (_is_right_left(subtree)) {
+            _assign_if_diff(
+               subtree->right, _right_rotation(subtree->right_raw()));
+            subtree = _left_rotation(subtree);
+         }
+         else
+            throw InvalidHeavyStateError();
+      }
+      return subtree;
+   }
+
+   AVLNodeOwner& _child_insertion_side(AVLNodeOwner &n, AVLNode *subtree) {
+      return *n < *subtree ? subtree->left : subtree->right;
+   }
+
+   AVLNode *_insert(
+      AVLNodeOwner &n, AVLNode *subtree, AVLNode *parent = nullptr) {
+      n->parent = subtree;
+      AVLNodeOwner &child_tree = _child_insertion_side(n, subtree);
+
+      if (child_tree) {
+         _assign_if_diff(child_tree, _insert(n, child_tree.get(), subtree));
+         child_tree->parent = subtree;
+      }
+      else
+         child_tree = move(n);
+
+      subtree->height = _height(subtree);
+      return _rebalance(subtree);
    }
 
    AVLNode *_on_removal_leaf(AVLNode *n, bool detach = false) {
@@ -395,7 +523,8 @@ public:
          ++_head->height;
          return;
       }
-      _insert(n, _head_raw());
+      _assign_if_diff(_head, _insert(n, _head_raw()));
+      _head->parent = nullptr;
    }
 
    void remove(const T& val) {
@@ -403,7 +532,7 @@ public:
    }
 
    string bfs_str(const string &delim = "|") {
-      return _gather_bfs_str();
+      return _gather_bfs_str(delim);
    }
 
    void clear() {
