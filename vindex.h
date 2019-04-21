@@ -208,7 +208,8 @@ private:
    }
 
    int _balance_factor(AVLNode *subtree) {
-      return _height(subtree->right_raw()) - _height(subtree->left_raw());
+      return subtree ? 
+         _height(subtree->right_raw()) - _height(subtree->left_raw()) : 0;
    }
 
    bool _is_left_left(AVLNode *subtree) {
@@ -415,14 +416,15 @@ private:
    }
 
    AVLNode *_remove(const T& val, AVLNode* tree) {
+      if (!tree)
+         return nullptr;
+
       if (val < tree->data)
          _assign_if_diff(tree->left, _remove(val, tree->left_raw()));
       else if (val > tree->data)
          _assign_if_diff(tree->right, _remove(val, tree->right_raw()));
       else {
-         if (!tree)
-            return tree;
-         else if (_num_children(tree) == 1)
+         if (_num_children(tree) == 1)
             tree = _on_removal_one_child(tree);
          else if (!_num_children(tree))
             tree = _on_removal_leaf(tree);
@@ -432,7 +434,7 @@ private:
 
       if (tree)
          tree->height = _height(tree);
-      return tree;
+      return _rebalance(tree);
    }
 
    bool _is_dq_all_nulls(NodeDQ &dq) {

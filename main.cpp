@@ -57,19 +57,21 @@ public:
 
    void test_leaf_removal() {
       _vin.remove(40);
-      assert(_vin.bfs_str() == "(data: 24, height: 4, left: 2, right: 54, parent: null)|(data: 2, height: 1, left: null, right: null, parent: 24) (data: 54, height: 3, left: 30, right: 60, parent: 24)|(null) (null) (data: 30, height: 1, left: null, right: null, parent: 54) (data: 60, height: 2, left: 57, right: null, parent: 54)|(null) (null) (null) (null) (null) (null) (data: 57, height: 1, left: null, right: null, parent: 60) (null)");
-      _vin.remove(57);
-      assert(_vin.bfs_str() == "(data: 24, height: 3, left: 2, right: 54, parent: null)|(data: 2, height: 1, left: null, right: null, parent: 24) (data: 54, height: 2, left: 30, right: 60, parent: 24)|(null) (null) (data: 30, height: 1, left: null, right: null, parent: 54) (data: 60, height: 1, left: null, right: null, parent: 54)");
+      insert(30);
+      _vin.remove(40);
+      assert(_vin.bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
+
       _vin.remove(30);
-      assert(_vin.bfs_str() == "(data: 24, height: 3, left: 2, right: 54, parent: null)|(data: 2, height: 1, left: null, right: null, parent: 24) (data: 54, height: 2, left: null, right: 60, parent: 24)|(null) (null) (null) (data: 60, height: 1, left: null, right: null, parent: 54)");
-      _vin.remove(60);
-      assert(_vin.bfs_str() == "(data: 24, height: 2, left: 2, right: 54, parent: null)|(data: 2, height: 1, left: null, right: null, parent: 24) (data: 54, height: 1, left: null, right: null, parent: 24)");
-      _vin.remove(54);
-      assert(_vin.bfs_str() == "(data: 24, height: 2, left: 2, right: null, parent: null)|(data: 2, height: 1, left: null, right: null, parent: 24) (null)");
-      _vin.remove(2);
-      assert(_vin.bfs_str() == "(data: 24, height: 1, left: null, right: null, parent: null)");
-      _vin.remove(24);
       assert(_vin.bfs_str() == "");
+
+      insert(30);
+      insert(20);
+      insert(25);
+      insert(40);
+      insert(35);
+      _vin.remove(30);
+      _vin.remove(20);
+      assert(_vin.bfs_str() == "(data: 35, height: 2, left: 25, right: 40, parent: 25)|(data: 25, height: 1, left: null, right: null, parent: 35) (data: 40, height: 1, left: null, right: null, parent: 35)");
    }
 
    void test_one_child_removal() {
@@ -113,7 +115,8 @@ int main () {
    vin.test_insert_left_left_right_right();
    vin.test_clear();
    vin.test_insert_left_right_right_left();
-   // vin.test_leaf_removal();
+   vin.test_clear();
+   vin.test_leaf_removal();
    // vin.test_insert();
    // vin.test_one_child_removal();
    // vin.test_clear();
