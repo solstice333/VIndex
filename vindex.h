@@ -250,14 +250,14 @@ private:
       return ychild;
    }
 
-   AVLNode *_single_rotation(AVLNode *x, Direction rot_dxn) {
+   AVLNode *_single_rotation(AVLNode *x, Direction y_dxn) {
       AVLNode *y = nullptr;
       AVLNode *subtree = nullptr;
 
       _act_with_child_owner(x, _detach_from_owner);
-      AVLNodeOwner *xchild = _xchild_by_rotation(x, rot_dxn);
+      AVLNodeOwner *xchild = _xchild_by_rotation(x, y_dxn);
       y = _detach_from_owner_rtn(*xchild);
-      AVLNodeOwner *ychild = _ychild_by_rotation(y, rot_dxn);
+      AVLNodeOwner *ychild = _ychild_by_rotation(y, y_dxn);
       subtree = _detach_from_owner_rtn(*ychild);
 
       if (*xchild)
@@ -415,14 +415,22 @@ private:
       return next;
    }
 
+   void _remove_and_rebalance(
+      const T& val, AVLNodeOwner &subtree, AVLNode *parent) {
+      _assign_if_diff(subtree, _remove(val, subtree.get()));
+      _assign_if_diff(subtree, _rebalance(subtree.get()));
+      if (subtree)
+         subtree->parent = parent;
+   }
+
    AVLNode *_remove(const T& val, AVLNode* tree) {
       if (!tree)
          return nullptr;
 
       if (val < tree->data)
-         _assign_if_diff(tree->left, _remove(val, tree->left_raw()));
+         _remove_and_rebalance(val, tree->left, tree);
       else if (val > tree->data)
-         _assign_if_diff(tree->right, _remove(val, tree->right_raw()));
+         _remove_and_rebalance(val, tree->right, tree);
       else {
          if (_num_children(tree) == 1)
             tree = _on_removal_one_child(tree);
@@ -434,7 +442,7 @@ private:
 
       if (tree)
          tree->height = _height(tree);
-      return _rebalance(tree);
+      return tree;
    }
 
    bool _is_dq_all_nulls(NodeDQ &dq) {
@@ -536,7 +544,7 @@ public:
    }
 
    void remove(const T& val) {
-      _assign_if_diff(_head, _remove(val, _head_raw()));
+      _remove_and_rebalance(val, _head, nullptr);
    }
 
    string bfs_str(const string &delim = "|") {
