@@ -55,8 +55,15 @@ namespace Direction {
    enum Direction { LEFT, RIGHT, ROOT };
 }
 
+namespace OrderType {
+   enum OrderType { INORDER };
+}
+
 template<typename T>
 class Vindex {
+public:
+   class const_iterator;
+
 private:
    typedef _AVLState<_Node<T>> AVLNode;
    typedef unique_ptr<AVLNode> AVLNodeOwner;
@@ -68,9 +75,99 @@ private:
    typedef function<void()> VoidFunc;
    typedef function<void(AVLNodeOwner&)> AVLNodeOwnerFunc;
    typedef Direction::Direction Direction;
+   typedef OrderType::OrderType OrderType;
 
    AVLNodeOwner _head;
+   OrderType _order_ty;
+   const_iterator _end;
 
+public:
+   class const_iterator: public std::iterator<bidirectional_iterator_tag, T> {
+   private:
+      typedef reference_wrapper<T> DataRef;
+      typedef list<DataRef> OrderList;
+      typedef shared_ptr<OrderList> SharedOrderList;
+      typedef typename OrderList::iterator OrderListIter;
+
+      SharedOrderList _l;
+      OrderListIter _pos;
+
+      void _init_list_in_order(Vindex &vin) {
+         if (vin._head)
+            _get_in_order_recurs(vin._head_raw());
+      }
+
+      void _get_in_order_recurs(AVLNode *tree) {
+         if (tree->left)
+            _get_in_order_recurs(tree->left_raw());
+         _l->emplace_back(tree->data);
+         if (tree->right)
+            _get_in_order_recurs(tree->right_raw());
+      }
+
+      void _init_orderlist(Vindex &vin) {
+         if (vin._order_ty == OrderType::INORDER)
+            _init_list_in_order(vin);
+         _pos = _l->begin();
+      }
+
+      void _init_from(const const_iterator &other) {
+         _l = other._l;
+         _pos = other._pos;
+      }
+
+   public:
+      const_iterator(): _l(make_shared<OrderList>()), _pos(_l->begin()) {}
+
+      const_iterator(Vindex &vin): _l(make_shared<OrderList>()) {
+         _init_orderlist(vin);
+      }
+
+      const_iterator(const const_iterator &other) {
+         _init_from(other);
+      }
+
+      const_iterator& operator=(const const_iterator &other) {
+         _init_from(other);
+         return *this;
+      }
+
+      bool operator==(const const_iterator& other) const {
+         return _pos == other._pos;
+      }
+
+      bool operator!=(const const_iterator& other) const {
+         return _pos != other._pos;
+      }
+
+      const_iterator operator++() {
+         ++_pos;
+         return *this;
+      }
+
+      const_iterator operator++(int) {
+         const_iterator tmp(*this);
+         ++*this;
+         return tmp;
+      }
+
+      const T& operator*() const {
+         return *_pos;
+      }
+
+      const T* operator->() const {
+         T& data = *_pos;
+         return &data;
+      }
+
+      const_iterator end() const { 
+         auto it = const_iterator(*this); 
+         it._pos = it._l->end();
+         return it;
+      }
+   };
+
+private:
    AVLNode *_head_raw() {
       return _head.get();
    }
@@ -82,14 +179,23 @@ private:
       return dtoi(val);
    }
 
+   string _node_data_str(AVLNode *n) {
+      stringstream ss;
+      if (n)
+         ss << n->data;
+      else
+         ss << "null";
+      return ss.str();
+   }
+
    string _node_str(AVLNode &n) {
       stringstream ss;
       ss << "(" 
          << "data: " << n.data 
          << ", height: " << n.height 
-         << ", left: " << (n.left ? to_string(n.left->data) : "null") 
-         << ", right: " << (n.right ? to_string(n.right->data) : "null")
-         << ", parent: " << (n.parent ? to_string(n.parent->data) : "null")
+         << ", left: " << _node_data_str(n.left_raw()) 
+         << ", right: " << _node_data_str(n.right_raw())
+         << ", parent: " << _node_data_str(n.parent)
          << ")";
       return ss.str();
    }
@@ -549,6 +655,24 @@ public:
 
    string bfs_str(const string &delim = "|") {
       return _gather_bfs_str(delim);
+   }
+
+   void order(OrderType order_ty) {
+      _order_ty = order_ty;
+   }
+
+   OrderType order() {
+      return _order_ty;
+   }
+
+   const_iterator begin() {
+      auto it = const_iterator(*this);
+      _end = it.end();
+      return it;
+   }
+
+   const_iterator end() {
+      return _end;
    }
 
    void clear() {
