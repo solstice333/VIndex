@@ -2,23 +2,22 @@
 #include <sstream>
 #include <string>
 
-using namespace std;
-
 #define DefineException(name)\
 class name: public _CustomException {\
 public:\
-   name(const string &file, int line, const string &err_msg = #name):\
+   name(const std::string &file, int line, const std::string &err_msg = #name):\
       _CustomException(file, line, err_msg) {}\
 };
 
-class _CustomException : public exception {
+class _CustomException : public std::exception {
 protected:
-   string _err_msg;
+   std::string _err_msg;
 
 public:
    _CustomException(
-      const string &file, int line, 
-      const string &err_msg = "_CustomException") {
+      const std::string &file, int line, 
+      const std::string &err_msg = "_CustomException") {
+         using namespace std;
          stringstream ss;
          ss << err_msg << ": " << file << ", " << line;   
          _err_msg = ss.str();

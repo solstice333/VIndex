@@ -15,8 +15,6 @@
 #include "helpers.h"
 #include "custom_exceptions.h"
 
-using namespace std;
-
 template<typename T>
 struct _Node {
    T data;
@@ -31,7 +29,7 @@ struct _Node {
 
 template<typename T, typename BASE_TY = decltype(T::data)>
 struct _AVLState: public T {
-   typedef unique_ptr<_AVLState> AVLStateOwner;
+   typedef std::unique_ptr<_AVLState> AVLStateOwner;
 
    int height;
    AVLStateOwner left;
@@ -56,7 +54,7 @@ namespace Direction {
 }
 
 namespace OrderType {
-   enum OrderType { INORDER };
+   enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
 }
 
 template<typename T>
@@ -66,14 +64,14 @@ public:
 
 private:
    typedef _AVLState<_Node<T>> AVLNode;
-   typedef unique_ptr<AVLNode> AVLNodeOwner;
-   typedef map<AVLNode *, AVLNodeOwner> NodeCache;
+   typedef std::unique_ptr<AVLNode> AVLNodeOwner;
+   typedef std::map<AVLNode *, AVLNodeOwner> NodeCache;
    typedef typename NodeCache::iterator NodeCacheIter;
-   typedef deque<AVLNode *> NodeDQ;
-   typedef list<AVLNode *> NodeList;
-   typedef function<void(AVLNode *)> NodeListener;
-   typedef function<void()> VoidFunc;
-   typedef function<void(AVLNodeOwner&)> AVLNodeOwnerFunc;
+   typedef std::deque<AVLNode *> NodeDQ;
+   typedef std::list<AVLNode *> NodeList;
+   typedef std::function<void(AVLNode *)> NodeListener;
+   typedef std::function<void()> VoidFunc;
+   typedef std::function<void(AVLNodeOwner&)> AVLNodeOwnerFunc;
    typedef Direction::Direction Direction;
    typedef OrderType::OrderType OrderType;
 
@@ -82,11 +80,12 @@ private:
    const_iterator _end;
 
 public:
-   class const_iterator: public std::iterator<bidirectional_iterator_tag, T> {
+   class const_iterator: 
+      public std::iterator<std::bidirectional_iterator_tag, T> {
    private:
-      typedef reference_wrapper<T> DataRef;
-      typedef list<DataRef> OrderList;
-      typedef shared_ptr<OrderList> SharedOrderList;
+      typedef std::reference_wrapper<T> DataRef;
+      typedef std::list<DataRef> OrderList;
+      typedef std::shared_ptr<OrderList> SharedOrderList;
       typedef typename OrderList::iterator OrderListIter;
 
       SharedOrderList _l;
@@ -105,9 +104,24 @@ public:
             _get_in_order_recurs(tree->right_raw());
       }
 
+      void _init_list_pre_order(Vindex &vin) {
+         if (vin._head)
+            _get_pre_order_recurs(vin._head_raw());
+      }
+
+      void _get_pre_order_recurs(AVLNode *tree) {
+         _l->emplace_back(tree->data);
+         if (tree->left)
+            _get_in_order_recurs(tree->left_raw());
+         if (tree->right)
+            _get_in_order_recurs(tree->right_raw());        
+      }
+
       void _init_orderlist(Vindex &vin) {
          if (vin._order_ty == OrderType::INORDER)
             _init_list_in_order(vin);
+         else if (vin._order_ty == OrderType::PREORDER)
+            _init_list_pre_order(vin);
          _pos = _l->begin();
       }
 
@@ -117,9 +131,9 @@ public:
       }
 
    public:
-      const_iterator(): _l(make_shared<OrderList>()), _pos(_l->begin()) {}
+      const_iterator(): _l(std::make_shared<OrderList>()), _pos(_l->begin()) {}
 
-      const_iterator(Vindex &vin): _l(make_shared<OrderList>()) {
+      const_iterator(Vindex &vin): _l(std::make_shared<OrderList>()) {
          _init_orderlist(vin);
       }
 
@@ -151,6 +165,8 @@ public:
          return tmp;
       }
 
+      // TODO do decrement operator too
+
       const T& operator*() const {
          return *_pos;
       }
@@ -172,6 +188,7 @@ private:
       return _head.get();
    }
 
+   // TODO don't use pow. Use left shift
    int _nodes_at_lv(int lv) {
       if (lv < 1)
          throw LessThanOneError();
@@ -179,7 +196,8 @@ private:
       return dtoi(val);
    }
 
-   string _node_data_str(AVLNode *n) {
+   std::string _node_data_str(AVLNode *n) {
+      using namespace std;
       stringstream ss;
       if (n)
          ss << n->data;
@@ -188,7 +206,8 @@ private:
       return ss.str();
    }
 
-   string _node_str(AVLNode &n) {
+   std::string _node_str(AVLNode &n) {
+      using namespace std;
       stringstream ss;
       ss << "(" 
          << "data: " << n.data 
@@ -276,6 +295,7 @@ private:
          throw DetachedNodeError();
    } 
 
+   // TODO avoid non-const lvalue refs
    void _assign_if_diff(AVLNodeOwner &o, AVLNode *n) {
       if (o.get() != n)
          o = AVLNodeOwner(n);
@@ -481,9 +501,9 @@ private:
       else {
          next = tree;
          if (tree->right)
-            return _on_removal_one_child(tree, true);
+            return _on_removal_one_child(tree, /*detach=*/true);
          else
-            return _on_removal_leaf(next, true);
+            return _on_removal_leaf(next, /*detach=*/true);
       }
    }
 
@@ -611,7 +631,8 @@ private:
       return nl;
    }
 
-   string _gather_bfs_str(const string &delim="|") {
+   std::string _gather_bfs_str(const std::string &delim="|") {
+      using namespace std;
       NodeList nl = _gather_bfs_list();
 
       stringstream ss;
@@ -637,6 +658,7 @@ public:
    Vindex(): _head(nullptr) {}
 
    void insert(const T& val) {
+      using namespace std;
       AVLNodeOwner n = make_unique<AVLNode>(val);
       ++n->height;
 
@@ -649,11 +671,19 @@ public:
       _head->parent = nullptr;
    }
 
+   // TODO test
+   template <typename... Args>
+   void emplace_back(Args&&... args) {
+      using namespace std;
+      T val(forward<Args>(args)...);
+      insert(val);
+   }
+
    void remove(const T& val) {
       _remove_and_rebalance(val, _head, nullptr);
    }
 
-   string bfs_str(const string &delim = "|") {
+   std::string bfs_str(const std::string &delim = "|") {
       return _gather_bfs_str(delim);
    }
 
