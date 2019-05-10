@@ -310,6 +310,13 @@ public:
 
       assert(ss.str() == "15202530333540");
 
+      stringstream ss2;
+      auto it2 = _vin.begin();
+      ss2 << *it2;
+      ss2 << *++it2;
+      ss2 << *--it2;
+      assert(ss2.str() == "152015");
+
       const IntVindex::const_iterator it = _vin.begin();
       const IntVindex::const_iterator end = _vin.end();
       assert(*it == 15);

@@ -165,7 +165,16 @@ public:
          return tmp;
       }
 
-      // TODO do decrement operator too
+      const_iterator operator--() {
+         --_pos;
+         return *this;
+      }
+
+      const_iterator operator--(int) {
+         const_iterator tmp(*this);
+         --*tmp;
+         return tmp;
+      }
 
       const T& operator*() const {
          return *_pos;
@@ -188,12 +197,10 @@ private:
       return _head.get();
    }
 
-   // TODO don't use pow. Use left shift
    int _nodes_at_lv(int lv) {
       if (lv < 1)
          throw LessThanOneError();
-      double val = pow(2, lv - 1);
-      return dtoi(val);
+      return 1 << (lv - 1);
    }
 
    std::string _node_data_str(AVLNode *n) {
