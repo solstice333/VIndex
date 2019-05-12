@@ -62,3 +62,7 @@ DefineException(LessThanOneException)
 
 DefineException(InvalidHeavyStateException)
 #define InvalidHeavyStateError() InvalidHeavyStateException(__FILE__, __LINE__)
+
+DefineException(InvalidIncrementStateException)
+#define InvalidIncrementStateError() \
+   InvalidIncrementStateException(__FILE__, __LINE__)

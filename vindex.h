@@ -83,112 +83,138 @@ public:
    class const_iterator: 
       public std::iterator<std::bidirectional_iterator_tag, T> {
    private:
-      typedef std::reference_wrapper<T> DataRef;
-      typedef std::list<DataRef> OrderList;
-      typedef std::shared_ptr<OrderList> SharedOrderList;
-      typedef typename OrderList::iterator OrderListIter;
+      typedef Vindex::AVLNode AVLNode;
 
-      SharedOrderList _l;
-      OrderListIter _pos;
-
-      void _init_list_in_order(Vindex &vin) {
-         if (vin._head)
-            _get_in_order_recurs(vin._head_raw());
-      }
-
-      void _get_in_order_recurs(AVLNode *tree) {
+      AVLNode *_get_leftest_node(AVLNode *tree) {
          if (tree->left)
-            _get_in_order_recurs(tree->left_raw());
-         _l->emplace_back(tree->data);
-         if (tree->right)
-            _get_in_order_recurs(tree->right_raw());
+            return _get_leftest_node(tree->left_raw());
+         else
+            return tree;
       }
 
-      void _init_list_pre_order(Vindex &vin) {
-         if (vin._head)
-            _get_pre_order_recurs(vin._head_raw());
+      bool _visited_subtree(AVLNode *subtree) {
+         AVLNode *child = subtree; 
+
+         while (child) {
+            if (child == _prev)
+               return true;
+            child = *_prev < *child ? child->left_raw() : child->right_raw();
+         }
+         return false;
       }
 
-      void _get_pre_order_recurs(AVLNode *tree) {
-         _l->emplace_back(tree->data);
-         if (tree->left)
-            _get_in_order_recurs(tree->left_raw());
-         if (tree->right)
-            _get_in_order_recurs(tree->right_raw());        
+      bool _visited_left_subtree() {
+         return _visited_subtree(_curr->left_raw()); 
       }
 
-      void _init_orderlist(Vindex &vin) {
-         if (vin._order_ty == OrderType::INORDER)
-            _init_list_in_order(vin);
-         else if (vin._order_ty == OrderType::PREORDER)
-            _init_list_pre_order(vin);
-         _pos = _l->begin();
+      bool _visited_right_subtree() {
+         return _visited_subtree(_curr->right_raw()); 
       }
 
-      void _init_from(const const_iterator &other) {
-         _l = other._l;
-         _pos = other._pos;
+      bool _visited_parent() {
+         if (!_curr)
+            return false;
+
+         AVLNode *parent = _curr->parent;
+         while (parent) {
+            if (_prev == parent)
+               return true;
+            parent = parent->parent;
+         }
+         return false;
       }
+
+      AVLNode *_retrace_in_order() {
+         AVLNode *curr = _curr;
+
+         if (!curr)
+            return nullptr;
+
+         AVLNode *parent = curr->parent;
+
+         if (!parent)
+            return nullptr;
+
+         while (parent && parent->right_raw() == curr) {
+            curr = curr->parent;
+            parent = curr->parent;
+         }
+         return curr->parent;
+      }
+
+      AVLNode *_curr;
+      AVLNode *_prev;
 
    public:
-      const_iterator(): _l(std::make_shared<OrderList>()), _pos(_l->begin()) {}
+      const_iterator(): _curr(nullptr), _prev(nullptr) {}
 
-      const_iterator(Vindex &vin): _l(std::make_shared<OrderList>()) {
-         _init_orderlist(vin);
-      }
+      const_iterator(Vindex &vin): 
+         _curr(_get_leftest_node(vin._head_raw())), _prev(nullptr) {}
 
-      const_iterator(const const_iterator &other) {
-         _init_from(other);
-      }
+      const_iterator(const const_iterator &other): 
+         _curr(other._curr), _prev(other._prev) {}
 
       const_iterator& operator=(const const_iterator &other) {
-         _init_from(other);
+         _curr = other._curr;
+         _prev = other._prev;
          return *this;
       }
 
       bool operator==(const const_iterator& other) const {
-         return _pos == other._pos;
+         return _curr == other._curr && !_curr || 
+            _curr == other._curr && _prev == other._prev;
       }
 
       bool operator!=(const const_iterator& other) const {
-         return _pos != other._pos;
+         return !operator==(other);
       }
 
       const_iterator operator++() {
-         ++_pos;
+         AVLNode *tmp = _curr;
+         if (_visited_left_subtree())
+            _curr = tmp->right ? 
+               _get_leftest_node(tmp->right_raw()) : _retrace_in_order();
+         else if (_visited_right_subtree())
+            throw InvalidIncrementStateError();
+         else if (_visited_parent())
+            _curr = tmp->right ? 
+               _get_leftest_node(tmp->right_raw()) : _retrace_in_order();
+         else if (!_prev)
+            _curr = _retrace_in_order();
+         else
+            throw InvalidIncrementStateError();
+
+         _prev = tmp;
          return *this;
       }
 
       const_iterator operator++(int) {
          const_iterator tmp(*this);
-         ++*this;
+         operator++();
          return tmp;
       }
 
       const_iterator operator--() {
-         --_pos;
+         throw NotYetImplementedError(); 
          return *this;
       }
 
       const_iterator operator--(int) {
          const_iterator tmp(*this);
-         --*tmp;
+         operator--();
          return tmp;
       }
 
       const T& operator*() const {
-         return *_pos;
+         return _curr->data;
       }
 
       const T* operator->() const {
-         T& data = *_pos;
-         return &data;
+         return &_curr->data;
       }
 
       const_iterator end() const { 
-         auto it = const_iterator(*this); 
-         it._pos = it._l->end();
-         return it;
+         return const_iterator();
       }
    };
 
@@ -203,7 +229,7 @@ private:
       return 1 << (lv - 1);
    }
 
-   std::string _node_data_str(AVLNode *n) {
+   static std::string _node_data_str(AVLNode *n) {
       using namespace std;
       stringstream ss;
       if (n)
@@ -213,7 +239,7 @@ private:
       return ss.str();
    }
 
-   std::string _node_str(AVLNode &n) {
+   static std::string _node_str(AVLNode &n) {
       using namespace std;
       stringstream ss;
       ss << "(" 
