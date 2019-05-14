@@ -301,6 +301,7 @@ public:
       _vin.insert(15);
       _vin.insert(30);
       _vin.insert(40);
+      _vin.insert(16);
       _vin.insert(33);
 
       _vin.order(OrderType::INORDER);
@@ -311,7 +312,7 @@ public:
          ss << *it;
       }
 
-      assert(ss.str() == "15202530333540");
+      assert(ss.str() == "1516202530333540");
 
       assert(*it == 0);
       assert(*++it == 0);
@@ -328,7 +329,7 @@ public:
          ss << *it;
       ss << *it;
 
-      assert(ss.str() == "3330252015");
+      assert(ss.str() == "333025201615");
 
       --it;
       assert(*it == 0);
@@ -344,7 +345,7 @@ public:
       ss2 << *++it2;
       ss2 << *++it2;
       ss2 << *--it2;
-      assert(ss2.str() == "15202520");
+      assert(ss2.str() == "15162016");
 
       const IntVindex::const_iterator const_it = _vin.begin();
       const IntVindex::const_iterator const_end = _vin.end();

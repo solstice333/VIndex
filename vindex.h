@@ -151,16 +151,11 @@ public:
          AVLNode *tmp = _curr;
          if (!_prev_incr)
             _curr = _prev;   
-         else if (_visited_left_subtree())
+         else if (_visited_left_subtree() || _visited_parent() || !_prev)
             _curr = tmp->right ? 
                _get_leftest_node(tmp->right_raw()) : _retrace_in_order();
          else if (_visited_right_subtree())
             throw InvalidIncrementStateError();
-         else if (_visited_parent())
-            _curr = tmp->right ? 
-               _get_leftest_node(tmp->right_raw()) : _retrace_in_order();
-         else if (!_prev)
-            _curr = _retrace_in_order();
          else if (!_curr)
             return;
          else
@@ -175,16 +170,10 @@ public:
             _curr = _prev;
          else if (_visited_left_subtree())
             throw InvalidIncrementStateError();   
-         else if (_visited_right_subtree())
+         else if (_visited_right_subtree() || _visited_parent() || !_prev)
             _curr = tmp->left ?
                _get_rightest_node(tmp->left_raw()) : 
                _retrace_in_order(/*decr=*/true);
-         else if (_visited_parent())
-            _curr = tmp->left ?
-               _get_rightest_node(tmp->left_raw()) : 
-               _retrace_in_order(/*decr=*/true);
-         else if (!_prev)
-            _curr = _retrace_in_order(/*decr=*/true);
          else if (!_curr)
             return;
          else
