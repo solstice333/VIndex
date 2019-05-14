@@ -94,6 +94,24 @@ public:
          return tree->right ? _get_rightest_node(tree->right_raw()) : tree;
       }
 
+      AVLNode *_get_root_node(AVLNode *tree) {
+         return tree;
+      }
+
+      AVLNode *_get_sibling(AVLNode *tree) {
+         if (!tree || !tree->parent)
+            return nullptr;
+
+         AVLNode *parent = tree->parent;
+
+         if (parent->left_raw() == tree)
+            return parent->right_raw();
+         else if (parent->right_raw() == tree)
+            return parent->left_raw();
+         else
+            throw NotChildError();
+      }
+
       bool _visited_subtree(AVLNode *subtree) {
          AVLNode *child = subtree; 
 
@@ -113,6 +131,16 @@ public:
          return _curr ? _visited_subtree(_curr->right_raw()) : false; 
       }
 
+      bool _visited_sibling_subtree() {
+         if (!_curr || !_curr->parent)
+            return false;
+
+         AVLNode *parent = _curr->parent;
+         return parent->left_raw() == _curr ?
+            _visited_subtree(parent->right_raw()) :
+            _visited_subtree(parent->left_raw());
+      }
+
       bool _visited_parent() {
          if (!_curr)
             return false;
@@ -127,16 +155,11 @@ public:
       }
 
       AVLNode *_retrace_in_order(bool decr=false) {
+         if (!_curr || !_curr->parent)
+            return nullptr;
+
          AVLNode *curr = _curr;
-
-         if (!curr)
-            return nullptr;
-
          AVLNode *parent = curr->parent;
-
-         if (!parent)
-            return nullptr;
-
          AVLNodeOwner *parents_child = decr ? &parent->left : &parent->right;
 
          while (parent && parents_child->get() == curr) {
@@ -144,7 +167,7 @@ public:
             parent = curr->parent;
             parents_child = decr ? &parent->left : &parent->right;
          }
-         return curr->parent;
+         return parent;
       }
 
       void _in_order_increment() {
@@ -168,8 +191,6 @@ public:
          AVLNode *tmp = _curr;
          if (_prev_incr)
             _curr = _prev;
-         else if (_visited_left_subtree())
-            throw InvalidIncrementStateError();   
          else if (_visited_right_subtree() || _visited_parent() || !_prev)
             _curr = tmp->left ?
                _get_rightest_node(tmp->left_raw()) : 
@@ -180,6 +201,36 @@ public:
             throw InvalidIncrementStateError();
 
          _prev = tmp;
+      }
+
+      AVLNode *_retrace_pre_order(bool decr=false) {
+         AVLNode *n = _retrace_in_order(decr);
+         return n ? (n->right ? n->right_raw() : nullptr) : nullptr;
+      }
+
+      void _pre_order_increment() {
+         AVLNode *tmp = _curr;   
+
+         if (!_prev_incr)
+            _curr = _prev;
+         else if (tmp) {
+            if (tmp->left)
+               _curr = _get_root_node(tmp->left_raw());
+            else if (tmp->right)
+               _curr = _get_root_node(tmp->right_raw());
+            else
+               _curr = _retrace_pre_order();
+         }
+         else if (!tmp)
+            return;
+         else
+            throw InvalidIncrementStateError();
+
+         _prev = tmp;
+      }
+
+      void _pre_order_decrement() {
+         throw NotYetImplementedError();
       }
 
       std::string _node_data(AVLNode *n) const {
@@ -205,26 +256,37 @@ public:
 
       AVLNode *_curr;
       AVLNode *_prev;
-      std::unique_ptr<AVLNode> _default;
       bool _prev_incr;
       bool _reverse;
+      OrderType _order_ty;
+      std::unique_ptr<AVLNode> _default;
 
    public:
       const_iterator(): 
          _curr(nullptr), _prev(nullptr), 
          _prev_incr(true), _reverse(false),
+         _order_ty(OrderType::INORDER),
          _default(std::make_unique<AVLNode>(T())) {}
 
-      const_iterator(Vindex &vin, bool reverse=false): 
-         _curr(reverse ? 
-            _get_rightest_node(vin._head_raw()) : 
-            _get_leftest_node(vin._head_raw())), 
+      const_iterator(Vindex *vin, OrderType order_ty, bool reverse=false): 
          _reverse(reverse), _prev(nullptr), 
-         _prev_incr(true), _default(std::make_unique<AVLNode>(T())) {}
+         _prev_incr(true), _order_ty(order_ty),
+         _default(std::make_unique<AVLNode>(T())) {
+
+         if (order_ty == OrderType::INORDER)
+            _curr = _reverse ? 
+               _get_rightest_node(vin->_head_raw()) : 
+               _get_leftest_node(vin->_head_raw());
+         else if (order_ty == OrderType::PREORDER)
+            _curr = _reverse ?
+               _get_rightest_node(vin->_head_raw()) :
+               _get_root_node(vin->_head_raw());
+      }
 
       const_iterator(const const_iterator &other): 
          _curr(other._curr), _prev(other._prev), 
          _reverse(other._reverse), _prev_incr(other._prev_incr), 
+         _order_ty(other._order_ty), 
          _default(std::make_unique<AVLNode>(T())) {}
 
       const_iterator& operator=(const const_iterator &other) {
@@ -232,6 +294,7 @@ public:
          _prev = other._prev;
          _prev_incr = other._prev_incr;
          _reverse = other._reverse;
+         _order_ty = other._order_ty;
          return *this;
       }
 
@@ -244,7 +307,13 @@ public:
       }
 
       const_iterator operator++() {
-         _in_order_increment();
+         if (_order_ty == OrderType::INORDER)
+            _in_order_increment();
+         else if (_order_ty == OrderType::PREORDER)
+            _pre_order_increment();
+         else
+            throw InvalidOperationError();
+
          _prev_incr = true;
          return *this;
       }
@@ -256,7 +325,13 @@ public:
       }
 
       const_iterator operator--() {
-         _in_order_decrement();
+         if (_order_ty == OrderType::INORDER)
+            _in_order_decrement();
+         else if (_order_ty == OrderType::PREORDER)
+            _pre_order_decrement();
+         else
+            throw InvalidOperationError();
+
          _prev_incr = false;
          return *this;
       }
@@ -795,7 +870,7 @@ public:
    }
 
    const_iterator begin() {
-      auto it = const_iterator(*this);
+      auto it = const_iterator(this, _order_ty);
       _end = it.end();
       return it;
    }
@@ -805,7 +880,7 @@ public:
    }
 
    const_iterator rbegin() {
-      auto it = const_iterator(*this, /*reverse=*/true);
+      auto it = const_iterator(this, _order_ty, /*reverse=*/true);
       _end = it.end();
       return it;
    }
