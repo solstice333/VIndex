@@ -15,6 +15,7 @@ class Int {
 private:
    int _val;
 public:
+   Int(): _val(0) {}
    Int(int i): _val(i) {}
    int val() const { return _val; }
    void val(int i) { _val = i; }
@@ -301,29 +302,53 @@ public:
       _vin.insert(30);
       _vin.insert(40);
       _vin.insert(33);
-      bfs_dump(_vin);
 
       _vin.order(OrderType::INORDER);
 
       stringstream ss;
-      for (IntVindex::const_iterator it = _vin.begin(); 
-         it != _vin.end(); ++it) {
-         cout << *it << endl;
+      IntVindex::const_iterator it;
+      for (it = _vin.begin(); it != _vin.end(); ++it) {
          ss << *it;
       }
 
       assert(ss.str() == "15202530333540");
 
+      assert(*it == 0);
+      assert(*++it == 0);
+
+      it = prev(it);
+      assert(*it == 40);
+
+      it = prev(it);
+      assert(*it == 35);
+
+      ss.str("");
+      ss.clear();
+      for (it = prev(it); it != _vin.begin(); it--)
+         ss << *it;
+      ss << *it;
+
+      assert(ss.str() == "3330252015");
+
+      --it;
+      assert(*it == 0);
+      --it;
+      assert(*it == 0);
+
+      ++it;
+      assert(*it == 15);
+
       stringstream ss2;
       auto it2 = _vin.begin();
       ss2 << *it2;
       ss2 << *++it2;
-      // ss2 << *--it2;
-      // assert(ss2.str() == "152015");
+      ss2 << *++it2;
+      ss2 << *--it2;
+      assert(ss2.str() == "15202520");
 
-      const IntVindex::const_iterator it = _vin.begin();
-      const IntVindex::const_iterator end = _vin.end();
-      assert(*it == 15);
+      const IntVindex::const_iterator const_it = _vin.begin();
+      const IntVindex::const_iterator const_end = _vin.end();
+      assert(*const_it == 15);
    }
 
    void test_in_order_iter_arrow_data() {
@@ -362,5 +387,5 @@ int main () {
    vin.test_two_children_removal();
 
    vin.test_in_order_iter();
-   // vin.test_in_order_iter_arrow_data();
+   vin.test_in_order_iter_arrow_data();
 }
