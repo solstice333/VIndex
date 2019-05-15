@@ -465,6 +465,109 @@ public:
       assert(*++it == 16);
       assert(it != _vin.end());
    }
+
+   void test_post_order_iter() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(26);
+      _vin.insert(33);
+
+      _vin.order(OrderType::POSTORDER);
+
+      IntVindex::const_iterator it = _vin.begin();     
+      assert(*it == 15);
+      assert(it != _vin.end());
+      advance(it, 1);
+      assert(*it == 20);
+      assert(it != _vin.end());
+      it = next(it);
+      assert(*it == 16);
+      assert(it != _vin.end());
+      it = next(it);
+      assert(*it == 26);
+      assert(it != _vin.end());
+      it = next(it);
+      assert(*it == 33);
+      assert(it != _vin.end());
+      it = next(it);
+      assert(*it == 30);
+      assert(it != _vin.end());
+      ++it;
+      assert(*it == 40);
+      assert(it != _vin.end());
+      ++it;
+      assert(*it == 35);
+      assert(it != _vin.end());
+      ++it;
+      assert(*it == 25);
+      assert(it != _vin.end());
+      ++it;
+      assert(*it == 0);
+      assert(it == _vin.end());
+      ++it;
+      assert(*it == 0);
+      assert(it == _vin.end());
+
+      stringstream ss;
+      for (auto it2 = _vin.begin(); it2 != _vin.end(); ++it2)
+         ss << *it2;
+
+      assert(ss.str() == "152016263330403525");
+
+      ss.str("");
+      ss.clear();
+      for (auto &data : _vin)
+         ss << data;
+
+      assert(ss.str() == "152016263330403525");
+
+      advance(it, -1);
+      assert(*it == 25);
+      assert(it != _vin.end());
+      it = prev(it);
+      assert(*it == 35);
+      assert(it != _vin.end());
+      --it;
+      assert(*it == 40);
+      assert(it != _vin.end());
+      it--;
+      assert(*it == 30);
+      assert(it != _vin.end());
+      it--;
+      assert(*it == 33);
+      assert(it != _vin.end());
+      it--;
+      assert(*it == 26);
+      assert(it != _vin.end());
+      it--;
+      assert(*it == 16);
+      assert(it != _vin.end());
+      it--;
+      assert(*it == 20);
+      assert(it != _vin.end());
+      it--;
+      assert(*it == 15);
+      assert(it != _vin.end());
+      --it;
+      assert(*it == 0);
+      assert(it == _vin.end());
+      --it;
+      assert(*it == 0);
+      assert(it == _vin.end());
+
+      ++it;
+      assert(*it == 15);
+      assert(it != _vin.end());
+      ++it;
+      assert(*it == 20);
+      assert(it != _vin.end());
+   }
 };
 
 int main () {
@@ -480,4 +583,5 @@ int main () {
    vin.test_in_order_iter();
    vin.test_in_order_iter_arrow_data();
    vin.test_pre_order_iter();
+   vin.test_post_order_iter();
 }

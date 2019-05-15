@@ -85,6 +85,7 @@ public:
    private:
       typedef Vindex::AVLNode AVLNode;
       typedef Vindex::AVLNodeOwner AVLNodeOwner;
+      typedef Vindex::Direction Direction;
 
       AVLNode *_get_leftest_node(AVLNode *tree) {
          return tree->left ? _get_leftest_node(tree->left_raw()) : tree;
@@ -109,9 +110,16 @@ public:
 
       AVLNode *_get_left_sibling(AVLNode *tree) {
          if (!tree || !tree->parent)
-            return nullptr;
+            throw NullPointerError();
          AVLNode *parent = tree->parent;
          return parent->right_raw() == tree ? parent->left_raw() : nullptr;
+      }
+
+      AVLNode *_get_right_sibling(AVLNode *tree) {
+         if (!tree || !tree->parent)
+            throw NullPointerError();
+         AVLNode *parent = tree->parent;
+         return parent->left_raw() == tree ? parent->right_raw() : nullptr;
       }
 
       bool _visited_subtree(AVLNode *subtree) {
@@ -156,20 +164,46 @@ public:
          return false;
       }
 
-      AVLNode *_retrace_in_order(bool decr=false) {
+      AVLNode *_retrace_while_child(Direction dir) {
          if (!_curr || !_curr->parent)
-            return nullptr;
+            throw NullPointerError();
 
          AVLNode *curr = _curr;
          AVLNode *parent = curr->parent;
-         AVLNodeOwner *parents_child = decr ? &parent->left : &parent->right;
+         AVLNodeOwner *parents_child = dir == Direction::RIGHT ? 
+            &parent->right : &parent->left;
 
          while (parent && parents_child->get() == curr) {
             curr = curr->parent;
             parent = curr->parent;
-            parents_child = decr ? &parent->left : &parent->right;
+            parents_child = dir == Direction::RIGHT ? 
+               &parent->right : &parent->left;
          }
          return parent;
+      }
+
+      AVLNode *_retrace_until_unvisited_right_child() {
+         AVLNode *n = _retrace_while_child(Direction::RIGHT);
+         return n ? (n->right ? n->right_raw() : nullptr) : nullptr;
+      }
+
+      AVLNode *_retrace_until_left_child() {
+         if (!_curr || !_curr->parent)
+            throw NullPointerError();
+
+         AVLNode *curr = _curr;
+         AVLNode *parent = curr->parent;
+
+         while (parent && !parent->left) {
+            curr = curr->parent;
+            parent = curr->parent;
+         }
+         return parent->left_raw();
+      }
+
+      AVLNode *_retrace_until_unvisited_left_child() {
+         AVLNode *n = _retrace_while_child(Direction::LEFT);
+         return n ? (n->left ? n->left_raw() : nullptr) : nullptr;
       }
 
       void _in_order_increment() {
@@ -178,7 +212,8 @@ public:
             _curr = _prev;   
          else if (_visited_left_subtree() || _visited_parent() || !_prev)
             _curr = tmp->right ? 
-               _get_leftest_node(tmp->right_raw()) : _retrace_in_order();
+               _get_leftest_node(tmp->right_raw()) : 
+               _retrace_while_child(Direction::RIGHT);
          else if (_visited_right_subtree())
             throw InvalidAdvanceStateError();
          else if (!_curr)
@@ -196,18 +231,13 @@ public:
          else if (_visited_right_subtree() || _visited_parent() || !_prev)
             _curr = tmp->left ?
                _get_rightest_node(tmp->left_raw()) : 
-               _retrace_in_order(/*decr=*/true);
+               _retrace_while_child(Direction::LEFT);
          else if (!_curr)
             return;
          else
             throw InvalidAdvanceStateError();
 
          _prev = tmp;
-      }
-
-      AVLNode *_retrace_pre_order() {
-         AVLNode *n = _retrace_in_order();
-         return n ? (n->right ? n->right_raw() : nullptr) : nullptr;
       }
 
       void _pre_order_increment() {
@@ -221,7 +251,7 @@ public:
             else if (tmp->right)
                _curr = _get_root_node(tmp->right_raw());
             else
-               _curr = _retrace_pre_order();
+               _curr = _retrace_until_unvisited_right_child();
          }
          else if (!tmp)
             return;
@@ -244,6 +274,55 @@ public:
             }
             else if (!tmp->parent || tmp->parent->left_raw() == tmp)
                _curr = tmp->parent;
+            else
+               throw InvalidAdvanceStateError();
+         }
+         else if (!tmp)
+            return;
+         else
+            throw InvalidAdvanceStateError();
+
+         _prev = tmp;
+      }
+
+      void _post_order_increment() {
+         AVLNode *tmp = _curr;
+
+         if (!_prev_incr)
+            _curr = _prev;
+         else if (tmp) {
+            if (tmp->parent && tmp->parent->left_raw() == tmp) {
+               AVLNode *right_sibling = _get_right_sibling(tmp);
+               _curr = right_sibling ?
+                  _get_leftest_node(right_sibling) : tmp->parent;
+            }
+            else if (!tmp->parent || tmp->parent->right_raw() == tmp)
+               _curr = tmp->parent;
+            else
+               throw InvalidAdvanceStateError();
+         }
+         else if (!tmp)
+            return;
+         else
+            throw InvalidAdvanceStateError();
+
+         _prev = tmp;
+      }
+
+      void _post_order_decrement() {
+         AVLNode *tmp = _curr;
+
+         if (_prev_incr)
+            _curr = _prev;
+         else if (tmp) {
+            if (tmp->right)
+               _curr = _get_root_node(tmp->right_raw());
+            else if (tmp->left)
+               _curr = _get_root_node(tmp->left_raw());
+            else if (tmp->parent && tmp->parent->right_raw() == tmp)
+               _curr = _get_root_node(_retrace_until_left_child());
+            else if (tmp->parent && tmp->parent->left_raw() == tmp)
+               _curr = _get_root_node(_retrace_until_unvisited_left_child());
             else
                throw InvalidAdvanceStateError();
          }
@@ -295,14 +374,20 @@ public:
          _prev_incr(true), _order_ty(order_ty),
          _default(std::make_unique<AVLNode>(T())) {
 
-         if (order_ty == OrderType::INORDER)
+         if (_order_ty == OrderType::INORDER)
             _curr = _reverse ? 
                _get_rightest_node(vin->_head_raw()) : 
                _get_leftest_node(vin->_head_raw());
-         else if (order_ty == OrderType::PREORDER)
+         else if (_order_ty == OrderType::PREORDER)
             _curr = _reverse ?
                _get_rightest_node(vin->_head_raw()) :
                _get_root_node(vin->_head_raw());
+         else if (_order_ty == OrderType::POSTORDER)
+            _curr = _reverse ?
+               _get_root_node(vin->_head_raw()) :
+               _get_leftest_node(vin->_head_raw());
+         else
+            throw InvalidOperationError();
       }
 
       const_iterator(const const_iterator &other): 
@@ -333,6 +418,8 @@ public:
             _in_order_increment();
          else if (_order_ty == OrderType::PREORDER)
             _pre_order_increment();
+         else if (_order_ty == OrderType::POSTORDER)
+            _post_order_increment();
          else
             throw InvalidOperationError();
 
@@ -351,6 +438,8 @@ public:
             _in_order_decrement();
          else if (_order_ty == OrderType::PREORDER)
             _pre_order_decrement();
+         else if (_order_ty == OrderType::POSTORDER)
+            _post_order_decrement();
          else
             throw InvalidOperationError();
 
