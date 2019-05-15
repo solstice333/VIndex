@@ -94,22 +94,24 @@ public:
          return tree->right ? _get_rightest_node(tree->right_raw()) : tree;
       }
 
+      AVLNode *_get_deepest_right_node(AVLNode *tree) {
+         if (tree->right)
+            return _get_deepest_right_node(tree->right_raw());
+         else if (tree->left)
+            return _get_deepest_right_node(tree->left_raw());
+         else
+            return tree;
+      }
+
       AVLNode *_get_root_node(AVLNode *tree) {
          return tree;
       }
 
-      AVLNode *_get_sibling(AVLNode *tree) {
+      AVLNode *_get_left_sibling(AVLNode *tree) {
          if (!tree || !tree->parent)
             return nullptr;
-
          AVLNode *parent = tree->parent;
-
-         if (parent->left_raw() == tree)
-            return parent->right_raw();
-         else if (parent->right_raw() == tree)
-            return parent->left_raw();
-         else
-            throw NotChildError();
+         return parent->right_raw() == tree ? parent->left_raw() : nullptr;
       }
 
       bool _visited_subtree(AVLNode *subtree) {
@@ -178,11 +180,11 @@ public:
             _curr = tmp->right ? 
                _get_leftest_node(tmp->right_raw()) : _retrace_in_order();
          else if (_visited_right_subtree())
-            throw InvalidIncrementStateError();
+            throw InvalidAdvanceStateError();
          else if (!_curr)
             return;
          else
-            throw InvalidIncrementStateError();
+            throw InvalidAdvanceStateError();
 
          _prev = tmp;
       }
@@ -198,13 +200,13 @@ public:
          else if (!_curr)
             return;
          else
-            throw InvalidIncrementStateError();
+            throw InvalidAdvanceStateError();
 
          _prev = tmp;
       }
 
-      AVLNode *_retrace_pre_order(bool decr=false) {
-         AVLNode *n = _retrace_in_order(decr);
+      AVLNode *_retrace_pre_order() {
+         AVLNode *n = _retrace_in_order();
          return n ? (n->right ? n->right_raw() : nullptr) : nullptr;
       }
 
@@ -224,13 +226,33 @@ public:
          else if (!tmp)
             return;
          else
-            throw InvalidIncrementStateError();
+            throw InvalidAdvanceStateError();
 
          _prev = tmp;
       }
 
       void _pre_order_decrement() {
-         throw NotYetImplementedError();
+         AVLNode *tmp = _curr;
+
+         if (_prev_incr)
+            _curr = _prev;
+         else if (tmp) { 
+            if (tmp->parent && tmp->parent->right_raw() == tmp) {
+               AVLNode *left_sibling = _get_left_sibling(tmp);
+               _curr = left_sibling ? 
+                  _get_deepest_right_node(left_sibling) : tmp->parent;
+            }
+            else if (!tmp->parent || tmp->parent->left_raw() == tmp)
+               _curr = tmp->parent;
+            else
+               throw InvalidAdvanceStateError();
+         }
+         else if (!tmp)
+            return;
+         else
+            throw InvalidAdvanceStateError();
+
+         _prev = tmp;
       }
 
       std::string _node_data(AVLNode *n) const {

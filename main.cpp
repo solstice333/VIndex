@@ -385,6 +385,7 @@ public:
       _vin.insert(30);
       _vin.insert(40);
       _vin.insert(16);
+      _vin.insert(26);
       _vin.insert(33);
 
       _vin.order(OrderType::PREORDER);
@@ -408,6 +409,9 @@ public:
       assert(*it == 30);
       assert(it != _vin.end());
       ++it;
+      assert(*it == 26);
+      assert(it != _vin.end());
+      ++it;
       assert(*it == 33);
       assert(it != _vin.end());
       ++it;
@@ -424,14 +428,42 @@ public:
       for (auto it2 = _vin.begin(); it2 != _vin.end(); ++it2)
          ss << *it2;
 
-      assert(ss.str() == "2516152035303340");
+      assert(ss.str() == "251615203530263340");
 
       ss.str("");
       ss.clear();
       for (auto &data : _vin)
          ss << data;
-      
-      assert(ss.str() == "2516152035303340");
+
+      assert(ss.str() == "251615203530263340");
+
+      assert(*--it == 40);
+      assert(it != _vin.end());
+      assert(*--it == 33);
+      assert(it != _vin.end());
+      assert(*--it == 26);
+      assert(it != _vin.end());
+      assert(*--it == 30);
+      assert(it != _vin.end());
+      assert(*--it == 35);
+      assert(it != _vin.end());
+      assert(*--it == 20);
+      assert(it != _vin.end());
+      assert(*--it == 15);
+      assert(it != _vin.end());
+      assert(*--it == 16);
+      assert(it != _vin.end());
+      assert(*--it == 25);
+      assert(it != _vin.end());
+      assert(*--it == 0);
+      assert(it == _vin.end());
+      assert(*--it == 0);
+      assert(it == _vin.end());
+
+      assert(*++it == 25);
+      assert(it != _vin.end());
+      assert(*++it == 16);
+      assert(it != _vin.end());
    }
 };
 
