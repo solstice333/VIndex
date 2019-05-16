@@ -387,7 +387,7 @@ public:
                _get_root_node(vin->_head_raw()) :
                _get_leftest_node(vin->_head_raw());
          else
-            throw InvalidOperationError();
+            throw NotYetImplementedError();
       }
 
       const_iterator(const const_iterator &other): 
@@ -421,7 +421,7 @@ public:
          else if (_order_ty == OrderType::POSTORDER)
             _post_order_increment();
          else
-            throw InvalidOperationError();
+            throw NotYetImplementedError();
 
          _prev_incr = true;
          return *this;
@@ -441,7 +441,7 @@ public:
          else if (_order_ty == OrderType::POSTORDER)
             _post_order_decrement();
          else
-            throw InvalidOperationError();
+            throw NotYetImplementedError();
 
          _prev_incr = false;
          return *this;
