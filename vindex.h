@@ -95,11 +95,11 @@ public:
          return tree->right ? _get_rightest_node(tree->right_raw()) : tree;
       }
 
-      AVLNode *_get_deepest_right_node(AVLNode *tree) {
+      AVLNode *_get_right_deepest_node(AVLNode *tree) {
          if (tree->right)
-            return _get_deepest_right_node(tree->right_raw());
+            return _get_right_deepest_node(tree->right_raw());
          else if (tree->left)
-            return _get_deepest_right_node(tree->left_raw());
+            return _get_right_deepest_node(tree->left_raw());
          else
             return tree;
       }
@@ -270,7 +270,7 @@ public:
             if (tmp->parent && tmp->parent->right_raw() == tmp) {
                AVLNode *left_sibling = _get_left_sibling(tmp);
                _curr = left_sibling ? 
-                  _get_deepest_right_node(left_sibling) : tmp->parent;
+                  _get_right_deepest_node(left_sibling) : tmp->parent;
             }
             else if (!tmp->parent || tmp->parent->left_raw() == tmp)
                _curr = tmp->parent;
@@ -386,6 +386,9 @@ public:
             _curr = _reverse ?
                _get_root_node(vin->_head_raw()) :
                _get_leftest_node(vin->_head_raw());
+         else if (_order_ty == OrderType::BREADTHFIRST) {
+            // TODO
+         }
          else
             throw NotYetImplementedError();
       }
