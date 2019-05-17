@@ -15,6 +15,8 @@
 #include "helpers.h"
 #include "custom_exceptions.h"
 
+#define DEPTH_DATA_ENABLED 0
+
 template<typename T>
 struct _Node {
    T data;
@@ -31,7 +33,8 @@ template<typename T, typename BASE_TY = decltype(T::data)>
 struct _AVLState: public T {
    typedef std::unique_ptr<_AVLState> AVLStateOwner;
 
-   int height;
+   size_t height;
+   size_t depth;
    AVLStateOwner left;
    AVLStateOwner right;
    _AVLState *parent;
@@ -45,7 +48,7 @@ struct _AVLState: public T {
    }
 
    _AVLState(BASE_TY data): 
-      T(data), height(0), 
+      T(data), height(0), depth(0), 
       left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
@@ -78,6 +81,7 @@ private:
    AVLNodeOwner _head;
    OrderType _order_ty;
    const_iterator _end;
+   NodeList _rebalanced_trees;
 
 public:
    class const_iterator: 
@@ -102,6 +106,12 @@ public:
             return _get_right_deepest_node(tree->left_raw());
          else
             return tree;
+      }
+
+      // TODO go down the subtree path of greater height and if height 
+      // is the same, prioritize the right path
+      AVLNode *_get_deepest_right_node(AVLNode *tree) {
+         throw NotYetImplementedError();
       }
 
       AVLNode *_get_root_node(AVLNode *tree) {
@@ -164,26 +174,30 @@ public:
          return false;
       }
 
-      AVLNode *_retrace_while_child(Direction dir) {
-         if (!_curr || !_curr->parent)
+      AVLNode *_retrace_while_child(
+         AVLNode *n, Direction dir, size_t *parent_distance=nullptr) {
+         if (!n || !n->parent)
             throw NullPointerError();
 
-         AVLNode *curr = _curr;
-         AVLNode *parent = curr->parent;
+         size_t dist = 0;
+         AVLNode *parent = n->parent;
          AVLNodeOwner *parents_child = dir == Direction::RIGHT ? 
             &parent->right : &parent->left;
 
-         while (parent && parents_child->get() == curr) {
-            curr = curr->parent;
-            parent = curr->parent;
+         while (parent && parents_child->get() == n) {
+            ++dist;
+            n = n->parent;
+            parent = n->parent;
             parents_child = dir == Direction::RIGHT ? 
                &parent->right : &parent->left;
          }
+         if (parent_distance)
+            *parent_distance = dist + 1;
          return parent;
       }
 
       AVLNode *_retrace_until_unvisited_right_child() {
-         AVLNode *n = _retrace_while_child(Direction::RIGHT);
+         AVLNode *n = _retrace_while_child(_curr, Direction::RIGHT);
          return n ? (n->right ? n->right_raw() : nullptr) : nullptr;
       }
 
@@ -202,7 +216,7 @@ public:
       }
 
       AVLNode *_retrace_until_unvisited_left_child() {
-         AVLNode *n = _retrace_while_child(Direction::LEFT);
+         AVLNode *n = _retrace_while_child(_curr, Direction::LEFT);
          return n ? (n->left ? n->left_raw() : nullptr) : nullptr;
       }
 
@@ -213,7 +227,7 @@ public:
          else if (_visited_left_subtree() || _visited_parent() || !_prev)
             _curr = tmp->right ? 
                _get_leftest_node(tmp->right_raw()) : 
-               _retrace_while_child(Direction::RIGHT);
+               _retrace_while_child(_curr, Direction::RIGHT);
          else if (_visited_right_subtree())
             throw InvalidAdvanceStateError();
          else if (!_curr)
@@ -231,7 +245,7 @@ public:
          else if (_visited_right_subtree() || _visited_parent() || !_prev)
             _curr = tmp->left ?
                _get_rightest_node(tmp->left_raw()) : 
-               _retrace_while_child(Direction::LEFT);
+               _retrace_while_child(_curr, Direction::LEFT);
          else if (!_curr)
             return;
          else
@@ -334,6 +348,84 @@ public:
          _prev = tmp;
       }
 
+      AVLNode *_get_leftest_node_at_depth(
+         AVLNode *tree, size_t tree_lv, size_t want_lv) {
+
+         if (!tree || tree_lv > want_lv)
+            return nullptr;
+         else if (tree_lv == want_lv)
+            return tree;
+         else if (tree_lv < want_lv) {
+            AVLNode *n = _get_leftest_node_at_depth(
+               tree->left_raw(), tree_lv + 1, want_lv);
+            if (!n)
+               n = _get_leftest_node_at_depth(
+                  tree->right_raw(), tree_lv + 1, want_lv);
+            return n;
+         }
+         else
+            throw InvalidOperationError();
+      }
+
+      AVLNode *_get_next_sibling(AVLNode *n, size_t depth) {
+         if (!n)
+            throw NullPointerError();
+
+         AVLNode *parent = n->parent;
+
+         if (parent) {
+            if (parent->left_raw() == n && parent->right)
+               return parent->right_raw();
+            else if (parent->right_raw() == n) {
+               size_t parent_distance = 0;
+               parent = _retrace_while_child(
+                  n, Direction::RIGHT, &parent_distance);
+               return parent ? 
+                  _get_leftest_node_at_depth(
+                     parent->right_raw(), 
+                     depth - parent_distance + 1,
+                     depth) :
+                  nullptr;
+            }
+            else
+               throw InvalidOperationError();
+         }
+         else
+            return nullptr;
+      }
+
+      AVLNode *_get_first_node_on_next_lv() {
+         AVLNode *n = _first_node_on_lv;
+         ++_curr_lv;
+
+         do {
+            if (n->left)
+               return n->left_raw();
+            else if (n->right)
+               return n->right_raw();
+         } while (n = _get_next_sibling(n, _curr_lv));
+         return nullptr;
+      }
+
+      void _breadth_first_increment() {
+         AVLNode *tmp = _curr;
+
+         if (!tmp)
+            return;
+
+         _curr = _get_next_sibling(tmp, _curr_lv);
+         if (!_curr) {
+            _first_node_on_lv = _get_first_node_on_next_lv();
+            _curr = _first_node_on_lv;
+         }
+         _prev = tmp;
+      }
+
+      // TODO
+      void _breadth_first_decrement() {
+         throw NotYetImplementedError();   
+      }
+
       std::string _node_data(AVLNode *n) const {
          using namespace std;
          stringstream ss;
@@ -344,6 +436,23 @@ public:
          return ss.str();
       }
 
+      std::string _order_type_name(OrderType ty) const {
+         using namespace std;
+         static map<OrderType, string> ty_to_name;
+         static bool initd = false;
+
+         if (!initd) {
+            ty_to_name[OrderType::INORDER] = "INORDER";
+            ty_to_name[OrderType::PREORDER] = "PREORDER";
+            ty_to_name[OrderType::POSTORDER] = "POSTORDER";
+            ty_to_name[OrderType::BREADTHFIRST] = "BREADTHFIRST";
+            ty_to_name[OrderType::INSERTION] = "INSERTION";
+            initd = true;
+         }
+
+         return ty_to_name.at(ty);
+      }
+
       std::string _str() const {
          using namespace std;
          stringstream ss;
@@ -352,6 +461,7 @@ public:
          ss << boolalpha;
          ss << "prev_incr: " << _prev_incr << endl;
          ss << "reverse: " << _reverse << endl;
+         ss << "order type: " << _order_type_name(_order_ty) << endl;
          return ss.str();
       }
 
@@ -360,6 +470,11 @@ public:
       bool _prev_incr;
       bool _reverse;
       OrderType _order_ty;
+
+      size_t _curr_lv;
+      size_t _nodes_seen_on_lv;
+      AVLNode *_first_node_on_lv;
+
       std::unique_ptr<AVLNode> _default;
 
    public:
@@ -367,11 +482,19 @@ public:
          _curr(nullptr), _prev(nullptr), 
          _prev_incr(true), _reverse(false),
          _order_ty(OrderType::INORDER),
+
+         _curr_lv(0), _nodes_seen_on_lv(0),
+         _first_node_on_lv(nullptr),
+
          _default(std::make_unique<AVLNode>(T())) {}
 
       const_iterator(Vindex *vin, OrderType order_ty, bool reverse=false): 
          _reverse(reverse), _prev(nullptr), 
          _prev_incr(true), _order_ty(order_ty),
+
+         _curr_lv(0), _nodes_seen_on_lv(0),
+         _first_node_on_lv(nullptr),
+
          _default(std::make_unique<AVLNode>(T())) {
 
          if (_order_ty == OrderType::INORDER)
@@ -387,7 +510,13 @@ public:
                _get_root_node(vin->_head_raw()) :
                _get_leftest_node(vin->_head_raw());
          else if (_order_ty == OrderType::BREADTHFIRST) {
-            // TODO
+            _curr = _reverse ?
+               _get_deepest_right_node(vin->_head_raw()) :
+               _get_root_node(vin->_head_raw()); 
+
+            _first_node_on_lv = _curr;
+            _nodes_seen_on_lv = 1;    
+            _curr_lv = 1;
          }
          else
             throw NotYetImplementedError();
@@ -423,6 +552,8 @@ public:
             _pre_order_increment();
          else if (_order_ty == OrderType::POSTORDER)
             _post_order_increment();
+         else if (_order_ty == OrderType::BREADTHFIRST)
+            _breadth_first_increment();
          else
             throw NotYetImplementedError();
 
@@ -443,6 +574,8 @@ public:
             _pre_order_decrement();
          else if (_order_ty == OrderType::POSTORDER)
             _post_order_decrement();
+         else if (_order_ty == OrderType::BREADTHFIRST)
+            _breadth_first_decrement();
          else
             throw NotYetImplementedError();
 
@@ -478,9 +611,7 @@ private:
       return _head.get();
    }
 
-   int _nodes_at_lv(int lv) {
-      if (lv < 1)
-         throw LessThanOneError();
+   size_t _nodes_at_lv(size_t lv) {
       return 1 << (lv - 1);
    }
 
@@ -500,6 +631,11 @@ private:
       ss << "(" 
          << "data: " << n.data 
          << ", height: " << n.height 
+
+#if DEPTH_DATA_ENABLED
+         << ", depth: " << n.depth 
+#endif
+
          << ", left: " << _node_data_str(n.left_raw()) 
          << ", right: " << _node_data_str(n.right_raw())
          << ", parent: " << _node_data_str(n.parent)
@@ -597,6 +733,18 @@ private:
       AVLNode *n = owner.get();
       owner.release();
       return n;
+   }
+
+   // TODO function to get highest rebalanced tree
+   AVLNode *_get_highest_rebalanced_tree() {
+      throw NotYetImplementedError();
+   }
+
+   void _update_depths_if_rebalanced() {
+      if (!_rebalanced_trees.empty()) {
+         _update_depths(_get_highest_rebalanced_tree());
+         _rebalanced_trees.clear();
+      }
    }
 
    int _height(AVLNode *tree) {
@@ -728,6 +876,12 @@ private:
          else
             throw InvalidHeavyStateError();
       }
+
+#if DEPTH_DATA_ENABLED
+      if (_is_too_left_heavy(bf) || _is_too_right_heavy(bf))
+         _rebalanced_trees.emplace_back(subtree);
+#endif
+
       return subtree;
    }
 
@@ -738,6 +892,7 @@ private:
    AVLNode *_insert(
       AVLNodeOwner &n, AVLNode *subtree, AVLNode *parent = nullptr) {
       n->parent = subtree;
+      ++n->depth;
       AVLNodeOwner &child_tree = _child_insertion_side(n, subtree);
 
       if (child_tree) {
@@ -762,6 +917,23 @@ private:
       return nullptr;
    }
 
+   void _update_depths(AVLNode *n, size_t depth) {
+      if (!n)
+         return;
+      n->depth = depth;
+      if (n->left)
+         _update_depths(n->left_raw(), depth + 1);
+      if (n->right)
+         _update_depths(n->right_raw(), depth + 1);
+   }
+
+   void _update_depths(AVLNode *n) {
+      if (!n)
+         throw NullPointerError();
+      size_t start_depth = n->parent ? n->parent->depth + 1 : 1;
+      _update_depths(n, start_depth);
+   }
+
    AVLNode *_on_removal_one_child(AVLNode *n, bool detach = false) {
       if (!n)
          throw NullPointerError();
@@ -772,6 +944,7 @@ private:
       AVLNode *parent = n->parent;
       _act_with_child_owner(child, _detach_from_owner);
       child->parent = parent ? parent : nullptr;
+      _update_depths(child);
 
       if (detach)
          _act_with_child_owner(n, _detach_from_owner);
@@ -803,6 +976,7 @@ private:
       next->right = move(temp->right);
       next->parent = temp->parent;
       next->height = temp->height;   
+      next->depth = temp->depth;
 
       if (next->left)
          next->left->parent = next;
@@ -943,12 +1117,14 @@ private:
    }
 
 public:
-   Vindex(): _head(nullptr) {}
+   Vindex(): 
+      _head(nullptr), _order_ty(OrderType::INORDER) {}
 
    void insert(const T& val) {
       using namespace std;
       AVLNodeOwner n = make_unique<AVLNode>(val);
       ++n->height;
+      ++n->depth;
 
       if (!_head) {
          _head = move(n);
@@ -957,6 +1133,7 @@ public:
       }
       _assign_if_diff(_head, _insert(n, _head_raw()));
       _head->parent = nullptr;
+      _update_depths_if_rebalanced();
    }
 
    // TODO test
@@ -969,6 +1146,7 @@ public:
 
    void remove(const T& val) {
       _remove_and_rebalance(val, _head, nullptr);
+      _update_depths_if_rebalanced();
    }
 
    std::string bfs_str(const std::string &delim = "|") {
