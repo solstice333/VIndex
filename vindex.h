@@ -108,10 +108,21 @@ public:
             return tree;
       }
 
-      // TODO go down the subtree path of greater height and if height 
-      // is the same, prioritize the right path
       AVLNode *_get_deepest_right_node(AVLNode *tree) {
-         throw NotYetImplementedError();
+         AVLNode *left = tree->left_raw();
+         AVLNode *right = tree->right_raw();
+
+         if (left && right) {
+            return right->height >= left->height ?
+               _get_deepest_right_node(right) :
+               _get_deepest_right_node(left);
+         }
+         else if (right)
+            return _get_deepest_right_node(right);
+         else if (left)
+            return _get_deepest_right_node(left);
+         else
+            return tree;
       }
 
       AVLNode *_get_root_node(AVLNode *tree) {
@@ -397,7 +408,7 @@ public:
             else if (pos2 == n) {
                size_t parent_distance = 0;
                parent = _retrace_while_child(n, dir, &parent_distance);
-               
+
                return parent ? 
                   _get_leftest_node_at_depth(
                      dir == Direction::RIGHT ?
@@ -413,66 +424,80 @@ public:
             return nullptr;
       }
 
-      AVLNode *_get_first_node_on_next_lv(Direction dir) {
-         AVLNode *n = _first_node_on_lv;
-         ++_curr_lv;
+      AVLNode *_get_start_node(AVLNode *refnode, size_t depth, Direction dir) {
+         AVLNode *n = refnode;
+         AVLNode *prev = nullptr;
 
-         AVLNode *first = nullptr;
-         AVLNode *second = nullptr;
+         if (dir == Direction::RIGHT) {
+            do {
+               prev = n;
+            } while (n = _get_next_sibling(n, depth, Direction::LEFT));
+         }
+         else if (dir == Direction::LEFT)
+            do {
+               prev = n;
+            } while (n = _get_next_sibling(n, depth, Direction::RIGHT));
+         else
+            throw InvalidDirectionError();
+
+         return prev;
+      }
+
+      AVLNode *_get_first_node_on_lower_lv(AVLNode *refnode) {
+         ++_curr_lv;
+         AVLNode *n = _get_start_node(refnode, _curr_lv - 1, Direction::RIGHT);
 
          do {
-            if (dir == Direction::RIGHT) {
-               first = n->left_raw();
-               second = n->right_raw();
-            }
-            else if (dir == Direction::LEFT) {
-               first = n->right_raw();
-               second = n->left_raw();
-            }
-            else
-               throw InvalidOperationError();
+            AVLNode *first = n->left_raw();
+            AVLNode *second = n->right_raw();
 
             if (first)
                return first;
             else if (second)
                return second;
-         } while (n = _get_next_sibling(n, _curr_lv, dir));
+         } while (n = _get_next_sibling(n, _curr_lv - 1, Direction::RIGHT));
          return nullptr;
+      }
+
+      AVLNode *_get_first_node_on_upper_lv() {
+         ++_curr_lv;
+         throw NotYetImplementedError();   
       }
 
       void _breadth_first_increment() {
          AVLNode *tmp = _curr;
 
-         if (!tmp)
-            return;
-         else if (!_prev_incr)
+         if (!_prev_incr)
             _curr = _prev;
-         else {
+         else if (tmp) {
             _curr = _get_next_sibling(tmp, _curr_lv, Direction::RIGHT);
-            if (!_curr) {
-               _first_node_on_lv = _get_first_node_on_next_lv(Direction::RIGHT);
-               _curr = _first_node_on_lv;
-            }
+            if (!_curr)
+               _curr = _get_first_node_on_lower_lv(tmp);
          }
+         else if (!tmp)
+            return;
+         else
+            throw InvalidAdvanceStateError();
+
          _prev = tmp;
       }
 
       void _breadth_first_decrement() {
-         throw NotYetImplementedError();
-         // AVLNode *tmp = _curr;
+         AVLNode *tmp = _curr;
 
-         // if (!tmp)
-         //    return;
-         // else if (_prev_incr)
-         //    _curr = _prev;
-         // else {
-         //    _curr = _get_next_sibling(tmp, _curr_lv, Direction::LEFT);
-         //    if (!_curr) {
-         //       _first_node_on_lv = _get_first_node_on_next_lv(Direction::LEFT);
-         //       _curr = _first_node_on_lv;
-         //    }
-         // }
-         // _prev = tmp;
+         if (_prev_incr)
+            _curr = _prev;
+         else if (tmp) {
+            _curr = _get_next_sibling(tmp, _curr_lv, Direction::LEFT);
+            if (!_curr)
+               _curr = _get_first_node_on_upper_lv();
+         }
+         else if (!tmp)
+            return;
+         else
+            throw InvalidAdvanceStateError();
+
+         _prev = tmp;
       }
 
       std::string _node_data(AVLNode *n) const {
@@ -522,7 +547,6 @@ public:
 
       size_t _curr_lv;
       size_t _nodes_seen_on_lv;
-      AVLNode *_first_node_on_lv;
 
       std::unique_ptr<AVLNode> _default;
 
@@ -533,7 +557,6 @@ public:
          _order_ty(OrderType::INORDER),
 
          _curr_lv(0), _nodes_seen_on_lv(0),
-         _first_node_on_lv(nullptr),
 
          _default(std::make_unique<AVLNode>(T())) {}
 
@@ -542,7 +565,6 @@ public:
          _prev_incr(true), _order_ty(order_ty),
 
          _curr_lv(0), _nodes_seen_on_lv(0),
-         _first_node_on_lv(nullptr),
 
          _default(std::make_unique<AVLNode>(T())) {
 
@@ -563,7 +585,6 @@ public:
                _get_deepest_right_node(vin->_head_raw()) :
                _get_root_node(vin->_head_raw()); 
 
-            _first_node_on_lv = _curr;
             _nodes_seen_on_lv = 1;    
             _curr_lv = 1;
          }

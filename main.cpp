@@ -606,9 +606,31 @@ public:
       assert(it == _vin.end());
       assert(*++it == 0);
       assert(it == _vin.end());
+
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
+      // cout << *--it << endl;
+      // cout << it.str() << endl;
    }
 
    // TODO add iterator tests for empty v-index
+   // TODO reverse iterator tests
 };
 
 int main () {
