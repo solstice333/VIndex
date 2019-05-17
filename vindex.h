@@ -367,22 +367,41 @@ public:
             throw InvalidOperationError();
       }
 
-      AVLNode *_get_next_sibling(AVLNode *n, size_t depth) {
+      void _get_next_sibling_positions(
+         AVLNode *parent, Direction dir, AVLNode **pos1, AVLNode **pos2) {
+         if (dir == Direction::RIGHT) {
+            *pos1 = parent->left_raw();
+            *pos2 = parent->right_raw();
+         }
+         else if (dir == Direction::LEFT) {
+            *pos1 = parent->right_raw();
+            *pos2 = parent->left_raw();
+         }
+         else
+            throw InvalidOperationError();
+      }
+
+      AVLNode *_get_next_sibling(AVLNode *n, size_t depth, Direction dir) {
          if (!n)
             throw NullPointerError();
 
          AVLNode *parent = n->parent;
 
          if (parent) {
-            if (parent->left_raw() == n && parent->right)
-               return parent->right_raw();
-            else if (parent->right_raw() == n) {
+            AVLNode *pos1 = nullptr;
+            AVLNode *pos2 = nullptr;
+            _get_next_sibling_positions(parent, dir, &pos1, &pos2);
+
+            if (pos1 == n && pos2)
+               return pos2;
+            else if (pos2 == n) {
                size_t parent_distance = 0;
-               parent = _retrace_while_child(
-                  n, Direction::RIGHT, &parent_distance);
+               parent = _retrace_while_child(n, dir, &parent_distance);
+               
                return parent ? 
                   _get_leftest_node_at_depth(
-                     parent->right_raw(), 
+                     dir == Direction::RIGHT ?
+                        parent->right_raw(): parent->left_raw(),
                      depth - parent_distance + 1,
                      depth) :
                   nullptr;
@@ -403,7 +422,7 @@ public:
                return n->left_raw();
             else if (n->right)
                return n->right_raw();
-         } while (n = _get_next_sibling(n, _curr_lv));
+         } while (n = _get_next_sibling(n, _curr_lv, Direction::RIGHT));
          return nullptr;
       }
 
@@ -415,7 +434,7 @@ public:
          else if (!_prev_incr)
             _curr = _prev;
          else {
-            _curr = _get_next_sibling(tmp, _curr_lv);
+            _curr = _get_next_sibling(tmp, _curr_lv, Direction::RIGHT);
             if (!_curr) {
                _first_node_on_lv = _get_first_node_on_next_lv();
                _curr = _first_node_on_lv;
