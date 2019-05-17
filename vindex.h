@@ -359,23 +359,35 @@ public:
          _prev = tmp;
       }
 
-      AVLNode *_get_leftest_node_at_depth(
-         AVLNode *tree, size_t tree_lv, size_t want_lv) {
-
+      AVLNode *_get_node_at_depth(
+         AVLNode *tree, size_t tree_lv, size_t want_lv, Direction dir) {
          if (!tree || tree_lv > want_lv)
             return nullptr;
          else if (tree_lv == want_lv)
             return tree;
          else if (tree_lv < want_lv) {
-            AVLNode *n = _get_leftest_node_at_depth(
-               tree->left_raw(), tree_lv + 1, want_lv);
+            AVLNode *n = _get_node_at_depth(
+               dir == Direction::RIGHT ? tree->right_raw() : tree->left_raw(), 
+               tree_lv + 1, want_lv, dir);
             if (!n)
-               n = _get_leftest_node_at_depth(
-                  tree->right_raw(), tree_lv + 1, want_lv);
+               n = _get_node_at_depth(
+                  dir == Direction::RIGHT ? 
+                     tree->left_raw() : tree->right_raw(), 
+                  tree_lv + 1, want_lv, dir);
             return n;
          }
          else
             throw InvalidOperationError();
+      }
+
+      AVLNode *_get_leftest_node_at_depth(
+         AVLNode *tree, size_t tree_lv, size_t want_lv) {
+         return _get_node_at_depth(tree, tree_lv, want_lv, Direction::LEFT);
+      }
+
+      AVLNode *_get_rightest_node_at_depth(
+         AVLNode *tree, size_t tree_lv, size_t want_lv) {
+         return _get_node_at_depth(tree, tree_lv, want_lv, Direction::RIGHT);
       }
 
       void _get_next_sibling_positions(
@@ -410,12 +422,16 @@ public:
                parent = _retrace_while_child(n, dir, &parent_distance);
 
                return parent ? 
-                  _get_leftest_node_at_depth(
-                     dir == Direction::RIGHT ?
-                        parent->right_raw(): parent->left_raw(),
-                     depth - parent_distance + 1,
-                     depth) :
-                  nullptr;
+                  (dir == Direction::RIGHT ?
+                     _get_leftest_node_at_depth(
+                        parent->right_raw(),
+                        depth - parent_distance + 1,
+                        depth) :
+                     _get_rightest_node_at_depth(
+                        parent->left_raw(),
+                        depth - parent_distance + 1,
+                        depth)
+                  ) : nullptr;
             }
             else
                throw InvalidOperationError();
@@ -427,25 +443,17 @@ public:
       AVLNode *_get_start_node(AVLNode *refnode, size_t depth, Direction dir) {
          AVLNode *n = refnode;
          AVLNode *prev = nullptr;
-
-         if (dir == Direction::RIGHT) {
-            do {
-               prev = n;
-            } while (n = _get_next_sibling(n, depth, Direction::LEFT));
-         }
-         else if (dir == Direction::LEFT)
-            do {
-               prev = n;
-            } while (n = _get_next_sibling(n, depth, Direction::RIGHT));
-         else
+         if (dir == Direction::ROOT)
             throw InvalidDirectionError();
-
+         do {
+            prev = n;
+         } while (n = _get_next_sibling(n, depth, dir));
          return prev;
       }
 
       AVLNode *_get_first_node_on_lower_lv(AVLNode *refnode) {
          ++_curr_lv;
-         AVLNode *n = _get_start_node(refnode, _curr_lv - 1, Direction::RIGHT);
+         AVLNode *n = _get_start_node(refnode, _curr_lv - 1, Direction::LEFT);
 
          do {
             AVLNode *first = n->left_raw();
@@ -456,12 +464,18 @@ public:
             else if (second)
                return second;
          } while (n = _get_next_sibling(n, _curr_lv - 1, Direction::RIGHT));
+
+         --_curr_lv;
          return nullptr;
       }
 
-      AVLNode *_get_first_node_on_upper_lv() {
-         ++_curr_lv;
-         throw NotYetImplementedError();   
+      AVLNode *_get_first_node_on_upper_lv(AVLNode *refnode) {
+         if (refnode) {
+            --_curr_lv;
+            return _get_start_node(refnode, _curr_lv - 1, Direction::RIGHT);
+         }
+         else
+            return nullptr;
       }
 
       void _breadth_first_increment() {
@@ -490,7 +504,7 @@ public:
          else if (tmp) {
             _curr = _get_next_sibling(tmp, _curr_lv, Direction::LEFT);
             if (!_curr)
-               _curr = _get_first_node_on_upper_lv();
+               _curr = _get_first_node_on_upper_lv(tmp->parent);
          }
          else if (!tmp)
             return;
@@ -535,7 +549,8 @@ public:
          ss << boolalpha;
          ss << "prev_incr: " << _prev_incr << endl;
          ss << "reverse: " << _reverse << endl;
-         ss << "order type: " << _order_type_name(_order_ty) << endl;
+         ss << "order_ty: " << _order_type_name(_order_ty) << endl;
+         ss << "curr_lv: " << _curr_lv << endl;
          return ss.str();
       }
 

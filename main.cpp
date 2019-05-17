@@ -607,30 +607,39 @@ public:
       assert(*++it == 0);
       assert(it == _vin.end());
 
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
-      // cout << *--it << endl;
-      // cout << it.str() << endl;
+      assert(*--it == 33);
+      assert(it != _vin.end());
+      assert(*--it == 26);
+      assert(it != _vin.end());
+      assert(*--it == 40);
+      assert(it != _vin.end());
+      assert(*--it == 30);
+      assert(it != _vin.end());
+      assert(*--it == 20);
+      assert(it != _vin.end());
+      assert(*--it == 15);
+      assert(it != _vin.end());
+      assert(*--it == 35);
+      assert(it != _vin.end());
+      assert(*--it == 16);
+      assert(it != _vin.end());
+      assert(*--it == 25);
+      assert(it != _vin.end());
+      assert(it == _vin.begin());
+      assert(*--it == 0);
+      assert(it == _vin.end());
+      assert(*--it == 0);
+      assert(it == _vin.end());
+
+      assert(*++it == 25);
+      assert(it != _vin.end());
+      assert(*++it == 16);
+      assert(it != _vin.end());
    }
 
    // TODO add iterator tests for empty v-index
    // TODO reverse iterator tests
+   // TODO add insertion order iterator tests
 };
 
 int main () {
