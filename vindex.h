@@ -412,11 +412,14 @@ public:
 
          if (!tmp)
             return;
-
-         _curr = _get_next_sibling(tmp, _curr_lv);
-         if (!_curr) {
-            _first_node_on_lv = _get_first_node_on_next_lv();
-            _curr = _first_node_on_lv;
+         else if (!_prev_incr)
+            _curr = _prev;
+         else {
+            _curr = _get_next_sibling(tmp, _curr_lv);
+            if (!_curr) {
+               _first_node_on_lv = _get_first_node_on_next_lv();
+               _curr = _first_node_on_lv;
+            }
          }
          _prev = tmp;
       }
