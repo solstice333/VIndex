@@ -413,16 +413,30 @@ public:
             return nullptr;
       }
 
-      AVLNode *_get_first_node_on_next_lv() {
+      AVLNode *_get_first_node_on_next_lv(Direction dir) {
          AVLNode *n = _first_node_on_lv;
          ++_curr_lv;
 
+         AVLNode *first = nullptr;
+         AVLNode *second = nullptr;
+
          do {
-            if (n->left)
-               return n->left_raw();
-            else if (n->right)
-               return n->right_raw();
-         } while (n = _get_next_sibling(n, _curr_lv, Direction::RIGHT));
+            if (dir == Direction::RIGHT) {
+               first = n->left_raw();
+               second = n->right_raw();
+            }
+            else if (dir == Direction::LEFT) {
+               first = n->right_raw();
+               second = n->left_raw();
+            }
+            else
+               throw InvalidOperationError();
+
+            if (first)
+               return first;
+            else if (second)
+               return second;
+         } while (n = _get_next_sibling(n, _curr_lv, dir));
          return nullptr;
       }
 
@@ -436,16 +450,29 @@ public:
          else {
             _curr = _get_next_sibling(tmp, _curr_lv, Direction::RIGHT);
             if (!_curr) {
-               _first_node_on_lv = _get_first_node_on_next_lv();
+               _first_node_on_lv = _get_first_node_on_next_lv(Direction::RIGHT);
                _curr = _first_node_on_lv;
             }
          }
          _prev = tmp;
       }
 
-      // TODO
       void _breadth_first_decrement() {
-         throw NotYetImplementedError();   
+         throw NotYetImplementedError();
+         // AVLNode *tmp = _curr;
+
+         // if (!tmp)
+         //    return;
+         // else if (_prev_incr)
+         //    _curr = _prev;
+         // else {
+         //    _curr = _get_next_sibling(tmp, _curr_lv, Direction::LEFT);
+         //    if (!_curr) {
+         //       _first_node_on_lv = _get_first_node_on_next_lv(Direction::LEFT);
+         //       _curr = _first_node_on_lv;
+         //    }
+         // }
+         // _prev = tmp;
       }
 
       std::string _node_data(AVLNode *n) const {
