@@ -82,6 +82,7 @@ private:
    OrderType _order_ty;
    const_iterator _end;
    NodeList _rebalanced_trees;
+   NodeList _insertion_list;
 
 public:
    class const_iterator: 
@@ -90,6 +91,8 @@ public:
       typedef Vindex::AVLNode AVLNode;
       typedef Vindex::AVLNodeOwner AVLNodeOwner;
       typedef Vindex::Direction Direction;
+      typedef typename Vindex::NodeList::iterator NodeListIter;
+      typedef typename Vindex::NodeList::reverse_iterator NodeListRevIter;
 
       AVLNode *_curr;
       AVLNode *_prev;
@@ -100,6 +103,13 @@ public:
       size_t _curr_lv;
       size_t _prev_lv;
       size_t _nodes_seen_on_lv;
+
+      NodeListIter _insertion_iter;
+      NodeListRevIter _insertion_rev_iter;
+      NodeListIter _insertion_iter_end;
+      NodeListRevIter _insertion_rev_iter_end;
+      NodeListIter _insertion_iter_begin;
+      NodeListRevIter _insertion_rev_iter_begin;
 
       std::unique_ptr<AVLNode> _default;
 
@@ -540,6 +550,25 @@ public:
          _prev = tmp;
       }
 
+      // TODO
+      void _insertion_order_increment() {
+         if (_insertion_iter == _insertion_iter_end)
+            _curr = nullptr;
+         else if (!_curr)
+            _curr = *_insertion_iter;
+         else {
+            ++_insertion_iter;   
+            _curr = _insertion_iter == _insertion_iter_end ?
+               nullptr : *_insertion_iter;
+         }
+      }
+
+      // TODO
+      void _insertion_order_decrement() {
+         _curr = _insertion_iter == _insertion_iter_begin ?
+            nullptr : *--_insertion_iter;
+      }
+
       std::string _node_data(AVLNode *n) const {
          using namespace std;
          stringstream ss;
@@ -604,6 +633,13 @@ public:
          _nodes_seen_on_lv(0), 
          _prev_lv(0),
 
+         _insertion_iter(vin->_insertion_list.begin()),
+         _insertion_rev_iter(vin->_insertion_list.rbegin()),
+         _insertion_iter_end(vin->_insertion_list.end()),
+         _insertion_rev_iter_end(vin->_insertion_list.rend()),
+         _insertion_iter_begin(vin->_insertion_list.begin()),
+         _insertion_rev_iter_begin(vin->_insertion_list.rbegin()),
+
          _default(std::make_unique<AVLNode>(T())) {
 
          if (_order_ty == OrderType::INORDER)
@@ -626,6 +662,8 @@ public:
             _nodes_seen_on_lv = 1;    
             _curr_lv = 1;
          }
+         else if (_order_ty == OrderType::INSERTION)
+            _curr = reverse ? *_insertion_rev_iter : *_insertion_iter;
          else
             throw NotYetImplementedError();
       }
@@ -641,6 +679,13 @@ public:
          _nodes_seen_on_lv(other._nodes_seen_on_lv),
          _prev_lv(other._prev_lv),
 
+         _insertion_iter(other._insertion_iter),
+         _insertion_rev_iter(other._insertion_rev_iter),
+         _insertion_iter_end(other._insertion_iter_end),
+         _insertion_rev_iter_end(other._insertion_rev_iter_end),
+         _insertion_iter_begin(other._insertion_iter_begin),
+         _insertion_rev_iter_begin(other._insertion_rev_iter_begin),
+
          _default(std::make_unique<AVLNode>(T())) {}
 
       const_iterator& operator=(const const_iterator &other) {
@@ -653,6 +698,13 @@ public:
          _curr_lv = other._curr_lv;
          _nodes_seen_on_lv = other._nodes_seen_on_lv;
          _prev_lv = other._prev_lv;
+
+         _insertion_iter = other._insertion_iter;
+         _insertion_rev_iter = other._insertion_rev_iter;
+         _insertion_iter_end = other._insertion_iter_end;
+         _insertion_rev_iter_end = other._insertion_rev_iter_end;
+         _insertion_iter_begin = other._insertion_iter_begin;
+         _insertion_rev_iter_begin = other._insertion_rev_iter_begin;
 
          return *this;
       }
@@ -674,6 +726,8 @@ public:
             _post_order_increment();
          else if (_order_ty == OrderType::BREADTHFIRST)
             _breadth_first_increment();
+         else if (_order_ty == OrderType::INSERTION)
+            _insertion_order_increment();
          else
             throw NotYetImplementedError();
 
@@ -696,6 +750,8 @@ public:
             _post_order_decrement();
          else if (_order_ty == OrderType::BREADTHFIRST)
             _breadth_first_decrement();
+         else if (_order_ty == OrderType::INSERTION)
+            _insertion_order_decrement();
          else
             throw NotYetImplementedError();
 
@@ -1023,8 +1079,10 @@ private:
          _assign_if_diff(child_tree, _insert(n, child_tree.get(), subtree));
          child_tree->parent = subtree;
       }
-      else
+      else {
          child_tree = move(n);
+         _insertion_list.emplace_back(child_tree.get());
+      }
 
       subtree->height = _height(subtree);
       return _rebalance(subtree);
@@ -1144,6 +1202,8 @@ private:
       else if (val > tree->data)
          _remove_and_rebalance(val, tree->right, tree);
       else {
+         _insertion_list.remove(tree);
+
          if (_num_children(tree) == 1)
             tree = _on_removal_one_child(tree);
          else if (!_num_children(tree))
@@ -1254,6 +1314,7 @@ public:
       if (!_head) {
          _head = move(n);
          ++_head->height;
+         _insertion_list.emplace_back(_head_raw()); 
          return;
       }
       _assign_if_diff(_head, _insert(n, _head_raw()));
@@ -1307,6 +1368,7 @@ public:
    }
 
    void clear() {
+      _insertion_list.clear();
       _head = nullptr;
    }
 };
