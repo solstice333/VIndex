@@ -653,7 +653,7 @@ public:
          _curr_lv = other._curr_lv;
          _nodes_seen_on_lv = other._nodes_seen_on_lv;
          _prev_lv = other._prev_lv;
-         
+
          return *this;
       }
 
@@ -1242,7 +1242,8 @@ private:
 
 public:
    Vindex(): 
-      _head(nullptr), _order_ty(OrderType::INORDER) {}
+      _head(nullptr), 
+      _order_ty(OrderType::INORDER) {}
 
    void insert(const T& val) {
       using namespace std;
