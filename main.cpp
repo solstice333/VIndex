@@ -673,9 +673,9 @@ public:
       assert(it.curr_level() == 2);
    }
 
+   // TODO add insertion order iterator tests
    // TODO add iterator tests for empty v-index
    // TODO reverse iterator tests
-   // TODO add insertion order iterator tests
 };
 
 int main () {

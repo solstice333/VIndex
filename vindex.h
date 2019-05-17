@@ -582,19 +582,27 @@ public:
 
    public:
       const_iterator(): 
-         _curr(nullptr), _prev(nullptr), 
-         _prev_incr(true), _reverse(false),
+         _curr(nullptr), 
+         _prev(nullptr), 
+         _prev_incr(true), 
+         _reverse(false),
          _order_ty(OrderType::INORDER),
 
-         _curr_lv(0), _nodes_seen_on_lv(0),
+         _curr_lv(0), 
+         _nodes_seen_on_lv(0), 
+         _prev_lv(0),
 
          _default(std::make_unique<AVLNode>(T())) {}
 
       const_iterator(Vindex *vin, OrderType order_ty, bool reverse=false): 
-         _reverse(reverse), _prev(nullptr), 
-         _prev_incr(true), _order_ty(order_ty),
+         _prev(nullptr),
+         _prev_incr(true), 
+         _reverse(reverse),
+         _order_ty(order_ty),
 
-         _curr_lv(0), _nodes_seen_on_lv(0),
+         _curr_lv(0), 
+         _nodes_seen_on_lv(0), 
+         _prev_lv(0),
 
          _default(std::make_unique<AVLNode>(T())) {
 
@@ -623,9 +631,16 @@ public:
       }
 
       const_iterator(const const_iterator &other): 
-         _curr(other._curr), _prev(other._prev), 
-         _reverse(other._reverse), _prev_incr(other._prev_incr), 
+         _curr(other._curr), 
+         _prev(other._prev), 
+         _prev_incr(other._prev_incr), 
+         _reverse(other._reverse), 
          _order_ty(other._order_ty), 
+
+         _curr_lv(other._curr_lv),
+         _nodes_seen_on_lv(other._nodes_seen_on_lv),
+         _prev_lv(other._prev_lv),
+
          _default(std::make_unique<AVLNode>(T())) {}
 
       const_iterator& operator=(const const_iterator &other) {
@@ -634,6 +649,11 @@ public:
          _prev_incr = other._prev_incr;
          _reverse = other._reverse;
          _order_ty = other._order_ty;
+
+         _curr_lv = other._curr_lv;
+         _nodes_seen_on_lv = other._nodes_seen_on_lv;
+         _prev_lv = other._prev_lv;
+         
          return *this;
       }
 
