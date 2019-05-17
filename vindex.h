@@ -91,6 +91,18 @@ public:
       typedef Vindex::AVLNodeOwner AVLNodeOwner;
       typedef Vindex::Direction Direction;
 
+      AVLNode *_curr;
+      AVLNode *_prev;
+      bool _prev_incr;
+      bool _reverse;
+      OrderType _order_ty;
+
+      size_t _curr_lv;
+      size_t _prev_lv;
+      size_t _nodes_seen_on_lv;
+
+      std::unique_ptr<AVLNode> _default;
+
       AVLNode *_get_leftest_node(AVLNode *tree) {
          return tree->left ? _get_leftest_node(tree->left_raw()) : tree;
       }
@@ -478,15 +490,25 @@ public:
             return nullptr;
       }
 
+      void _swap(size_t *a, size_t *b) {
+         size_t tmp = *a;
+         *a = *b;
+         *b = tmp;
+      }
+
       void _breadth_first_increment() {
          AVLNode *tmp = _curr;
 
-         if (!_prev_incr)
+         if (!_prev_incr) {
             _curr = _prev;
+            _swap(&_curr_lv, &_prev_lv);
+         }
          else if (tmp) {
             _curr = _get_next_sibling(tmp, _curr_lv, Direction::RIGHT);
-            if (!_curr)
+            if (!_curr) {
+               _prev_lv = _curr_lv;
                _curr = _get_first_node_on_lower_lv(tmp);
+            }
          }
          else if (!tmp)
             return;
@@ -499,12 +521,16 @@ public:
       void _breadth_first_decrement() {
          AVLNode *tmp = _curr;
 
-         if (_prev_incr)
+         if (_prev_incr) {
             _curr = _prev;
+            _swap(&_curr_lv, &_prev_lv);
+         }
          else if (tmp) {
             _curr = _get_next_sibling(tmp, _curr_lv, Direction::LEFT);
-            if (!_curr)
+            if (!_curr) {
+               _prev_lv = _curr_lv;
                _curr = _get_first_node_on_upper_lv(tmp->parent);
+            }
          }
          else if (!tmp)
             return;
@@ -553,17 +579,6 @@ public:
          ss << "curr_lv: " << _curr_lv << endl;
          return ss.str();
       }
-
-      AVLNode *_curr;
-      AVLNode *_prev;
-      bool _prev_incr;
-      bool _reverse;
-      OrderType _order_ty;
-
-      size_t _curr_lv;
-      size_t _nodes_seen_on_lv;
-
-      std::unique_ptr<AVLNode> _default;
 
    public:
       const_iterator(): 
@@ -688,6 +703,10 @@ public:
 
       std::string str() const {
          return _str();
+      }
+
+      size_t curr_level() const {
+         return _curr_lv;
       }
    };
 
