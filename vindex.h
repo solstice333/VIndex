@@ -104,12 +104,12 @@ public:
       size_t _prev_lv;
       size_t _nodes_seen_on_lv;
 
-      NodeListIter _insertion_iter;
-      NodeListRevIter _insertion_rev_iter;
-      NodeListIter _insertion_iter_end;
-      NodeListRevIter _insertion_rev_iter_end;
-      NodeListIter _insertion_iter_begin;
-      NodeListRevIter _insertion_rev_iter_begin;
+      NodeListIter _insert_iter;
+      NodeListRevIter _insert_riter;
+      NodeListIter _insert_end;
+      NodeListRevIter _insert_rend;
+      NodeListIter _insert_begin;
+      NodeListRevIter _insert_rbegin;
 
       std::unique_ptr<AVLNode> _default;
 
@@ -551,20 +551,20 @@ public:
       }
 
       void _insertion_order_increment() {
-         if (_insertion_iter == _insertion_iter_end)
+         if (_insert_iter == _insert_end)
             _curr = nullptr;
          else if (!_curr)
-            _curr = *_insertion_iter;
+            _curr = *_insert_iter;
          else {
-            ++_insertion_iter;   
-            _curr = _insertion_iter == _insertion_iter_end ?
-               nullptr : *_insertion_iter;
+            ++_insert_iter;   
+            _curr = _insert_iter == _insert_end ?
+               nullptr : *_insert_iter;
          }
       }
 
       void _insertion_order_decrement() {
-         _curr = _insertion_iter == _insertion_iter_begin ?
-            nullptr : *--_insertion_iter;
+         _curr = _insert_iter == _insert_begin ?
+            nullptr : *--_insert_iter;
       }
 
       std::string _node_data(AVLNode *n) const {
@@ -631,12 +631,12 @@ public:
          _nodes_seen_on_lv(0), 
          _prev_lv(0),
 
-         _insertion_iter(vin->_insertion_list.begin()),
-         _insertion_rev_iter(vin->_insertion_list.rbegin()),
-         _insertion_iter_end(vin->_insertion_list.end()),
-         _insertion_rev_iter_end(vin->_insertion_list.rend()),
-         _insertion_iter_begin(vin->_insertion_list.begin()),
-         _insertion_rev_iter_begin(vin->_insertion_list.rbegin()),
+         _insert_iter(vin->_insertion_list.begin()),
+         _insert_riter(vin->_insertion_list.rbegin()),
+         _insert_end(vin->_insertion_list.end()),
+         _insert_rend(vin->_insertion_list.rend()),
+         _insert_begin(vin->_insertion_list.begin()),
+         _insert_rbegin(vin->_insertion_list.rbegin()),
 
          _default(std::make_unique<AVLNode>(T())) {
 
@@ -661,7 +661,7 @@ public:
             _curr_lv = 1;
          }
          else if (_order_ty == OrderType::INSERTION)
-            _curr = reverse ? *_insertion_rev_iter : *_insertion_iter;
+            _curr = reverse ? *_insert_riter : *_insert_iter;
          else
             throw NotYetImplementedError();
       }
@@ -677,12 +677,12 @@ public:
          _nodes_seen_on_lv(other._nodes_seen_on_lv),
          _prev_lv(other._prev_lv),
 
-         _insertion_iter(other._insertion_iter),
-         _insertion_rev_iter(other._insertion_rev_iter),
-         _insertion_iter_end(other._insertion_iter_end),
-         _insertion_rev_iter_end(other._insertion_rev_iter_end),
-         _insertion_iter_begin(other._insertion_iter_begin),
-         _insertion_rev_iter_begin(other._insertion_rev_iter_begin),
+         _insert_iter(other._insert_iter),
+         _insert_riter(other._insert_riter),
+         _insert_end(other._insert_end),
+         _insert_rend(other._insert_rend),
+         _insert_begin(other._insert_begin),
+         _insert_rbegin(other._insert_rbegin),
 
          _default(std::make_unique<AVLNode>(T())) {}
 
@@ -697,12 +697,12 @@ public:
          _nodes_seen_on_lv = other._nodes_seen_on_lv;
          _prev_lv = other._prev_lv;
 
-         _insertion_iter = other._insertion_iter;
-         _insertion_rev_iter = other._insertion_rev_iter;
-         _insertion_iter_end = other._insertion_iter_end;
-         _insertion_rev_iter_end = other._insertion_rev_iter_end;
-         _insertion_iter_begin = other._insertion_iter_begin;
-         _insertion_rev_iter_begin = other._insertion_rev_iter_begin;
+         _insert_iter = other._insert_iter;
+         _insert_riter = other._insert_riter;
+         _insert_end = other._insert_end;
+         _insert_rend = other._insert_rend;
+         _insert_begin = other._insert_begin;
+         _insert_rbegin = other._insert_rbegin;
 
          return *this;
       }
