@@ -769,7 +769,6 @@ public:
       assert(it == _vin.end());
    }
 
-   // TODO add insertion order iterator tests
    // TODO add iterator tests for empty v-index
    // TODO reverse iterator tests
 };
