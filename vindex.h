@@ -550,7 +550,6 @@ public:
          _prev = tmp;
       }
 
-      // TODO
       void _insertion_order_increment() {
          if (_insertion_iter == _insertion_iter_end)
             _curr = nullptr;
@@ -563,7 +562,6 @@ public:
          }
       }
 
-      // TODO
       void _insertion_order_decrement() {
          _curr = _insertion_iter == _insertion_iter_begin ?
             nullptr : *--_insertion_iter;

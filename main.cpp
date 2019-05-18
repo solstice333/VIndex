@@ -741,6 +741,32 @@ public:
       assert(it != _vin.end());
       assert(*++it == 20);
       assert(it != _vin.end());
+
+      _vin.remove(15);
+
+      it = _vin.begin();
+
+      assert(*it == 25);
+      assert(it == _vin.begin());
+      assert(it != _vin.end());
+      assert(*++it == 20);
+      assert(it != _vin.end());
+      assert(*++it == 35);
+      assert(it != _vin.end());
+      assert(*++it == 30);
+      assert(it != _vin.end());
+      assert(*++it == 40);
+      assert(it != _vin.end());
+      assert(*++it == 16);
+      assert(it != _vin.end());
+      assert(*++it == 26);
+      assert(it != _vin.end());
+      assert(*++it == 33);
+      assert(it != _vin.end());
+      assert(*++it == 0);
+      assert(it == _vin.end());
+      assert(*++it == 0);
+      assert(it == _vin.end());
    }
 
    // TODO add insertion order iterator tests
