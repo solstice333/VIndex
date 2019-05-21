@@ -1345,13 +1345,13 @@ public:
       return _order_ty;
    }
 
-   const_iterator begin() {
+   const_iterator cbegin() {
       auto it = const_iterator(this, _order_ty);
       _end = it.end();
       return it;
    }
 
-   const_iterator end() {
+   const_iterator cend() {
       return _end;
    }
 
@@ -1362,7 +1362,7 @@ public:
    }
 
    const_iterator rend() {
-      return end();
+      return cend();
    }
 
    void clear() {
