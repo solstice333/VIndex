@@ -64,6 +64,7 @@ template<typename T>
 class Vindex {
 public:
    class const_iterator;
+   class const_reverse_iterator;
 
 private:
    typedef _AVLState<_Node<T>> AVLNode;
@@ -80,7 +81,8 @@ private:
 
    AVLNodeOwner _head;
    OrderType _order_ty;
-   const_iterator _end;
+   const_iterator _cend;
+   const_reverse_iterator _crend;
    NodeList _rebalanced_trees;
    NodeList _insertion_list;
 
@@ -130,21 +132,32 @@ public:
             return tree;
       }
 
-      AVLNode *_get_deepest_right_node(AVLNode *tree) {
+      AVLNode *_get_deepest_right_node_recurs(
+         AVLNode *tree, size_t *curr_lv=nullptr) {
          AVLNode *left = tree->left_raw();
          AVLNode *right = tree->right_raw();
 
+         if (curr_lv)
+            ++*curr_lv;
+
          if (left && right) {
             return right->height >= left->height ?
-               _get_deepest_right_node(right) :
-               _get_deepest_right_node(left);
+               _get_deepest_right_node_recurs(right, curr_lv) :
+               _get_deepest_right_node_recurs(left, curr_lv);
          }
          else if (right)
-            return _get_deepest_right_node(right);
+            return _get_deepest_right_node_recurs(right, curr_lv);
          else if (left)
-            return _get_deepest_right_node(left);
+            return _get_deepest_right_node_recurs(left, curr_lv);
          else
             return tree;
+      }
+
+      AVLNode *_get_deepest_right_node(
+         AVLNode *tree, size_t *curr_lv=nullptr) {
+         if (curr_lv)
+            *curr_lv = 0;
+         return _get_deepest_right_node_recurs(tree, curr_lv);
       }
 
       AVLNode *_get_root_node(AVLNode *tree) {
@@ -550,21 +563,43 @@ public:
          _prev = tmp;
       }
 
-      void _insertion_order_increment() {
-         if (_insert_iter == _insert_end)
-            _curr = nullptr;
-         else if (!_curr)
-            _curr = *_insert_iter;
-         else {
-            ++_insert_iter;   
-            _curr = _insert_iter == _insert_end ?
-               nullptr : *_insert_iter;
+      template <typename ITER_TY>
+      void _insertion_order_advance(
+         ITER_TY *iter, ITER_TY *begin, ITER_TY *end, bool towards_end) {
+         if (towards_end) {
+            if (*iter == *end)
+               _curr = nullptr;
+            else if (!_curr)
+               _curr = **iter;
+            else {
+               ++*iter;
+               _curr = *iter == *end ? nullptr : **iter;
+            }
          }
+         else
+            _curr = *iter == *begin ? nullptr : *--*iter;
+      }
+
+      void _insertion_order_increment() {
+         if (_reverse)
+            _insertion_order_advance<NodeListRevIter>(
+               &_insert_riter, &_insert_rbegin, &_insert_rend, 
+               /*towards_end=*/false);
+         else
+            _insertion_order_advance<NodeListIter>(
+               &_insert_iter, &_insert_begin, &_insert_end, 
+               /*towards_end=*/true);
       }
 
       void _insertion_order_decrement() {
-         _curr = _insert_iter == _insert_begin ?
-            nullptr : *--_insert_iter;
+         if (_reverse)
+            _insertion_order_advance<NodeListRevIter>(
+               &_insert_riter, &_insert_rbegin, &_insert_rend, 
+               /*towards_end=*/true);
+         else
+            _insertion_order_advance<NodeListIter>(
+               &_insert_iter, &_insert_begin, &_insert_end, 
+               /*towards_end=*/false);
       }
 
       std::string _node_data(AVLNode *n) const {
@@ -623,7 +658,7 @@ public:
 
       const_iterator(Vindex *vin, OrderType order_ty, bool reverse=false): 
          _prev(nullptr),
-         _prev_incr(true), 
+         _prev_incr(reverse ? false : true), 
          _reverse(reverse),
          _order_ty(order_ty),
 
@@ -654,11 +689,11 @@ public:
                _get_leftest_node(vin->_head_raw());
          else if (_order_ty == OrderType::BREADTHFIRST) {
             _curr = _reverse ?
-               _get_deepest_right_node(vin->_head_raw()) :
+               _get_deepest_right_node(vin->_head_raw(), &_curr_lv) :
                _get_root_node(vin->_head_raw()); 
 
             _nodes_seen_on_lv = 1;    
-            _curr_lv = 1;
+            _curr_lv = _reverse ? _curr_lv : 1;
          }
          else if (_order_ty == OrderType::INSERTION)
             _curr = reverse ? *_insert_riter : *_insert_iter;
@@ -783,6 +818,46 @@ public:
          return _curr_lv;
       }
    };
+
+   class const_reverse_iterator: public const_iterator {
+   public:
+      const_reverse_iterator() {}
+
+      const_reverse_iterator(Vindex *vin, OrderType order_ty): 
+         const_iterator(vin, order_ty, /*reverse=*/true) {}
+
+      const_reverse_iterator(const const_reverse_iterator &other):
+         const_iterator(other) {}
+
+      const_reverse_iterator& operator=(const const_reverse_iterator& other) {
+         const_iterator::operator=(other);   
+         return *this;
+      }
+
+      const_reverse_iterator operator++() {
+         const_iterator::operator--();
+         return *this;
+      } 
+
+      const_reverse_iterator operator++(int val) {
+         const_iterator::operator--(val);
+         return *this;
+      }
+
+      const_reverse_iterator operator--() {
+         const_iterator::operator++();
+         return *this;
+      } 
+
+      const_reverse_iterator operator--(int val) {
+         const_iterator::operator++(val);
+         return *this;
+      }
+
+      const_reverse_iterator end() {
+         return const_reverse_iterator();
+      }
+   }; 
 
 private:
    AVLNode *_head_raw() {
@@ -1347,22 +1422,22 @@ public:
 
    const_iterator cbegin() {
       auto it = const_iterator(this, _order_ty);
-      _end = it.end();
+      _cend = it.end();
       return it;
    }
 
    const_iterator cend() {
-      return _end;
+      return _cend;
    }
 
-   const_iterator rbegin() {
-      auto it = const_iterator(this, _order_ty, /*reverse=*/true);
-      _end = it.end();
+   const_reverse_iterator crbegin() {
+      auto it = const_reverse_iterator(this, _order_ty);
+      _crend = it.end();
       return it;
    }
 
-   const_iterator rend() {
-      return cend();
+   const_reverse_iterator crend() {
+      return _crend;
    }
 
    void clear() {

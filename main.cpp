@@ -762,7 +762,451 @@ public:
    }
 
    // TODO add iterator tests for empty v-index
+
    // TODO reverse iterator tests
+   void test_in_order_rev_iter() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(33);
+
+      _vin.order(OrderType::INORDER);
+
+      stringstream ss;
+      IntVindex::const_reverse_iterator it;
+      for (it = _vin.crbegin(); it != _vin.crend(); ++it) {
+         ss << *it;
+      }
+
+      assert(ss.str() == "4035333025201615");
+
+      assert(*it == 0);
+      assert(*++it == 0);
+
+      it = prev(it);
+      assert(*it == 15);
+
+      it = prev(it);
+      assert(*it == 16);
+
+      ss.str("");
+      ss.clear();
+      for (it = prev(it); it != _vin.crbegin(); it--)
+         ss << *it;
+      ss << *it;
+
+      assert(ss.str() == "202530333540");
+
+      --it;
+      assert(*it == 0);
+      --it;
+      assert(*it == 0);
+
+      ++it;
+      assert(*it == 40);
+
+      stringstream ss2;
+      auto it2 = _vin.crbegin();
+      ss2 << *it2;
+      ss2 << *++it2;
+      ss2 << *++it2;
+      ss2 << *--it2;
+      assert(ss2.str() == "40353335");
+
+      const IntVindex::const_reverse_iterator const_it = _vin.crbegin();
+      const IntVindex::const_reverse_iterator const_end = _vin.crend();
+      assert(*const_it == 40);
+   }
+
+   void test_pre_order_rev_iter() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(26);
+      _vin.insert(33);
+
+      _vin.order(OrderType::PREORDER);
+
+      IntVindex::const_reverse_iterator it = _vin.crbegin();
+      assert(*it == 40);
+      assert(it != _vin.crend());
+      advance(it, 1);
+      assert(*it == 33);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 26);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 30);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 35);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 20);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 15);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 16);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 25);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 0);
+      assert(it == _vin.crend());
+      ++it;
+      assert(*it == 0);
+      assert(it == _vin.crend());
+
+      stringstream ss;
+      for (auto it2 = _vin.crbegin(); it2 != _vin.crend(); ++it2)
+         ss << *it2;
+
+      assert(ss.str() == "403326303520151625");
+
+      ss.str("");
+      ss.clear();
+
+      assert(*--it == 25);
+      assert(it != _vin.crend());
+      assert(*--it == 16);
+      assert(it != _vin.crend());
+      assert(*--it == 15);
+      assert(it != _vin.crend());
+      assert(*--it == 20);
+      assert(it != _vin.crend());
+      assert(*--it == 35);
+      assert(it != _vin.crend());
+      assert(*--it == 30);
+      assert(it != _vin.crend());
+      assert(*--it == 26);
+      assert(it != _vin.crend());
+      assert(*--it == 33);
+      assert(it != _vin.crend());
+      assert(*--it == 40);
+      assert(it != _vin.crend());
+      assert(*--it == 0);
+      assert(it == _vin.crend());
+      assert(*--it == 0);
+      assert(it == _vin.crend());
+
+      assert(*++it == 40);
+      assert(it != _vin.crend());
+      assert(*++it == 33);
+      assert(it != _vin.crend());
+   }
+
+   void test_post_order_rev_iter() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(26);
+      _vin.insert(33);
+
+      _vin.order(OrderType::POSTORDER);
+
+      IntVindex::const_reverse_iterator it = _vin.crbegin();     
+      assert(*it == 25);
+      assert(it != _vin.crend());
+      advance(it, 1);
+      assert(*it == 35);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 40);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 30);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 33);
+      assert(it != _vin.crend());
+      it = next(it);
+      assert(*it == 26);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 16);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 20);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 15);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 0);
+      assert(it == _vin.crend());
+      ++it;
+      assert(*it == 0);
+      assert(it == _vin.crend());
+
+      stringstream ss;
+      for (auto it2 = _vin.crbegin(); it2 != _vin.crend(); ++it2)
+         ss << *it2;
+
+      assert(ss.str() == "253540303326162015");
+
+      ss.str("");
+      ss.clear();
+
+      advance(it, -1);
+      assert(*it == 15);
+      assert(it != _vin.crend());
+      it = prev(it);
+      assert(*it == 20);
+      assert(it != _vin.crend());
+      --it;
+      assert(*it == 16);
+      assert(it != _vin.crend());
+      it--;
+      assert(*it == 26);
+      assert(it != _vin.crend());
+      it--;
+      assert(*it == 33);
+      assert(it != _vin.crend());
+      it--;
+      assert(*it == 30);
+      assert(it != _vin.crend());
+      it--;
+      assert(*it == 40);
+      assert(it != _vin.crend());
+      it--;
+      assert(*it == 35);
+      assert(it != _vin.crend());
+      it--;
+      assert(*it == 25);
+      assert(it != _vin.crend());
+      --it;
+      assert(*it == 0);
+      assert(it == _vin.crend());
+      --it;
+      assert(*it == 0);
+      assert(it == _vin.crend());
+
+      ++it;
+      assert(*it == 25);
+      assert(it != _vin.crend());
+      ++it;
+      assert(*it == 35);
+      assert(it != _vin.crend());
+   }
+
+   void test_breadth_first_order_rev_iter() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(26);
+      _vin.insert(33);
+
+      _vin.order(OrderType::BREADTHFIRST);
+
+      IntVindex::const_reverse_iterator it = _vin.crbegin();     
+      assert(*it == 33);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 4);
+      assert(*++it == 26);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 4);
+      assert(*++it == 40);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*++it == 30);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*++it == 20);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*++it == 15);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*++it == 35);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 2);
+      assert(*++it == 16);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 2);
+      assert(*++it == 25);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 1);
+      assert(*++it == 0);
+      assert(it == _vin.crend());
+      assert(it.curr_level() == 1);
+      assert(*++it == 0);
+      assert(it == _vin.crend());
+      assert(it.curr_level() == 1);
+
+      assert(*--it == 25);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 1);
+      assert(*--it == 16);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 2);
+      assert(*--it == 35);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 2);
+      assert(*--it == 15);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*--it == 20);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*--it == 30);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*--it == 40);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+      assert(*--it == 26);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 4);
+      assert(*--it == 33);
+      assert(it != _vin.crend());
+      assert(it == _vin.crbegin());
+      assert(it.curr_level() == 4);
+      assert(*--it == 0);
+      assert(it == _vin.crend());
+      assert(it.curr_level() == 4);
+      assert(*--it == 0);
+      assert(it == _vin.crend());
+      assert(it.curr_level() == 4);
+
+      assert(*++it == 33);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 4);
+      assert(*++it == 26);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 4);
+      assert(*++it == 40);
+      assert(it != _vin.crend());
+      assert(it.curr_level() == 3);
+
+      assert(*--it == 26);
+      assert(it.curr_level() == 4);
+      assert(*++it == 40);
+      assert(it.curr_level() == 3);
+      assert(*--it == 26);
+      assert(it.curr_level() == 4);
+      assert(*++it == 40);
+      assert(it.curr_level() == 3);
+   }
+
+   void test_insertion_order_rev_iter() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(26);
+      _vin.insert(33);
+
+      _vin.order(OrderType::INSERTION);
+
+      IntVindex::const_reverse_iterator it = _vin.crbegin();
+      assert(*it == 33);
+      assert(it == _vin.crbegin());
+      assert(it != _vin.crend());
+      assert(*++it == 26);
+      assert(it != _vin.crend());
+      assert(*++it == 16);
+      assert(it != _vin.crend());
+      assert(*++it == 40);
+      assert(it != _vin.crend());
+      assert(*++it == 30);
+      assert(it != _vin.crend());
+      assert(*++it == 15);
+      assert(it != _vin.crend());
+      assert(*++it == 35);
+      assert(it != _vin.crend());
+      assert(*++it == 20);
+      assert(it != _vin.crend());
+      assert(*++it == 25);
+      assert(it != _vin.crend());
+      assert(*++it == 0);
+      assert(it == _vin.crend());
+      assert(*++it == 0);
+      assert(it == _vin.crend());
+
+      assert(*--it == 25);
+      assert(it != _vin.crend());
+      assert(*--it == 20);
+      assert(it != _vin.crend());
+      assert(*--it == 35);
+      assert(it != _vin.crend());
+      assert(*--it == 15);
+      assert(it != _vin.crend());
+      assert(*--it == 30);
+      assert(it != _vin.crend());
+      assert(*--it == 40);
+      assert(it != _vin.crend());
+      assert(*--it == 16);
+      assert(it != _vin.crend());
+      assert(*--it == 26);
+      assert(it != _vin.crend());
+      assert(*--it == 33);
+      assert(it == _vin.crbegin());
+      assert(it != _vin.crend());
+      assert(*--it == 0);
+      assert(it == _vin.crend());
+      assert(*--it == 0);
+      assert(it == _vin.crend());
+
+      assert(*++it == 33);
+      assert(it == _vin.crbegin());
+      assert(it != _vin.crend());
+      assert(*++it == 26);
+      assert(it != _vin.crend());
+
+      _vin.remove(15);
+
+      it = _vin.crbegin();
+
+      assert(*it == 33);
+      assert(it == _vin.crbegin());
+      assert(it != _vin.crend());
+      assert(*++it == 26);
+      assert(it != _vin.crend());
+      assert(*++it == 16);
+      assert(it != _vin.crend());
+      assert(*++it == 40);
+      assert(it != _vin.crend());
+      assert(*++it == 30);
+      assert(it != _vin.crend());
+      assert(*++it == 35);
+      assert(it != _vin.crend());
+      assert(*++it == 20);
+      assert(it != _vin.crend());
+      assert(*++it == 25);
+      assert(it != _vin.crend());
+      assert(*++it == 0);
+      assert(it == _vin.crend());
+      assert(*++it == 0);
+      assert(it == _vin.crend());
+   }
 };
 
 int main () {
@@ -781,4 +1225,10 @@ int main () {
    vin.test_post_order_iter();
    vin.test_breadth_first_order_iter();
    vin.test_insertion_order_iter();
+
+   vin.test_in_order_rev_iter();
+   vin.test_pre_order_rev_iter();
+   vin.test_post_order_rev_iter();
+   vin.test_breadth_first_order_rev_iter();
+   vin.test_insertion_order_rev_iter();
 }
