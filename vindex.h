@@ -11,6 +11,7 @@
 #include <cassert>
 #include <string>
 #include <list>
+#include <functional>
 
 #include "helpers.h"
 #include "custom_exceptions.h"
@@ -78,6 +79,11 @@ private:
    typedef std::function<void(AVLNodeOwner&)> AVLNodeOwnerFunc;
    typedef Direction::Direction Direction;
    typedef OrderType::OrderType OrderType;
+   typedef std::function<void(AVLNodeOwner *)> AVLNodeOwnerPtrAction;
+   typedef 
+      std::function<void(AVLNodeOwner *, const AVLNodeOwnerPtrAction &)> 
+      TreeEditAction;
+   typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditActionRtn;
 
    AVLNodeOwner _head;
    OrderType _order_ty;
@@ -1014,6 +1020,10 @@ private:
       return bf > 1;
    }
 
+   bool _is_too_heavy(int bf) {
+      return _is_too_left_heavy(bf) || _is_too_right_heavy(bf);
+   }
+
    bool _is_left_heavy(int bf) {
       return bf < 0;
    }
@@ -1065,100 +1075,192 @@ private:
       return ychild;
    }
 
-   AVLNode *_single_rotation(AVLNode *x, Direction y_dxn) {
-      AVLNode *y = nullptr;
-      AVLNode *subtree = nullptr;
+   void _single_rotation_parts(
+      const AVLNodeOwner &x,
+      AVLNodeOwner *y, AVLNodeOwner *t2, 
+      AVLNodeOwner **x_owner, AVLNodeOwner **t2_owner,
+      Direction y_dxn) {
 
-      _act_with_child_owner(x, _detach_from_owner);
-      AVLNodeOwner *xchild = _xchild_by_rotation(x, y_dxn);
-      y = _detach_from_owner_rtn(*xchild);
-      AVLNodeOwner *ychild = _ychild_by_rotation(y, y_dxn);
-      subtree = _detach_from_owner_rtn(*ychild);
-
-      if (*xchild)
-         throw NotNullPointerError();
-      *xchild = AVLNodeOwner(subtree);
-
-      if (*ychild)
-         throw NotNullPointerError();
-      *ychild = AVLNodeOwner(x);
-
-      x->parent = y;
-      if (subtree)
-         subtree->parent = x;
-      x->height = _height(x);
-      y->height = _height(y);
-
-      return y;     
-   }
-
-   AVLNode *_right_rotation(AVLNode *subtree) {
-      return _single_rotation(subtree, Direction::LEFT);
-   }
-
-   AVLNode *_left_rotation(AVLNode *subtree) {
-      return _single_rotation(subtree, Direction::RIGHT);
-   }
-
-   AVLNode *_left_right_double_rotation(AVLNode *subtree) {
-      _assign_if_diff(subtree->left, _left_rotation(subtree->left_raw()));
-      return _right_rotation(subtree);
-   }
-
-   AVLNode *_right_left_double_rotation(AVLNode *subtree) {
-      _assign_if_diff(subtree->right, _right_rotation(subtree->right_raw()));
-      return _left_rotation(subtree);
-   }
-
-   AVLNode *_rebalance(AVLNode *subtree) {
-      int bf = _balance_factor(subtree);
-
-      if (_is_too_left_heavy(bf)) {
-         if (_is_left_left(subtree))
-            subtree = _right_rotation(subtree);
-         else if (_is_left_right(subtree))
-            subtree = _left_right_double_rotation(subtree);
-         else
-            throw InvalidHeavyStateError();
+      if (y_dxn == Direction::LEFT) {
+         *y = std::move(x->left);
+         *t2 = std::move((*y)->right);
+         *x_owner = &(*y)->right;
+         *t2_owner = &x->left;
       }
-      else if (_is_too_right_heavy(bf)) {
-         if (_is_right_right(subtree))
-            subtree = _left_rotation(subtree);
-         else if (_is_right_left(subtree))
-            subtree = _right_left_double_rotation(subtree);
-         else
-            throw InvalidHeavyStateError();
+      else if (y_dxn == Direction::RIGHT) {
+         *y = std::move(x->right);
+         *t2 = std::move((*y)->left);
+         *x_owner = &(*y)->left;
+         *t2_owner = &x->right;
       }
+      else
+         throw InvalidDirectionError();
+   }
+
+   void _single_rotation_metadata_update(
+      AVLNodeOwner *parent, AVLNodeOwner **child) {
+      if (**child)
+         (**child)->parent = parent->get();
+      (*parent)->height = _height(parent->get());
+   }
+
+   AVLNodeOwner& _modify_proxy_tree(
+      AVLNodeOwner *tree, const TreeEditAction &edit) {
+
+      AVLNodeOwner working_tree = std::move(*tree);
+      edit(&working_tree, [&tree](AVLNodeOwner *root) {
+         *tree = std::move(*root);
+      });
+      return *tree;
+   }
+
+   AVLNodeOwner& _modify_proxy_tree(
+      AVLNodeOwner *tree, const TreeEditActionRtn &edit) {
+
+      AVLNodeOwner working_tree = std::move(*tree);
+      *tree = edit(&working_tree);
+      return *tree;
+   }
+
+   AVLNodeOwner& _single_rotation(AVLNodeOwner *tree, Direction y_dxn) {
+      return _modify_proxy_tree(
+         tree, 
+         [&y_dxn, this](AVLNodeOwner *x) -> AVLNodeOwner {
+
+         AVLNodeOwner y;
+         AVLNodeOwner t2;
+         AVLNodeOwner *x_owner = nullptr;
+         AVLNodeOwner *t2_owner = nullptr;
+
+         _single_rotation_parts(*x, &y, &t2, &x_owner, &t2_owner, y_dxn);
+         *t2_owner = std::move(t2);
+         _single_rotation_metadata_update(x, &t2_owner);
+         *x_owner = std::move(*x); 
+         _single_rotation_metadata_update(&y, &x_owner);
+
+         return y;
+      });
+   }
+
+   AVLNodeOwner& _right_rotation(AVLNodeOwner *subtree) {
+      return _modify_proxy_tree(
+         subtree, 
+         [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            return std::move(_single_rotation(working_tree, Direction::LEFT));
+         });
+   }
+
+   AVLNodeOwner& _left_rotation(AVLNodeOwner *subtree) {
+      return _modify_proxy_tree(
+         subtree, 
+         [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            return std::move(_single_rotation(working_tree, Direction::RIGHT));
+         });
+   }
+
+   AVLNodeOwner& _left_right_double_rotation(AVLNodeOwner *subtree) {
+      _modify_proxy_tree(
+         &(*subtree)->left,
+         [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            return std::move(_left_rotation(working_tree));
+         });
+      return _modify_proxy_tree(
+         subtree,
+         [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            return std::move(_right_rotation(working_tree));
+         });
+   }
+
+   AVLNodeOwner& _right_left_double_rotation(AVLNodeOwner *subtree) {
+       _modify_proxy_tree(
+         &(*subtree)->right,
+         [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            return std::move(_right_rotation(working_tree));
+         });
+      return _modify_proxy_tree(
+         subtree,
+         [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            return std::move(_left_rotation(working_tree));
+         });
+   }
+
+   AVLNodeOwner& _rebalance(AVLNodeOwner *subtree) {
+      int bf = _balance_factor(subtree->get());
+      AVLNodeOwner *balanced_tree = nullptr;
+
+      if (_is_too_heavy(bf)) {
+         balanced_tree = &_modify_proxy_tree(
+            subtree,
+            [this, &bf](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+               if (_is_too_left_heavy(bf)) {
+                  if (_is_left_left(working_tree->get()))
+                     return std::move(_right_rotation(working_tree));
+                  else if (_is_left_right(working_tree->get()))
+                     return std::move(
+                        _left_right_double_rotation(working_tree));
+                  else
+                     throw InvalidHeavyStateError();
+               }
+               else if (_is_too_right_heavy(bf)) {
+                  if (_is_right_right(working_tree->get()))
+                     return std::move(_left_rotation(working_tree));
+                  else if (_is_right_left(working_tree->get()))
+                     return std::move(
+                        _right_left_double_rotation(working_tree));
+                  else
+                     throw InvalidHeavyStateError();
+               }
+               else
+                  throw InvalidHeavyStateError();
+            }
+         );
 
 #if DEPTH_DATA_ENABLED
-      if (_is_too_left_heavy(bf) || _is_too_right_heavy(bf))
-         _rebalanced_trees.emplace_back(subtree);
+         _rebalanced_trees.emplace_back(subtree->get());
 #endif
+      }
+      else
+         balanced_tree = subtree;
 
-      return subtree;
+      return *balanced_tree;
    }
 
-   AVLNodeOwner& _child_insertion_side(AVLNodeOwner &n, AVLNode *subtree) {
-      return *n < *subtree ? subtree->left : subtree->right;
+   AVLNodeOwner& _child_insertion_side(AVLNodeOwner *n, AVLNodeOwner *subtree) {
+      return **n < **subtree ? (*subtree)->left : (*subtree)->right;
    }
 
-   AVLNode *_insert(
-      AVLNodeOwner &n, AVLNode *subtree, AVLNode *parent = nullptr) {
-      n->parent = subtree;
-      ++n->depth;
+   void _assign_if_diff(AVLNodeOwner *owner, AVLNodeOwner *other) {
+      if (*owner != *other)
+         *owner = move(*other);
+   }
+
+   AVLNodeOwner& _insert(
+      AVLNodeOwner *n, AVLNodeOwner *subtree, AVLNodeOwner *parent = nullptr) {
+
+      (*n)->parent = subtree->get();
+      ++(*n)->depth;
+
       AVLNodeOwner &child_tree = _child_insertion_side(n, subtree);
 
       if (child_tree) {
-         _assign_if_diff(child_tree, _insert(n, child_tree.get(), subtree));
-         child_tree->parent = subtree;
+         _modify_proxy_tree(&child_tree,
+            [this, n, subtree](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+               return std::move(_insert(n, working_tree, subtree));
+            });
+         child_tree->parent = subtree->get();
       }
       else {
-         child_tree = move(n);
+         child_tree = std::move(*n);
          _insertion_list.emplace_back(child_tree.get());
       }
 
-      subtree->height = _height(subtree);
-      return _rebalance(subtree);
+      (*subtree)->height = _height(subtree->get());
+
+      return _modify_proxy_tree(
+         subtree,
+         [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            return std::move(_rebalance(working_tree));
+         });
    }
 
    AVLNode *_on_removal_leaf(AVLNode *n, bool detach = false) {
@@ -1227,8 +1329,8 @@ private:
       if (next->left)
          throw NotNullPointerError();
 
-      next->left = move(temp->left);
-      next->right = move(temp->right);
+      next->left = std::move(temp->left);
+      next->right = std::move(temp->right);
       next->parent = temp->parent;
       next->height = temp->height;   
       next->depth = temp->depth;
@@ -1261,7 +1363,7 @@ private:
    void _remove_and_rebalance(
       const T& val, AVLNodeOwner &subtree, AVLNode *parent) {
       _assign_if_diff(subtree, _remove(val, subtree.get()));
-      _assign_if_diff(subtree, _rebalance(subtree.get()));
+      // _assign_if_diff(subtree, _rebalance(subtree.get()));
       if (subtree)
          subtree->parent = parent;
    }
@@ -1379,18 +1481,17 @@ public:
       _order_ty(OrderType::INORDER) {}
 
    void insert(const T& val) {
-      using namespace std;
-      AVLNodeOwner n = make_unique<AVLNode>(val);
+      AVLNodeOwner n = std::make_unique<AVLNode>(val);
       ++n->height;
       ++n->depth;
 
       if (!_head) {
-         _head = move(n);
+         _head = std::move(n);
          ++_head->height;
          _insertion_list.emplace_back(_head_raw()); 
          return;
       }
-      _assign_if_diff(_head, _insert(n, _head_raw()));
+      _head = std::move(_insert(&n, &_head));
       _head->parent = nullptr;
       _update_depths_if_rebalanced();
    }

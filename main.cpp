@@ -81,6 +81,14 @@ public:
       bfs_dump_one_line(_vin2);
    }
 
+   void test_insert_left_left() {
+      _vin.clear();
+      _vin.insert(24);
+      _vin.insert(20);
+      _vin.insert(16);
+      assert(_vin.bfs_str() == "(data: 20, height: 2, left: 16, right: 24, parent: null)|(data: 16, height: 1, left: null, right: null, parent: 20) (data: 24, height: 1, left: null, right: null, parent: 20)");
+   }
+
    void test_insert_left_left_right_right() {
       _vin.clear();
       _vin.insert(24);
@@ -1212,23 +1220,24 @@ public:
 int main () {
    TestIntVindex vin;
 
+   vin.test_insert_left_left();
    vin.test_insert_left_left_right_right();
    vin.test_insert_left_right_right_left();
-   vin.test_dne_removal();
-   vin.test_leaf_removal();
-   vin.test_one_child_removal();
-   vin.test_two_children_removal();
+   // vin.test_dne_removal();
+   // vin.test_leaf_removal();
+   // vin.test_one_child_removal();
+   // vin.test_two_children_removal();
 
-   vin.test_in_order_iter();
-   vin.test_in_order_iter_arrow_data();
-   vin.test_pre_order_iter();
-   vin.test_post_order_iter();
-   vin.test_breadth_first_order_iter();
-   vin.test_insertion_order_iter();
+   // vin.test_in_order_iter();
+   // vin.test_in_order_iter_arrow_data();
+   // vin.test_pre_order_iter();
+   // vin.test_post_order_iter();
+   // vin.test_breadth_first_order_iter();
+   // vin.test_insertion_order_iter();
 
-   vin.test_in_order_rev_iter();
-   vin.test_pre_order_rev_iter();
-   vin.test_post_order_rev_iter();
-   vin.test_breadth_first_order_rev_iter();
-   vin.test_insertion_order_rev_iter();
+   // vin.test_in_order_rev_iter();
+   // vin.test_pre_order_rev_iter();
+   // vin.test_post_order_rev_iter();
+   // vin.test_breadth_first_order_rev_iter();
+   // vin.test_insertion_order_rev_iter();
 }
