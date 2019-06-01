@@ -40,11 +40,11 @@ struct _AVLState: public T {
    AVLStateOwner right;
    _AVLState *parent;
 
-   _AVLState *left_raw() {
+   _AVLState *left_raw() const {
       return left.get();
    }
 
-   _AVLState *right_raw() {
+   _AVLState *right_raw() const {
       return right.get();
    }
 
@@ -76,13 +76,8 @@ private:
    typedef std::list<AVLNode *> NodeList;
    typedef std::function<void(AVLNode *)> NodeListener;
    typedef std::function<void()> VoidFunc;
-   typedef std::function<void(AVLNodeOwner&)> AVLNodeOwnerFunc;
    typedef Direction::Direction Direction;
    typedef OrderType::OrderType OrderType;
-   typedef std::function<void(AVLNodeOwner *)> AVLNodeOwnerPtrAction;
-   typedef 
-      std::function<void(AVLNodeOwner *, const AVLNodeOwnerPtrAction &)> 
-      TreeEditAction;
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditActionRtn;
 
    AVLNodeOwner _head;
@@ -884,7 +879,7 @@ private:
       return ss.str();
    }
 
-   static std::string _node_str(AVLNode &n) {
+   static std::string _node_str(const AVLNode &n) {
       using namespace std;
       stringstream ss;
       ss << "(" 
@@ -920,15 +915,15 @@ private:
       return node;
    }
 
-   AVLNode *_first_child(AVLNode *n) {
+   AVLNodeOwner& _first_child(AVLNode *n) {
       if (!n)
          throw NullPointerError();
       if (n->left)
-         return n->left_raw();
+         return n->left;
       else if (n->right)
-         return n->right_raw();
+         return n->right;
       else
-         return nullptr;
+         throw NoChildError();
    }
 
    Direction _which_child(AVLNode *n) {
@@ -961,37 +956,6 @@ private:
 
    bool _has_children(AVLNode *n) {
       return _num_children(n) > 0;
-   }
-
-   void _act_with_child_owner(
-      AVLNode *child, const AVLNodeOwnerFunc &action) {
-      AVLNode *parent = child->parent;
-      Direction child_ty = _which_child(child);
-
-      if (child_ty == Direction::LEFT)
-         action(parent->left);
-      else if (child_ty == Direction::RIGHT)
-         action(parent->right);
-      else if (child_ty == Direction::ROOT)
-         action(_head);
-      else
-         throw DetachedNodeError();
-   } 
-
-   // TODO avoid non-const lvalue refs
-   void _assign_if_diff(AVLNodeOwner &o, AVLNode *n) {
-      if (o.get() != n)
-         o = AVLNodeOwner(n);
-   }
-
-   static void _detach_from_owner(AVLNodeOwner &owner) {
-      owner.release();
-   }
-
-   static AVLNode *_detach_from_owner_rtn(AVLNodeOwner &owner) {
-      AVLNode *n = owner.get();
-      owner.release();
-      return n;
    }
 
    // TODO function to get highest rebalanced tree
@@ -1102,16 +1066,6 @@ private:
       if (**child)
          (**child)->parent = parent->get();
       (*parent)->height = _height(parent->get());
-   }
-
-   AVLNodeOwner& _modify_proxy_tree(
-      AVLNodeOwner *tree, const TreeEditAction &edit) {
-
-      AVLNodeOwner working_tree = std::move(*tree);
-      edit(&working_tree, [&tree](AVLNodeOwner *root) {
-         *tree = std::move(*root);
-      });
-      return *tree;
    }
 
    AVLNodeOwner& _modify_proxy_tree(
@@ -1229,11 +1183,6 @@ private:
       return **n < **subtree ? (*subtree)->left : (*subtree)->right;
    }
 
-   void _assign_if_diff(AVLNodeOwner *owner, AVLNodeOwner *other) {
-      if (*owner != *other)
-         *owner = move(*other);
-   }
-
    AVLNodeOwner& _insert(
       AVLNodeOwner *n, AVLNodeOwner *subtree, AVLNodeOwner *parent = nullptr) {
 
@@ -1263,15 +1212,15 @@ private:
          });
    }
 
-   AVLNode *_on_removal_leaf(AVLNode *n, bool detach = false) {
+   AVLNodeOwner _on_removal_leaf(AVLNodeOwner *n, AVLNodeOwner *rm = nullptr) {
       if (!n) 
          throw NullPointerError();
-      if (n->left || n->right)
+      if ((*n)->left || (*n)->right)
          throw NotLeafError();
-      if (detach)
-         _act_with_child_owner(n, _detach_from_owner);
+      if (rm)
+         *rm = std::move(*n);
 
-      return nullptr;
+      return AVLNodeOwner();
    }
 
    void _update_depths(AVLNode *n, size_t depth) {
@@ -1291,105 +1240,118 @@ private:
       _update_depths(n, start_depth);
    }
 
-   AVLNode *_on_removal_one_child(AVLNode *n, bool detach = false) {
-      if (!n)
+   AVLNodeOwner& _on_removal_one_child(
+      AVLNodeOwner *n, AVLNodeOwner *rm = nullptr) {
+      if (!*n)
          throw NullPointerError();
-      if (_num_children(n) != 1)
+      if (_num_children(n->get()) != 1)
          throw MustHaveExactlyOneChildError();
 
-      AVLNode *child = _first_child(n);
-      AVLNode *parent = n->parent;
-      _act_with_child_owner(child, _detach_from_owner);
-      child->parent = parent ? parent : nullptr;
-      _update_depths(child);
+      return _modify_proxy_tree(n,
+         [this, &rm](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            AVLNodeOwner child = std::move(_first_child(working_tree->get()));
 
-      if (detach)
-         _act_with_child_owner(n, _detach_from_owner);
+            AVLNodeOwner tmp;
+            if (!rm)
+               rm = &tmp;
 
-      return child;
+            *rm = std::move(*working_tree);
+
+            child->parent = (*rm)->parent;
+            (*rm)->height = _height(rm->get());
+            (*rm)->parent = nullptr;
+            (*rm)->left = nullptr;
+            (*rm)->right = nullptr;
+
+            return child;
+         }
+      );
    }
 
-   AVLNode *_detach_next_in_order(AVLNode *tree, AVLNode *&next) {
-      if (tree->left) {
-         _assign_if_diff(tree->left, 
-            _detach_next_in_order(tree->left_raw(), next));
-         tree->height = _height(tree);
-         return tree;
+   void _transfer_to_next(AVLNodeOwner *next, AVLNodeOwner *temp) {
+      (*next)->left = std::move((*temp)->left);
+      (*next)->right = std::move((*temp)->right);
+      (*next)->parent = (*temp)->parent;
+      (*next)->height = (*temp)->height;   
+      (*next)->depth = (*temp)->depth;
+
+      if ((*next)->left)
+         (*next)->left->parent = next->get();
+      if ((*next)->right)
+         (*next)->right->parent = next->get();
+   }
+
+   AVLNodeOwner _rm_next_in_order(AVLNodeOwner *tree, AVLNodeOwner *next) {
+      if ((*tree)->left) {
+         return std::move(_modify_proxy_tree(&(*tree)->left,
+            [this, &next](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+               *working_tree = std::move(_rm_next_in_order(working_tree, next));
+               (*working_tree)->height = _height(working_tree->get());
+               return std::move(*working_tree);
+            }
+         ));
       }
       else {
-         next = tree;
-         if (tree->right)
-            return _on_removal_one_child(tree, /*detach=*/true);
+         if ((*tree)->right)
+            return std::move(_on_removal_one_child(tree, next));
          else
-            return _on_removal_leaf(next, /*detach=*/true);
+            return std::move(_on_removal_leaf(tree, next));
       }
    }
 
-   void _rewire_next(AVLNode *next, AVLNode *temp) {
-      if (next->left)
-         throw NotNullPointerError();
-
-      next->left = std::move(temp->left);
-      next->right = std::move(temp->right);
-      next->parent = temp->parent;
-      next->height = temp->height;   
-      next->depth = temp->depth;
-
-      if (next->left)
-         next->left->parent = next;
-      if (next->right)
-         next->right->parent = next;
-   }
-
-   AVLNode *_on_removal_two_children(AVLNode *n, bool detach = false) {
+   AVLNodeOwner& _on_removal_two_children(AVLNodeOwner *n) {
       if (!n) 
          throw NullPointerError();
 
-      AVLNode *next = nullptr;
-      _assign_if_diff(n->right, 
-         _detach_next_in_order(n->right_raw(), next));
-      n->height = _height(n);
+     return  _modify_proxy_tree(n, 
+         [this, &n](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            AVLNodeOwner next;
 
-      if (!next)
-         throw NullPointerError();
-      _rewire_next(next, n);
-
-      if (detach)
-         _act_with_child_owner(n, _detach_from_owner);
-
-      return next;
+            (*working_tree)->right = 
+               std::move(_rm_next_in_order(&(*working_tree)->right, &next));
+            (*working_tree)->height = _height(working_tree->get());
+            _transfer_to_next(&next, working_tree);
+            return next;
+         }
+      );
    }
 
    void _remove_and_rebalance(
       const T& val, AVLNodeOwner &subtree, AVLNode *parent) {
-      _assign_if_diff(subtree, _remove(val, subtree.get()));
-      // _assign_if_diff(subtree, _rebalance(subtree.get()));
+
+      _modify_proxy_tree(
+         &subtree,
+         [this, &val](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            *working_tree = std::move(_remove(val, working_tree));
+            return std::move(_rebalance(working_tree));
+         });
+
       if (subtree)
          subtree->parent = parent;
    }
 
-   AVLNode *_remove(const T& val, AVLNode* tree) {
-      if (!tree)
-         return nullptr;
+   AVLNodeOwner& _remove(const T& val, AVLNodeOwner *tree) {
+      if (!*tree)
+         return *tree;
 
-      if (val < tree->data)
-         _remove_and_rebalance(val, tree->left, tree);
-      else if (val > tree->data)
-         _remove_and_rebalance(val, tree->right, tree);
+      if (val < (*tree)->data)
+         _remove_and_rebalance(val, (*tree)->left, tree->get());
+      else if (val > (*tree)->data)
+         _remove_and_rebalance(val, (*tree)->right, tree->get());
       else {
-         _insertion_list.remove(tree);
+         _insertion_list.remove(tree->get());
 
-         if (_num_children(tree) == 1)
-            tree = _on_removal_one_child(tree);
-         else if (!_num_children(tree))
-            tree = _on_removal_leaf(tree);
+         if (_num_children(tree->get()) == 1)
+            *tree = std::move(_on_removal_one_child(tree));
+         else if (!_num_children(tree->get()))
+            *tree = std::move(_on_removal_leaf(tree));
          else
-            tree = _on_removal_two_children(tree);
+            *tree = std::move(_on_removal_two_children(tree));
       }
 
-      if (tree)
-         tree->height = _height(tree);
-      return tree;
+      if (*tree)
+         (*tree)->height = _height(tree->get());
+      return *tree;
    }
 
    bool _is_dq_all_nulls(NodeDQ &dq) {

@@ -40,6 +40,9 @@ DefineException(DetachedNodeException)
 DefineException(NotChildException)
 #define NotChildError() NotChildException(__FILE__, __LINE__)
 
+DefineException(NoChildException)
+#define NoChildError() NoChildException(__FILE__, __LINE__)
+
 DefineException(InvalidDirectionException)
 #define InvalidDirectionError() InvalidDirectionException(__FILE__, __LINE__)
 
