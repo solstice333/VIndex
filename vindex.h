@@ -78,7 +78,7 @@ private:
    typedef std::function<void()> VoidFunc;
    typedef Direction::Direction Direction;
    typedef OrderType::OrderType OrderType;
-   typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditActionRtn;
+   typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
 
    AVLNodeOwner _head;
    OrderType _order_ty;
@@ -1069,7 +1069,7 @@ private:
    }
 
    AVLNodeOwner& _modify_proxy_tree(
-      AVLNodeOwner *tree, const TreeEditActionRtn &edit) {
+      AVLNodeOwner *tree, const TreeEditAction &edit) {
 
       AVLNodeOwner working_tree = std::move(*tree);
       *tree = edit(&working_tree);
