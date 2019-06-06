@@ -1455,14 +1455,16 @@ public:
       }
       _head = std::move(_insert(&n, &_head));
       _head->parent = nullptr;
+
+#if DEPTH_DATA_ENABLED
       _update_depths_if_rebalanced();
+#endif
    }
 
    // TODO test
    template <typename... Args>
    void emplace_back(Args&&... args) {
-      using namespace std;
-      T val(forward<Args>(args)...);
+      T val(std::forward<Args>(args)...);
       insert(val);
    }
 
