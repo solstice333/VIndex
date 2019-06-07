@@ -1317,17 +1317,16 @@ private:
    }
 
    void _remove_and_rebalance(
-      const T& val, AVLNodeOwner &subtree, AVLNode *parent) {
+      const T& val, AVLNodeOwner *subtree, AVLNode *parent) {
 
-      _modify_proxy_tree(
-         &subtree,
+      _modify_proxy_tree(subtree,
          [this, &val](AVLNodeOwner *working_tree) -> AVLNodeOwner {
             *working_tree = std::move(_remove(val, working_tree));
             return std::move(_rebalance(working_tree));
          });
 
-      if (subtree)
-         subtree->parent = parent;
+      if (*subtree)
+         (*subtree)->parent = parent;
    }
 
    AVLNodeOwner& _remove(const T& val, AVLNodeOwner *tree) {
@@ -1335,9 +1334,9 @@ private:
          return *tree;
 
       if (val < (*tree)->data)
-         _remove_and_rebalance(val, (*tree)->left, tree->get());
+         _remove_and_rebalance(val, &(*tree)->left, tree->get());
       else if (val > (*tree)->data)
-         _remove_and_rebalance(val, (*tree)->right, tree->get());
+         _remove_and_rebalance(val, &(*tree)->right, tree->get());
       else {
          _insertion_list.remove(tree->get());
 
@@ -1354,47 +1353,47 @@ private:
       return *tree;
    }
 
-   bool _is_dq_all_nulls(NodeDQ &dq) {
+   bool _is_dq_all_nulls(const NodeDQ &dq) {
       auto it = find_if(
          dq.begin(), dq.end(), [](AVLNode *n) -> bool { return n; });
       return it == dq.end();
    }
 
-   void _on_max_nodes_per_line(NodeDQ &dq, const VoidFunc &func) {
+   void _on_max_nodes_per_line(NodeDQ *dq, const VoidFunc &func) {
       func();
-      if (_is_dq_all_nulls(dq))
-         dq.clear();
+      if (_is_dq_all_nulls(*dq))
+         dq->clear();
    }
 
-   void _on_valid_node(NodeDQ &dq, AVLNode *n, const NodeListener &func) {
+   void _on_valid_node(NodeDQ *dq, AVLNode *n, const NodeListener &func) {
       func(n);
-      dq.push_back(n->left_raw());
-      dq.push_back(n->right_raw());
+      dq->push_back(n->left_raw());
+      dq->push_back(n->right_raw());
    }
 
-   void _on_null_node(NodeDQ &dq, const NodeListener &func) {
+   void _on_null_node(NodeDQ *dq, const NodeListener &func) {
       func(nullptr);
-      dq.push_back(nullptr);
-      dq.push_back(nullptr);
+      dq->push_back(nullptr);
+      dq->push_back(nullptr);
    }
 
    void _gather_bfs(
-      NodeDQ &dq, int &curr_depth, int &node_cnt, const NodeListener &func) {
-      if (dq.empty()) 
+      NodeDQ *dq, size_t *curr_depth, size_t *node_cnt, const NodeListener &func) {
+      if (dq->empty()) 
          return;
 
-      AVLNode *n = dq.front();
-      dq.pop_front();
+      AVLNode *n = dq->front();
+      dq->pop_front();
 
       if (n) 
          _on_valid_node(dq, n, func);
       else 
          _on_null_node(dq, func);
 
-      if (++node_cnt == _nodes_at_lv(curr_depth))
+      if (++*node_cnt == _nodes_at_lv(*curr_depth))
          _on_max_nodes_per_line(dq, [&node_cnt, &curr_depth]() { 
-            node_cnt = 0; 
-            ++curr_depth;
+            *node_cnt = 0; 
+            ++*curr_depth;
          });
 
       _gather_bfs(dq, curr_depth, node_cnt, func);
@@ -1403,13 +1402,13 @@ private:
    NodeList _gather_bfs_list() {
       NodeDQ dq;
       NodeList nl;
-      int curr_depth = 1;
-      int node_cnt = 0;
+      size_t curr_depth = 1;
+      size_t node_cnt = 0;
 
       if (_head_raw())
          dq.push_back(_head_raw());
 
-      _gather_bfs(dq, curr_depth, node_cnt,
+      _gather_bfs(&dq, &curr_depth, &node_cnt,
          [&nl](AVLNode *n) { nl.push_back(n); });
       return nl;
    }
@@ -1469,7 +1468,7 @@ public:
    }
 
    void remove(const T& val) {
-      _remove_and_rebalance(val, _head, nullptr);
+      _remove_and_rebalance(val, &_head, nullptr);
       _update_depths_if_rebalanced();
    }
 

@@ -56,29 +56,29 @@ public:
    }
 
    template <typename V>
-   void bfs_dump(V &vin) {
-      cout << vin.bfs_str("\n") << endl << endl;
+   void bfs_dump(V *vin) {
+      cout << vin->bfs_str("\n") << endl << endl;
    }
 
    template <typename V>
-   void bfs_dump_one_line(V &vin) {
-      cout << vin.bfs_str() << endl << endl;
+   void bfs_dump_one_line(V *vin) {
+      cout << vin->bfs_str() << endl << endl;
    }
 
    void vin_bfs_dump() {
-      bfs_dump(_vin);
+      bfs_dump(&_vin);
    }
 
-   void avin_bfs_dump() {
-      bfs_dump(_vin2);
+   void vin2_bfs_dump() {
+      bfs_dump(&_vin2);
    }
 
    void vin_bfs_dump_one_line() {
-      bfs_dump_one_line(_vin);
+      bfs_dump_one_line(&_vin);
    }
 
-   void avin_bfs_dump_one_line() {
-      bfs_dump_one_line(_vin2);
+   void vin2_bfs_dump_one_line() {
+      bfs_dump_one_line(&_vin2);
    }
 
    void test_insert_left_left() {
