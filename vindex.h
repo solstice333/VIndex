@@ -1460,11 +1460,9 @@ public:
 #endif
    }
 
-   // TODO test
    template <typename... Args>
    void emplace_back(Args&&... args) {
-      T val(std::forward<Args>(args)...);
-      insert(val);
+      insert(T(std::forward<Args>(args)...));
    }
 
    void remove(const T& val) {

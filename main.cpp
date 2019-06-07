@@ -1215,6 +1215,22 @@ public:
       assert(*++it == 0);
       assert(it == _vin.crend());
    }
+
+   void test_emplace_back() {
+      _vin2.clear();
+         
+      _vin2.emplace_back(25);
+      _vin2.emplace_back(20);
+      _vin2.emplace_back(35);
+      _vin2.emplace_back(15);
+      _vin2.emplace_back(30);
+      _vin2.emplace_back(40);
+      _vin2.emplace_back(16);
+      _vin2.emplace_back(26);
+      _vin2.emplace_back(33);
+
+      assert(_vin2.bfs_str() == "(data: i25, height: 4, left: i16, right: i35, parent: null)|(data: i16, height: 2, left: i15, right: i20, parent: i25) (data: i35, height: 3, left: i30, right: i40, parent: i25)|(data: i15, height: 1, left: null, right: null, parent: i16) (data: i20, height: 1, left: null, right: null, parent: i16) (data: i30, height: 2, left: i26, right: i33, parent: i35) (data: i40, height: 1, left: null, right: null, parent: i35)|(null) (null) (null) (null) (data: i26, height: 1, left: null, right: null, parent: i30) (data: i33, height: 1, left: null, right: null, parent: i30) (null) (null)");
+   }
 };
 
 int main () {
@@ -1240,4 +1256,6 @@ int main () {
    vin.test_post_order_rev_iter();
    vin.test_breadth_first_order_rev_iter();
    vin.test_insertion_order_rev_iter();
+
+   vin.test_emplace_back();
 }
