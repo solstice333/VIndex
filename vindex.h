@@ -12,11 +12,81 @@
 #include <string>
 #include <list>
 #include <functional>
-
-#include "helpers.h"
-#include "custom_exceptions.h"
+#include <exception>
 
 #define DEPTH_DATA_ENABLED 0
+
+#define DefineException(name)\
+class name: public _CustomException {\
+public:\
+   name(const std::string &file, int line, const std::string &err_msg = #name):\
+      _CustomException(file, line, err_msg) {}\
+};
+
+class _CustomException : public std::exception {
+protected:
+   std::string _err_msg;
+
+public:
+   _CustomException(
+      const std::string &file, int line, 
+      const std::string &err_msg = "_CustomException") {
+         using namespace std;
+         stringstream ss;
+         ss << err_msg << ": " << file << ", " << line;   
+         _err_msg = ss.str();
+      }
+
+   virtual const char* what() const throw() {
+      return _err_msg.c_str();
+   }
+};
+
+DefineException(NullPointerException)
+#define NullPointerError() NullPointerException(__FILE__, __LINE__)
+
+DefineException(NotNullPointerException)
+#define NotNullPointerError() NotNullPointerException(__FILE__, __LINE__)
+
+DefineException(DetachedNodeException)
+#define DetachedNodeError() DetachedNodeException(__FILE__, __LINE__)
+
+DefineException(NotChildException)
+#define NotChildError() NotChildException(__FILE__, __LINE__)
+
+DefineException(NoChildException)
+#define NoChildError() NoChildException(__FILE__, __LINE__)
+
+DefineException(InvalidDirectionException)
+#define InvalidDirectionError() InvalidDirectionException(__FILE__, __LINE__)
+
+DefineException(PointerToSelfException)
+#define PointerToSelfError() PointerToSelfException(__FILE__, __LINE__)
+
+DefineException(MustHaveExactlyOneChildException)
+#define MustHaveExactlyOneChildError()\
+    MustHaveExactlyOneChildException(__FILE__, __LINE__)
+
+DefineException(NotYetImplementedException)
+#define NotYetImplementedError()\
+   NotYetImplementedException(__FILE__, __LINE__)
+
+DefineException(NotLeafException)
+#define NotLeafError() NotLeafException(__FILE__, __LINE__)
+
+DefineException(LessThanOneException)
+#define LessThanOneError() LessThanOneException(__FILE__, __LINE__)
+
+DefineException(InvalidHeavyStateException)
+#define InvalidHeavyStateError() InvalidHeavyStateException(__FILE__, __LINE__)
+
+DefineException(InvalidAdvanceStateException)
+#define InvalidAdvanceStateError() \
+   InvalidAdvanceStateException(__FILE__, __LINE__)
+
+DefineException(InvalidOperationException)
+#define InvalidOperationError() \
+   InvalidOperationException(__FILE__, __LINE__)
 
 template<typename T>
 struct _Node {
@@ -861,12 +931,22 @@ public:
    }; 
 
 private:
-   AVLNode *_head_raw() {
-      return _head.get();
+   static int dtoi(double val) {
+      std::stringstream ss;
+      ss << val;
+      int val_i;
+      ss >> val_i;
+      return val_i;
    }
 
-   size_t _nodes_at_lv(size_t lv) {
-      return 1 << (lv - 1);
+   static int max(int a, int b) {
+      return a > b ? a : b;
+   }
+
+   static std::string itos(int x) {
+      std::stringstream ss;
+      ss << x;
+      return ss.str();
    }
 
    static std::string _node_data_str(AVLNode *n) {
@@ -895,6 +975,14 @@ private:
          << ", parent: " << _node_data_str(n.parent)
          << ")";
       return ss.str();
+   }
+
+   AVLNode *_head_raw() {
+      return _head.get();
+   }
+
+   size_t _nodes_at_lv(size_t lv) {
+      return 1 << (lv - 1);
    }
 
    AVLNode *_find(AVLNode *subtree, const T& val) {
