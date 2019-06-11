@@ -7,86 +7,23 @@
 #include <deque>
 #include <cmath>
 #include <sstream>
-#include <stdexcept>
-#include <cassert>
 #include <string>
 #include <list>
 #include <functional>
-#include <exception>
 
 #define DEPTH_DATA_ENABLED 0
 
-#define DefineException(name)\
-class name: public _CustomException {\
-public:\
-   name(const std::string &file, int line, const std::string &err_msg = #name):\
-      _CustomException(file, line, err_msg) {}\
-};
-
-class _CustomException : public std::exception {
-protected:
-   std::string _err_msg;
-
-public:
-   _CustomException(
-      const std::string &file, int line, 
-      const std::string &err_msg = "_CustomException") {
-         using namespace std;
-         stringstream ss;
-         ss << err_msg << ": " << file << ", " << line;   
-         _err_msg = ss.str();
-      }
-
-   virtual const char* what() const throw() {
-      return _err_msg.c_str();
-   }
-};
-
-DefineException(NullPointerException)
-#define NullPointerError() NullPointerException(__FILE__, __LINE__)
-
-DefineException(NotNullPointerException)
-#define NotNullPointerError() NotNullPointerException(__FILE__, __LINE__)
-
-DefineException(DetachedNodeException)
-#define DetachedNodeError() DetachedNodeException(__FILE__, __LINE__)
-
-DefineException(NotChildException)
-#define NotChildError() NotChildException(__FILE__, __LINE__)
-
-DefineException(NoChildException)
-#define NoChildError() NoChildException(__FILE__, __LINE__)
-
-DefineException(InvalidDirectionException)
-#define InvalidDirectionError() InvalidDirectionException(__FILE__, __LINE__)
-
-DefineException(PointerToSelfException)
-#define PointerToSelfError() PointerToSelfException(__FILE__, __LINE__)
-
-DefineException(MustHaveExactlyOneChildException)
-#define MustHaveExactlyOneChildError()\
-    MustHaveExactlyOneChildException(__FILE__, __LINE__)
-
-DefineException(NotYetImplementedException)
-#define NotYetImplementedError()\
-   NotYetImplementedException(__FILE__, __LINE__)
-
-DefineException(NotLeafException)
-#define NotLeafError() NotLeafException(__FILE__, __LINE__)
-
-DefineException(LessThanOneException)
-#define LessThanOneError() LessThanOneException(__FILE__, __LINE__)
-
-DefineException(InvalidHeavyStateException)
-#define InvalidHeavyStateError() InvalidHeavyStateException(__FILE__, __LINE__)
-
-DefineException(InvalidAdvanceStateException)
-#define InvalidAdvanceStateError() \
-   InvalidAdvanceStateException(__FILE__, __LINE__)
-
-DefineException(InvalidOperationException)
-#define InvalidOperationError() \
-   InvalidOperationException(__FILE__, __LINE__)
+#ifdef NDEBUG
+#define assert(condition, message) 0
+#else
+#define assert(condition, message)\
+   (!(condition)) ?\
+      (std::cerr << "Assertion failed: (" << #condition << "), "\
+      << "function " << __FUNCTION__\
+      << ", file " << __FILE__\
+      << ", line " << __LINE__ << "."\
+      << std::endl << message << std::endl, abort(), 0) : 1
+#endif
 
 template<typename T>
 struct _Node {
@@ -236,15 +173,13 @@ public:
       }
 
       AVLNode *_get_left_sibling(AVLNode *tree) {
-         if (!tree || !tree->parent)
-            throw NullPointerError();
+         assert(tree && tree->parent, "NullPointerError");
          AVLNode *parent = tree->parent;
          return parent->right_raw() == tree ? parent->left_raw() : nullptr;
       }
 
       AVLNode *_get_right_sibling(AVLNode *tree) {
-         if (!tree || !tree->parent)
-            throw NullPointerError();
+         assert(tree && tree->parent, "NullPointerError");
          AVLNode *parent = tree->parent;
          return parent->left_raw() == tree ? parent->right_raw() : nullptr;
       }
@@ -293,8 +228,7 @@ public:
 
       AVLNode *_retrace_while_child(
          AVLNode *n, Direction dir, size_t *parent_distance=nullptr) {
-         if (!n || !n->parent)
-            throw NullPointerError();
+         assert(n && n->parent, "NullPointerError");
 
          size_t dist = 0;
          AVLNode *parent = n->parent;
@@ -319,8 +253,7 @@ public:
       }
 
       AVLNode *_retrace_until_left_child() {
-         if (!_curr || !_curr->parent)
-            throw NullPointerError();
+         assert(_curr && _curr->parent, "NullPointerError");
 
          AVLNode *curr = _curr;
          AVLNode *parent = curr->parent;
@@ -346,11 +279,11 @@ public:
                _get_leftest_node(tmp->right_raw()) : 
                _retrace_while_child(_curr, Direction::RIGHT);
          else if (_visited_right_subtree())
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
          else if (!_curr)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -366,7 +299,7 @@ public:
          else if (!_curr)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -387,7 +320,7 @@ public:
          else if (!tmp)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -406,12 +339,12 @@ public:
             else if (!tmp->parent || tmp->parent->left_raw() == tmp)
                _curr = tmp->parent;
             else
-               throw InvalidAdvanceStateError();
+               assert(false, "InvalidAdvanceStateError");
          }
          else if (!tmp)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -430,12 +363,12 @@ public:
             else if (!tmp->parent || tmp->parent->right_raw() == tmp)
                _curr = tmp->parent;
             else
-               throw InvalidAdvanceStateError();
+               assert(false, "InvalidAdvanceStateError");
          }
          else if (!tmp)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -455,12 +388,12 @@ public:
             else if (tmp->parent && tmp->parent->left_raw() == tmp)
                _curr = _get_root_node(_retrace_until_unvisited_left_child());
             else
-               throw InvalidAdvanceStateError();
+               assert(false, "InvalidAdvanceStateError");
          }
          else if (!tmp)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -483,7 +416,7 @@ public:
             return n;
          }
          else
-            throw InvalidOperationError();
+            assert(false, "InvalidOperationError");
       }
 
       AVLNode *_get_leftest_node_at_depth(
@@ -507,12 +440,11 @@ public:
             *pos2 = parent->left_raw();
          }
          else
-            throw InvalidOperationError();
+            assert(false, "InvalidOperationError");
       }
 
       AVLNode *_get_next_sibling(AVLNode *n, size_t depth, Direction dir) {
-         if (!n)
-            throw NullPointerError();
+         assert(n, "NullPointerError");
 
          AVLNode *parent = n->parent;
 
@@ -540,7 +472,7 @@ public:
                   ) : nullptr;
             }
             else
-               throw InvalidOperationError();
+               assert(false, "InvalidOperationError");
          }
          else
             return nullptr;
@@ -549,8 +481,8 @@ public:
       AVLNode *_get_start_node(AVLNode *refnode, size_t depth, Direction dir) {
          AVLNode *n = refnode;
          AVLNode *prev = nullptr;
-         if (dir == Direction::ROOT)
-            throw InvalidDirectionError();
+         assert(dir != Direction::ROOT, "InvalidDirectionError");
+
          do {
             prev = n;
          } while (n = _get_next_sibling(n, depth, dir));
@@ -607,7 +539,7 @@ public:
          else if (!tmp)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -629,7 +561,7 @@ public:
          else if (!tmp)
             return;
          else
-            throw InvalidAdvanceStateError();
+            assert(false, "InvalidAdvanceStateError");
 
          _prev = tmp;
       }
@@ -769,7 +701,7 @@ public:
          else if (_order_ty == OrderType::INSERTION)
             _curr = reverse ? *_insert_riter : *_insert_iter;
          else
-            throw NotYetImplementedError();
+            assert(false, "NotYetImplementedError");
       }
 
       const_iterator(const const_iterator &other): 
@@ -833,7 +765,7 @@ public:
          else if (_order_ty == OrderType::INSERTION)
             _insertion_order_increment();
          else
-            throw NotYetImplementedError();
+            assert(false, "NotYetImplementedError");
 
          _prev_incr = true;
          return *this;
@@ -857,7 +789,7 @@ public:
          else if (_order_ty == OrderType::INSERTION)
             _insertion_order_decrement();
          else
-            throw NotYetImplementedError();
+            assert(false, "NotYetImplementedError");
 
          _prev_incr = false;
          return *this;
@@ -1004,20 +936,17 @@ private:
    }
 
    AVLNodeOwner& _first_child(AVLNode *n) {
-      if (!n)
-         throw NullPointerError();
+      assert(n, "NullPointerError");
       if (n->left)
          return n->left;
       else if (n->right)
          return n->right;
       else
-         throw NoChildError();
+         assert(false, "NoChildError");
    }
 
    Direction _which_child(AVLNode *n) {
-      if (!n)
-         throw NullPointerError();
-
+      assert(n, "NullPointerError");
       AVLNode *parent = n->parent;
 
       if (!parent)
@@ -1027,7 +956,7 @@ private:
       else if (parent->right_raw() == n)
          return Direction::RIGHT;
       else
-         throw DetachedNodeError();
+         assert(false, "DetachedNodeError");
    }
 
    int _num_children(AVLNode *n) {
@@ -1048,7 +977,7 @@ private:
 
    // TODO function to get highest rebalanced tree
    AVLNode *_get_highest_rebalanced_tree() {
-      throw NotYetImplementedError();
+      assert(false, "NotYetImplementedError");
    }
 
    void _update_depths_if_rebalanced() {
@@ -1112,7 +1041,7 @@ private:
       else if (rot_dxn == Direction::RIGHT)
          xchild = &x->right;
       else
-         throw InvalidDirectionError();
+         assert(false, "InvalidDirectionError");
       return xchild;
    }
 
@@ -1123,7 +1052,7 @@ private:
       else if (rot_dxn = Direction::RIGHT)
          ychild = &y->left;
       else
-         throw InvalidDirectionError();     
+         assert(false, "InvalidDirectionError");
       return ychild;
    }
 
@@ -1146,7 +1075,7 @@ private:
          *t2_owner = &x->right;
       }
       else
-         throw InvalidDirectionError();
+         assert(false, "InvalidDirectionError");
    }
 
    void _single_rotation_metadata_update(
@@ -1241,7 +1170,7 @@ private:
                      return std::move(
                         _left_right_double_rotation(working_tree));
                   else
-                     throw InvalidHeavyStateError();
+                     assert(false, "InvalidHeavyStateError");
                }
                else if (_is_too_right_heavy(bf)) {
                   if (_is_right_right(working_tree->get()))
@@ -1250,10 +1179,10 @@ private:
                      return std::move(
                         _right_left_double_rotation(working_tree));
                   else
-                     throw InvalidHeavyStateError();
+                     assert(false, "InvalidHeavyStateError");
                }
                else
-                  throw InvalidHeavyStateError();
+                  assert(false, "InvalidHeavyStateError");
             }
          );
 
@@ -1301,13 +1230,11 @@ private:
    }
 
    AVLNodeOwner _on_removal_leaf(AVLNodeOwner *n, AVLNodeOwner *rm = nullptr) {
-      if (!n) 
-         throw NullPointerError();
-      if ((*n)->left || (*n)->right)
-         throw NotLeafError();
+      assert(n, "NullPointerError");
+      assert(!(*n)->left && !(*n)->right, "NotLeafError");
+
       if (rm)
          *rm = std::move(*n);
-
       return AVLNodeOwner();
    }
 
@@ -1322,18 +1249,15 @@ private:
    }
 
    void _update_depths(AVLNode *n) {
-      if (!n)
-         throw NullPointerError();
+      assert(n, "NullPointerError");
       size_t start_depth = n->parent ? n->parent->depth + 1 : 1;
       _update_depths(n, start_depth);
    }
 
    AVLNodeOwner& _on_removal_one_child(
       AVLNodeOwner *n, AVLNodeOwner *rm = nullptr) {
-      if (!*n)
-         throw NullPointerError();
-      if (_num_children(n->get()) != 1)
-         throw MustHaveExactlyOneChildError();
+      assert(*n, "NullPointerError");
+      assert(_num_children(n->get()) == 1, "MustHaveExactlyOneChildError");
 
       return _modify_proxy_tree(n,
          [this, &rm](AVLNodeOwner *working_tree) -> AVLNodeOwner {
@@ -1388,10 +1312,9 @@ private:
    }
 
    AVLNodeOwner& _on_removal_two_children(AVLNodeOwner *n) {
-      if (!n) 
-         throw NullPointerError();
+      assert(n, "NullPointerError");
 
-     return  _modify_proxy_tree(n, 
+      return  _modify_proxy_tree(n, 
          [this, &n](AVLNodeOwner *working_tree) -> AVLNodeOwner {
             AVLNodeOwner next;
 
