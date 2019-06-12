@@ -155,6 +155,9 @@ private:
       size_t _curr_lv;
       size_t _prev_lv;
 
+      // TODO change to IteratorTracker object that has begin, end, curr 
+      // properties of type 
+      // std::conditional<reverse, NodeListRevIter, NodeListIter>
       NodeListIter _insert_iter;
       NodeListRevIter _insert_riter;
       NodeListIter _insert_end;
@@ -605,6 +608,8 @@ private:
          _prev = tmp;
       }
 
+      // TODO change ITER_TY to 
+      // std::conditional<reverse, NodeListRevIter, NodeListIter>
       template <typename ITER_TY>
       void _insertion_order_advance(
          ITER_TY *iter, ITER_TY *begin, ITER_TY *end, bool towards_end) {
@@ -622,6 +627,7 @@ private:
             _curr = *iter == *begin ? nullptr : *--*iter;
       }
 
+      // TODO just pass in an IteratorTracker
       void _insertion_order_increment() {
          if (reverse)
             _insertion_order_advance<NodeListRevIter>(
@@ -633,6 +639,7 @@ private:
                /*towards_end=*/true);
       }
 
+      // TODO just pass in an IteratorTracker
       void _insertion_order_decrement() {
          if (reverse)
             _insertion_order_advance<NodeListRevIter>(
