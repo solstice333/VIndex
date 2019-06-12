@@ -119,13 +119,6 @@ private:
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
    typedef std::map<OrderType, std::string> OrderTypeToStr;
 
-   AVLNodeOwner _head;
-   OrderType _order_ty;
-   const_iterator _cend;
-   const_reverse_iterator _crend;
-   NodeList _rebalanced_trees;
-   NodeList _insertion_list;
-
    class OrderTypeToStrSingleton : 
       public Singleton<OrderTypeToStr, OrderTypeToStrSingleton> {
    public:
@@ -144,8 +137,8 @@ private:
       static void init(AVLNode *) {}
    };
 
-public:
-   class const_iterator: 
+   template<bool reverse>
+   class _const_iterator : 
       public std::iterator<std::bidirectional_iterator_tag, T> {
    private:
       typedef Vindex::AVLNode AVLNode;
@@ -157,7 +150,6 @@ public:
       AVLNode *_curr;
       AVLNode *_prev;
       bool _prev_incr;
-      bool _reverse;
       OrderType _order_ty;
 
       size_t _curr_lv;
@@ -631,7 +623,7 @@ public:
       }
 
       void _insertion_order_increment() {
-         if (_reverse)
+         if (reverse)
             _insertion_order_advance<NodeListRevIter>(
                &_insert_riter, &_insert_rbegin, &_insert_rend, 
                /*towards_end=*/false);
@@ -642,7 +634,7 @@ public:
       }
 
       void _insertion_order_decrement() {
-         if (_reverse)
+         if (reverse)
             _insertion_order_advance<NodeListRevIter>(
                &_insert_riter, &_insert_rbegin, &_insert_rend, 
                /*towards_end=*/true);
@@ -674,27 +666,25 @@ public:
          ss << "prev: " << _prev << " = " << _node_data(_prev) << endl;
          ss << boolalpha;
          ss << "prev_incr: " << _prev_incr << endl;
-         ss << "reverse: " << _reverse << endl;
+         ss << "reverse: " << reverse << endl;
          ss << "order_ty: " << _order_type_name(_order_ty) << endl;
          ss << "curr_lv: " << _curr_lv << endl;
          return ss.str();
       }
 
    public:
-      const_iterator(): 
+      _const_iterator(): 
          _curr(nullptr), 
          _prev(nullptr), 
          _prev_incr(true), 
-         _reverse(false),
          _order_ty(OrderType::INORDER),
 
          _curr_lv(0), 
          _prev_lv(0) {}
 
-      const_iterator(Vindex *vin, OrderType order_ty, bool reverse=false): 
+      _const_iterator(Vindex *vin, OrderType order_ty): 
          _prev(nullptr),
          _prev_incr(reverse ? false : true), 
-         _reverse(reverse),
          _order_ty(order_ty),
 
          _curr_lv(0), 
@@ -708,23 +698,23 @@ public:
          _insert_rbegin(vin->_insertion_list.rbegin()) {
 
          if (_order_ty == OrderType::INORDER)
-            _curr = _reverse ? 
+            _curr = reverse ? 
                _get_rightest_node(vin->_head_raw()) : 
                _get_leftest_node(vin->_head_raw());
          else if (_order_ty == OrderType::PREORDER)
-            _curr = _reverse ?
+            _curr = reverse ?
                _get_rightest_node(vin->_head_raw()) :
                _get_root_node(vin->_head_raw());
          else if (_order_ty == OrderType::POSTORDER)
-            _curr = _reverse ?
+            _curr = reverse ?
                _get_root_node(vin->_head_raw()) :
                _get_leftest_node(vin->_head_raw());
          else if (_order_ty == OrderType::BREADTHFIRST) {
-            _curr = _reverse ?
+            _curr = reverse ?
                _get_deepest_right_node(vin->_head_raw(), &_curr_lv) :
                _get_root_node(vin->_head_raw()); 
 
-            _curr_lv = _reverse ? _curr_lv : 1;
+            _curr_lv = reverse ? _curr_lv : 1;
          }
          else if (_order_ty == OrderType::INSERTION)
             _curr = reverse ? *_insert_riter : *_insert_iter;
@@ -732,11 +722,10 @@ public:
             assert(false, "NotYetImplementedError");
       }
 
-      const_iterator(const const_iterator &other): 
+      _const_iterator(const _const_iterator &other): 
          _curr(other._curr), 
          _prev(other._prev), 
          _prev_incr(other._prev_incr), 
-         _reverse(other._reverse), 
          _order_ty(other._order_ty), 
 
          _curr_lv(other._curr_lv),
@@ -749,11 +738,10 @@ public:
          _insert_begin(other._insert_begin),
          _insert_rbegin(other._insert_rbegin) {}
 
-      const_iterator& operator=(const const_iterator &other) {
+      _const_iterator& operator=(const _const_iterator &other) {
          _curr = other._curr;
          _prev = other._prev;
          _prev_incr = other._prev_incr;
-         _reverse = other._reverse;
          _order_ty = other._order_ty;
 
          _curr_lv = other._curr_lv;
@@ -769,15 +757,15 @@ public:
          return *this;
       }
 
-      bool operator==(const const_iterator& other) const {
+      bool operator==(const _const_iterator& other) const {
          return _curr == other._curr;
       }
 
-      bool operator!=(const const_iterator& other) const {
+      bool operator!=(const _const_iterator& other) const {
          return !operator==(other);
       }
 
-      const_iterator operator++() {
+      _const_iterator operator++() {
          if (_order_ty == OrderType::INORDER)
             _in_order_increment();
          else if (_order_ty == OrderType::PREORDER)
@@ -795,13 +783,13 @@ public:
          return *this;
       }
 
-      const_iterator operator++(int) {
-         const_iterator tmp(*this);
+      _const_iterator operator++(int) {
+         _const_iterator tmp(*this);
          operator++();
          return tmp;
       }
 
-      const_iterator operator--() {
+      _const_iterator operator--() {
          if (_order_ty == OrderType::INORDER)
             _in_order_decrement();
          else if (_order_ty == OrderType::PREORDER)
@@ -819,8 +807,8 @@ public:
          return *this;
       }
 
-      const_iterator operator--(int) {
-         const_iterator tmp(*this);
+      _const_iterator operator--(int) {
+         _const_iterator tmp(*this);
          operator--();
          return tmp;
       }
@@ -833,8 +821,8 @@ public:
          return _curr ? &_curr->data : &Vindex<T>::_default()->data;
       }
 
-      const_iterator end() const { 
-         return const_iterator();
+      _const_iterator end() const { 
+         return _const_iterator();
       }
 
       std::string str() const {
@@ -846,38 +834,86 @@ public:
       }
    };
 
-   class const_reverse_iterator: public const_iterator {
+   AVLNodeOwner _head;
+   OrderType _order_ty;
+   const_iterator _cend;
+   const_reverse_iterator _crend;
+   NodeList _rebalanced_trees;
+   NodeList _insertion_list;
+
+public:
+   class const_iterator: public _const_iterator<false> {
+   public:
+      const_iterator() {}
+
+      const_iterator(Vindex *vin, OrderType order_ty): 
+         _const_iterator<false>(vin, order_ty) {}
+
+      const_iterator(const const_iterator &other):
+         _const_iterator<false>(other) {}
+
+      const_iterator& operator=(const const_iterator& other) {
+         _const_iterator<false>::operator=(other);   
+         return *this;
+      }
+
+      const_iterator operator++() {
+         _const_iterator<false>::operator++();
+         return *this;
+      } 
+
+      const_iterator operator++(int val) {
+         _const_iterator<false>::operator++(val);
+         return *this;
+      }
+
+      const_iterator operator--() {
+         _const_iterator<false>::operator--();
+         return *this;
+      } 
+
+      const_iterator operator--(int val) {
+         _const_iterator<false>::operator--(val);
+         return *this;
+      }
+
+      const_iterator end() {
+         return const_iterator();
+      }
+   };
+
+   class const_reverse_iterator: public _const_iterator<true> {
    public:
       const_reverse_iterator() {}
 
       const_reverse_iterator(Vindex *vin, OrderType order_ty): 
-         const_iterator(vin, order_ty, /*reverse=*/true) {}
+         _const_iterator<true>(vin, order_ty) {}
 
       const_reverse_iterator(const const_reverse_iterator &other):
-         const_iterator(other) {}
+         _const_iterator<true>(other) {}
 
       const_reverse_iterator& operator=(const const_reverse_iterator& other) {
-         const_iterator::operator=(other);   
+         _const_iterator<true>::operator=(other);   
          return *this;
       }
 
       const_reverse_iterator operator++() {
-         const_iterator::operator--();
+         _const_iterator<true>::operator--();
          return *this;
       } 
 
       const_reverse_iterator operator++(int val) {
-         const_iterator::operator--(val);
+         _const_iterator<true>::operator--(val);
          return *this;
       }
 
       const_reverse_iterator operator--() {
-         const_iterator::operator++();
+         _const_iterator<true>::operator++();
          return *this;
       } 
 
       const_reverse_iterator operator--(int val) {
-         const_iterator::operator++(val);
+         _const_iterator<true>::operator++(val);
          return *this;
       }
 
