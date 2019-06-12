@@ -13,6 +13,7 @@
 #include <string>
 #include <list>
 #include <functional>
+#include <mutex>
 
 #define DEPTH_DATA_ENABLED 0
 
@@ -27,6 +28,29 @@
       << ", line " << __LINE__ << "."\
       << std::endl << message << std::endl, abort(), 0) : 1
 #endif
+
+template <typename T, typename DerivedTy>
+class Singleton {
+private:
+   static T resource;
+   static std::once_flag flag;
+
+public:
+   static void init(T *resource) {
+      DerivedTy::init(resource);
+   };
+
+   virtual T& get() {
+      std::call_once(flag, init, &resource);
+      return resource;
+   } 
+};
+
+template <typename T, typename DerivedTy>
+std::once_flag Singleton<T, DerivedTy>::flag;
+
+template <typename T, typename DerivedTy>
+T Singleton<T, DerivedTy>::resource;
 
 template<typename T>
 struct _Node {
@@ -1515,5 +1539,9 @@ public:
       _head = nullptr;
    }
 };
+
+#ifdef assert
+#undef assert
+#endif
 
 #endif
