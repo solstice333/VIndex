@@ -113,6 +113,7 @@ private:
    typedef Direction::Direction Direction;
    typedef OrderType::OrderType OrderType;
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
+   typedef std::map<OrderType, std::string> OrderTypeToStr;
 
    AVLNodeOwner _head;
    OrderType _order_ty;
@@ -120,6 +121,18 @@ private:
    const_reverse_iterator _crend;
    NodeList _rebalanced_trees;
    NodeList _insertion_list;
+
+   class OrderTypeToStrSingleton : 
+      public Singleton<OrderTypeToStr, OrderTypeToStrSingleton> {
+   public:
+      static void init(OrderTypeToStr *order_ty_to_str) {
+         (*order_ty_to_str)[OrderType::INORDER] = "INORDER";
+         (*order_ty_to_str)[OrderType::PREORDER] = "PREORDER";
+         (*order_ty_to_str)[OrderType::POSTORDER] = "POSTORDER";
+         (*order_ty_to_str)[OrderType::BREADTHFIRST] = "BREADTHFIRST";
+         (*order_ty_to_str)[OrderType::INSERTION] = "INSERTION";
+      }
+   }; 
 
 public:
    class const_iterator: 
@@ -642,20 +655,8 @@ public:
       }
 
       std::string _order_type_name(OrderType ty) const {
-         using namespace std;
-         static map<OrderType, string> ty_to_name;
-         static bool initd = false;
-
-         if (!initd) {
-            ty_to_name[OrderType::INORDER] = "INORDER";
-            ty_to_name[OrderType::PREORDER] = "PREORDER";
-            ty_to_name[OrderType::POSTORDER] = "POSTORDER";
-            ty_to_name[OrderType::BREADTHFIRST] = "BREADTHFIRST";
-            ty_to_name[OrderType::INSERTION] = "INSERTION";
-            initd = true;
-         }
-
-         return ty_to_name.at(ty);
+         OrderTypeToStrSingleton order_ty_to_str;
+         return order_ty_to_str.get().at(ty);
       }
 
       std::string _str() const {
