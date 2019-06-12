@@ -1,3 +1,6 @@
+#ifndef VINDEX_H
+#define VINDEX_H
+
 #include <iostream>
 #include <memory>
 #include <functional>
@@ -112,7 +115,6 @@ public:
 
       size_t _curr_lv;
       size_t _prev_lv;
-      size_t _nodes_seen_on_lv;
 
       NodeListIter _insert_iter;
       NodeListRevIter _insert_riter;
@@ -654,7 +656,6 @@ public:
          _order_ty(OrderType::INORDER),
 
          _curr_lv(0), 
-         _nodes_seen_on_lv(0), 
          _prev_lv(0),
 
          _default(std::make_unique<AVLNode>(T())) {}
@@ -666,7 +667,6 @@ public:
          _order_ty(order_ty),
 
          _curr_lv(0), 
-         _nodes_seen_on_lv(0), 
          _prev_lv(0),
 
          _insert_iter(vin->_insertion_list.begin()),
@@ -695,7 +695,6 @@ public:
                _get_deepest_right_node(vin->_head_raw(), &_curr_lv) :
                _get_root_node(vin->_head_raw()); 
 
-            _nodes_seen_on_lv = 1;    
             _curr_lv = _reverse ? _curr_lv : 1;
          }
          else if (_order_ty == OrderType::INSERTION)
@@ -712,7 +711,6 @@ public:
          _order_ty(other._order_ty), 
 
          _curr_lv(other._curr_lv),
-         _nodes_seen_on_lv(other._nodes_seen_on_lv),
          _prev_lv(other._prev_lv),
 
          _insert_iter(other._insert_iter),
@@ -732,7 +730,6 @@ public:
          _order_ty = other._order_ty;
 
          _curr_lv = other._curr_lv;
-         _nodes_seen_on_lv = other._nodes_seen_on_lv;
          _prev_lv = other._prev_lv;
 
          _insert_iter = other._insert_iter;
@@ -1518,3 +1515,5 @@ public:
       _head = nullptr;
    }
 };
+
+#endif
