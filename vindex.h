@@ -85,6 +85,10 @@ struct _AVLState: public T {
    _AVLState(BASE_TY data): 
       T(data), height(0), depth(0), 
       left(nullptr), right(nullptr), parent(nullptr) {}
+
+   _AVLState(): 
+      T(BASE_TY()), height(0), depth(0),
+      left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
 namespace Direction {
@@ -134,6 +138,12 @@ private:
       }
    }; 
 
+   class AVLNodeDefaultSingleton :
+      public Singleton<AVLNode, AVLNodeDefaultSingleton> {
+   public:
+      static void init(AVLNode *) {}
+   };
+
 public:
    class const_iterator: 
       public std::iterator<std::bidirectional_iterator_tag, T> {
@@ -159,8 +169,6 @@ public:
       NodeListRevIter _insert_rend;
       NodeListIter _insert_begin;
       NodeListRevIter _insert_rbegin;
-
-      std::unique_ptr<AVLNode> _default;
 
       AVLNode *_get_leftest_node(AVLNode *tree) {
          return tree->left ? _get_leftest_node(tree->left_raw()) : tree;
@@ -681,9 +689,7 @@ public:
          _order_ty(OrderType::INORDER),
 
          _curr_lv(0), 
-         _prev_lv(0),
-
-         _default(std::make_unique<AVLNode>(T())) {}
+         _prev_lv(0) {}
 
       const_iterator(Vindex *vin, OrderType order_ty, bool reverse=false): 
          _prev(nullptr),
@@ -699,9 +705,7 @@ public:
          _insert_end(vin->_insertion_list.end()),
          _insert_rend(vin->_insertion_list.rend()),
          _insert_begin(vin->_insertion_list.begin()),
-         _insert_rbegin(vin->_insertion_list.rbegin()),
-
-         _default(std::make_unique<AVLNode>(T())) {
+         _insert_rbegin(vin->_insertion_list.rbegin()) {
 
          if (_order_ty == OrderType::INORDER)
             _curr = _reverse ? 
@@ -743,9 +747,7 @@ public:
          _insert_end(other._insert_end),
          _insert_rend(other._insert_rend),
          _insert_begin(other._insert_begin),
-         _insert_rbegin(other._insert_rbegin),
-
-         _default(std::make_unique<AVLNode>(T())) {}
+         _insert_rbegin(other._insert_rbegin) {}
 
       const_iterator& operator=(const const_iterator &other) {
          _curr = other._curr;
@@ -824,11 +826,11 @@ public:
       }
 
       const T& operator*() const {
-         return _curr ? _curr->data : _default->data;
+         return _curr ? _curr->data : Vindex<T>::_default()->data;
       }
 
       const T* operator->() const {
-         return _curr ? &_curr->data : &_default->data;
+         return _curr ? &_curr->data : &Vindex<T>::_default()->data;
       }
 
       const_iterator end() const { 
@@ -885,6 +887,10 @@ public:
    }; 
 
 private:
+   static AVLNode *_default() {
+      return &AVLNodeDefaultSingleton().get();
+   }
+
    static int dtoi(double val) {
       std::stringstream ss;
       ss << val;
