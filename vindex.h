@@ -52,7 +52,7 @@ std::once_flag Singleton<T, DerivedTy>::flag;
 template <typename T, typename DerivedTy>
 T Singleton<T, DerivedTy>::resource;
 
-template<typename T>
+template <typename T>
 struct _Node {
    T data;
    _Node(const T& data): data(data) {}
@@ -64,7 +64,7 @@ struct _Node {
    bool operator!=(const _Node& n) { return data != n.data; }
 };
 
-template<typename T, typename BASE_TY = decltype(T::data)>
+template <typename T, typename BASE_TY = decltype(T::data)>
 struct _AVLState: public T {
    typedef std::unique_ptr<_AVLState> AVLStateOwner;
 
@@ -99,7 +99,7 @@ namespace OrderType {
    enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
 }
 
-template<typename T>
+template <typename T>
 class Vindex {
 public:
    class const_iterator;
@@ -137,7 +137,7 @@ private:
       static void init(AVLNode *) {}
    };
 
-   template<bool reverse>
+   template <bool reverse>
    class _const_iterator : 
       public std::iterator<std::bidirectional_iterator_tag, T> {
    private:
