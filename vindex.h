@@ -30,7 +30,7 @@
 #endif
 
 template <typename T, typename DerivedTy>
-class Singleton {
+class _Singleton {
 private:
    static T resource;
    static std::once_flag flag;
@@ -47,10 +47,10 @@ public:
 };
 
 template <typename T, typename DerivedTy>
-std::once_flag Singleton<T, DerivedTy>::flag;
+std::once_flag _Singleton<T, DerivedTy>::flag;
 
 template <typename T, typename DerivedTy>
-T Singleton<T, DerivedTy>::resource;
+T _Singleton<T, DerivedTy>::resource;
 
 template <typename T>
 struct _Node {
@@ -91,8 +91,78 @@ struct _AVLState: public T {
       left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
-namespace Direction {
+template <typename T> class Vindex;
+
+namespace _Direction {
    enum Direction { LEFT, RIGHT, ROOT };
+}
+
+namespace _IterTracker {
+   template <typename IterTy>
+   class IterTrackerBase {
+   private:
+      IterTy _curr;
+      IterTy _begin;
+      IterTy _end;
+
+   protected:
+      IterTrackerBase() {}
+      IterTrackerBase(IterTy curr, IterTy begin, IterTy end): 
+         _curr(curr), _begin(begin), _end(end) {}
+      IterTrackerBase(IterTy begin, IterTy end): 
+         IterTrackerBase(begin, begin, end) {}
+
+      IterTrackerBase& operator=(const IterTrackerBase &other) {
+         _curr = other._curr;
+         _begin = other._begin;
+         _end = other._end;
+         return *this;
+      }
+
+   public:
+      virtual IterTy& curr() { return _curr; }
+      virtual IterTy& begin() { return _begin; }
+      virtual IterTy& end() { return _end; }
+   };
+
+   template <typename NodeDataTy, typename IterTy> 
+   class IterTracker: public IterTrackerBase<IterTy> {
+   public:
+      IterTracker(): IterTrackerBase<IterTy>() {}
+
+      IterTracker(Vindex<NodeDataTy> *vin): 
+         IterTrackerBase<IterTy>(
+            vin->_insertion_list.begin(),
+            vin->_insertion_list.end()) {
+      }
+
+      IterTracker& operator=(const IterTracker &other) {
+         IterTrackerBase<IterTy>::operator=(other);
+         return *this;
+      }
+   };
+
+   template <typename T>
+   using NodeListRevIter = typename Vindex<T>::NodeList::reverse_iterator;
+
+   template <typename NodeDataTy>
+   class IterTracker<
+         NodeDataTy, 
+         NodeListRevIter<NodeDataTy>
+      >: public IterTrackerBase<NodeListRevIter<NodeDataTy>> {
+   public:
+      IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy>>() {}
+
+      IterTracker(Vindex<NodeDataTy> *vin):
+         IterTrackerBase<NodeListRevIter<NodeDataTy>>(
+            vin->_insertion_list.rbegin(),
+            vin->_insertion_list.rend()) {}
+
+      IterTracker& operator=(const IterTracker &other) {
+         IterTrackerBase<NodeListRevIter<NodeDataTy>>::operator=(other);
+         return *this;
+      }
+   };
 }
 
 namespace OrderType {
@@ -101,26 +171,30 @@ namespace OrderType {
 
 template <typename T>
 class Vindex {
-public:
-   class const_iterator;
-   class const_reverse_iterator;
-
 private:
+   template <typename NodeDataTy, typename IterTy>
+   friend class _IterTracker::IterTracker;
+
    typedef _AVLState<_Node<T>> AVLNode;
    typedef std::unique_ptr<AVLNode> AVLNodeOwner;
    typedef std::map<AVLNode *, AVLNodeOwner> NodeCache;
    typedef typename NodeCache::iterator NodeCacheIter;
    typedef std::deque<AVLNode *> NodeDQ;
-   typedef std::list<AVLNode *> NodeList;
    typedef std::function<void(AVLNode *)> NodeListener;
    typedef std::function<void()> VoidFunc;
-   typedef Direction::Direction Direction;
+   typedef _Direction::Direction Direction;
    typedef OrderType::OrderType OrderType;
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
    typedef std::map<OrderType, std::string> OrderTypeToStr;
 
+public:
+   class const_iterator;
+   class const_reverse_iterator;
+   typedef std::list<AVLNode *> NodeList;
+
+private:
    class OrderTypeToStrSingleton : 
-      public Singleton<OrderTypeToStr, OrderTypeToStrSingleton> {
+      public _Singleton<OrderTypeToStr, OrderTypeToStrSingleton> {
    public:
       static void init(OrderTypeToStr *order_ty_to_str) {
          (*order_ty_to_str)[OrderType::INORDER] = "INORDER";
@@ -132,7 +206,7 @@ private:
    }; 
 
    class AVLNodeDefaultSingleton :
-      public Singleton<AVLNode, AVLNodeDefaultSingleton> {
+      public _Singleton<AVLNode, AVLNodeDefaultSingleton> {
    public:
       static void init(AVLNode *) {}
    };
@@ -144,8 +218,13 @@ private:
       typedef Vindex::AVLNode AVLNode;
       typedef Vindex::AVLNodeOwner AVLNodeOwner;
       typedef Vindex::Direction Direction;
-      typedef typename Vindex::NodeList::iterator NodeListIter;
-      typedef typename Vindex::NodeList::reverse_iterator NodeListRevIter;
+      typedef typename Vindex<T>::NodeList::iterator NodeListIter;
+      typedef typename Vindex<T>::NodeList::reverse_iterator NodeListRevIter;
+      typedef 
+         typename 
+            std::conditional<reverse, NodeListRevIter, NodeListIter>::type 
+         IterTy;
+      typedef _IterTracker::IterTracker<T, IterTy> IterTracker;
 
       AVLNode *_curr;
       AVLNode *_prev;
@@ -155,15 +234,7 @@ private:
       size_t _curr_lv;
       size_t _prev_lv;
 
-      // TODO change to IteratorTracker object that has begin, end, curr 
-      // properties of type 
-      // std::conditional<reverse, NodeListRevIter, NodeListIter>
-      NodeListIter _insert_iter;
-      NodeListRevIter _insert_riter;
-      NodeListIter _insert_end;
-      NodeListRevIter _insert_rend;
-      NodeListIter _insert_begin;
-      NodeListRevIter _insert_rbegin;
+      IterTracker _tracker;
 
       AVLNode *_get_leftest_node(AVLNode *tree) {
          return tree->left ? _get_leftest_node(tree->left_raw()) : tree;
@@ -608,47 +679,33 @@ private:
          _prev = tmp;
       }
 
-      // TODO change ITER_TY to 
-      // std::conditional<reverse, NodeListRevIter, NodeListIter>
-      template <typename ITER_TY>
-      void _insertion_order_advance(
-         ITER_TY *iter, ITER_TY *begin, ITER_TY *end, bool towards_end) {
+      void _insertion_order_advance(bool towards_end) {
          if (towards_end) {
-            if (*iter == *end)
+            if (_tracker.curr() == _tracker.end())
                _curr = nullptr;
             else if (!_curr)
-               _curr = **iter;
+               _curr = *_tracker.curr();
             else {
-               ++*iter;
-               _curr = *iter == *end ? nullptr : **iter;
+               ++_tracker.curr();
+               _curr = _tracker.curr() == _tracker.end() ? 
+                  nullptr : *_tracker.curr();
             }
          }
          else
-            _curr = *iter == *begin ? nullptr : *--*iter;
+            _curr = _tracker.curr() == _tracker.begin() ? 
+               nullptr : *--_tracker.curr();
       }
 
-      // TODO just pass in an IteratorTracker
       void _insertion_order_increment() {
-         if (reverse)
-            _insertion_order_advance<NodeListRevIter>(
-               &_insert_riter, &_insert_rbegin, &_insert_rend, 
-               /*towards_end=*/false);
-         else
-            _insertion_order_advance<NodeListIter>(
-               &_insert_iter, &_insert_begin, &_insert_end, 
-               /*towards_end=*/true);
+         reverse ?
+            _insertion_order_advance(/*towards_end=*/false) :
+            _insertion_order_advance(/*towards_end=*/true);
       }
 
-      // TODO just pass in an IteratorTracker
       void _insertion_order_decrement() {
-         if (reverse)
-            _insertion_order_advance<NodeListRevIter>(
-               &_insert_riter, &_insert_rbegin, &_insert_rend, 
-               /*towards_end=*/true);
-         else
-            _insertion_order_advance<NodeListIter>(
-               &_insert_iter, &_insert_begin, &_insert_end, 
-               /*towards_end=*/false);
+         reverse ?
+            _insertion_order_advance(/*towards_end=*/true) :
+            _insertion_order_advance(/*towards_end=*/false);
       }
 
       std::string _node_data(AVLNode *n) const {
@@ -679,7 +736,7 @@ private:
          return ss.str();
       }
 
-   public:
+   protected:
       _const_iterator(): 
          _curr(nullptr), 
          _prev(nullptr), 
@@ -697,12 +754,7 @@ private:
          _curr_lv(0), 
          _prev_lv(0),
 
-         _insert_iter(vin->_insertion_list.begin()),
-         _insert_riter(vin->_insertion_list.rbegin()),
-         _insert_end(vin->_insertion_list.end()),
-         _insert_rend(vin->_insertion_list.rend()),
-         _insert_begin(vin->_insertion_list.begin()),
-         _insert_rbegin(vin->_insertion_list.rbegin()) {
+         _tracker(vin) {
 
          if (_order_ty == OrderType::INORDER)
             _curr = reverse ? 
@@ -724,7 +776,7 @@ private:
             _curr_lv = reverse ? _curr_lv : 1;
          }
          else if (_order_ty == OrderType::INSERTION)
-            _curr = reverse ? *_insert_riter : *_insert_iter;
+            _curr = *_tracker.curr();
          else
             assert(false, "NotYetImplementedError");
       }
@@ -738,12 +790,7 @@ private:
          _curr_lv(other._curr_lv),
          _prev_lv(other._prev_lv),
 
-         _insert_iter(other._insert_iter),
-         _insert_riter(other._insert_riter),
-         _insert_end(other._insert_end),
-         _insert_rend(other._insert_rend),
-         _insert_begin(other._insert_begin),
-         _insert_rbegin(other._insert_rbegin) {}
+         _tracker(other._tracker) {}
 
       _const_iterator& operator=(const _const_iterator &other) {
          _curr = other._curr;
@@ -754,16 +801,12 @@ private:
          _curr_lv = other._curr_lv;
          _prev_lv = other._prev_lv;
 
-         _insert_iter = other._insert_iter;
-         _insert_riter = other._insert_riter;
-         _insert_end = other._insert_end;
-         _insert_rend = other._insert_rend;
-         _insert_begin = other._insert_begin;
-         _insert_rbegin = other._insert_rbegin;
+         _tracker = other._tracker;
 
          return *this;
       }
 
+   public:
       bool operator==(const _const_iterator& other) const {
          return _curr == other._curr;
       }
