@@ -764,6 +764,7 @@ public:
 
       it2 = it;
       assert(*it2 == 40);
+      assert(*++it2 == 16);
 
       assert(*++it == 16);
       assert(it != _vin.cend());
