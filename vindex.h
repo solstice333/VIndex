@@ -112,13 +112,6 @@ namespace _IterTracker {
       IterTrackerBase(IterTy begin, IterTy end): 
          IterTrackerBase(begin, begin, end) {}
 
-      IterTrackerBase& operator=(const IterTrackerBase &other) {
-         _curr = other._curr;
-         _begin = other._begin;
-         _end = other._end;
-         return *this;
-      }
-
    public:
       virtual IterTy& curr() { return _curr; }
       virtual IterTy& begin() { return _begin; }
@@ -134,11 +127,6 @@ namespace _IterTracker {
          IterTrackerBase<IterTy>(
             vin->_insertion_list.begin(),
             vin->_insertion_list.end()) {
-      }
-
-      IterTracker& operator=(const IterTracker &other) {
-         IterTrackerBase<IterTy>::operator=(other);
-         return *this;
       }
    };
 
@@ -157,11 +145,6 @@ namespace _IterTracker {
          IterTrackerBase<NodeListRevIter<NodeDataTy>>(
             vin->_insertion_list.rbegin(),
             vin->_insertion_list.rend()) {}
-
-      IterTracker& operator=(const IterTracker &other) {
-         IterTrackerBase<NodeListRevIter<NodeDataTy>>::operator=(other);
-         return *this;
-      }
    };
 }
 

@@ -755,8 +755,16 @@ public:
       assert(it != _vin.cend());
       assert(*++it == 30);
       assert(it != _vin.cend());
+
+      Vindex<int>::const_iterator it2 = it;
+      assert(*it2 == 30);
+
       assert(*++it == 40);
       assert(it != _vin.cend());
+
+      it2 = it;
+      assert(*it2 == 40);
+
       assert(*++it == 16);
       assert(it != _vin.cend());
       assert(*++it == 26);
