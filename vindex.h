@@ -877,80 +877,81 @@ private:
 public:
    class const_iterator: public _const_iterator<false> {
    public:
-      const_iterator() {}
+      const_iterator() noexcept {}
 
-      const_iterator(Vindex *vin, OrderType order_ty): 
+      const_iterator(Vindex *vin, OrderType order_ty) noexcept : 
          _const_iterator<false>(vin, order_ty) {}
 
-      const_iterator(const const_iterator &other):
+      const_iterator(const const_iterator &other) noexcept :
          _const_iterator<false>(other) {}
 
-      const_iterator& operator=(const const_iterator& other) {
+      const_iterator& operator=(const const_iterator& other) noexcept {
          _const_iterator<false>::operator=(other);   
          return *this;
       }
 
-      const_iterator operator++() {
+      const_iterator operator++() noexcept {
          _const_iterator<false>::operator++();
          return *this;
       } 
 
-      const_iterator operator++(int val) {
+      const_iterator operator++(int val) noexcept {
          _const_iterator<false>::operator++(val);
          return *this;
       }
 
-      const_iterator operator--() {
+      const_iterator operator--() noexcept {
          _const_iterator<false>::operator--();
          return *this;
       } 
 
-      const_iterator operator--(int val) {
+      const_iterator operator--(int val) noexcept {
          _const_iterator<false>::operator--(val);
          return *this;
       }
 
-      const_iterator end() {
+      const_iterator end() noexcept {
          return const_iterator();
       }
    };
 
    class const_reverse_iterator: public _const_iterator<true> {
    public:
-      const_reverse_iterator() {}
+      const_reverse_iterator() noexcept {}
 
-      const_reverse_iterator(Vindex *vin, OrderType order_ty): 
+      const_reverse_iterator(Vindex *vin, OrderType order_ty) noexcept: 
          _const_iterator<true>(vin, order_ty) {}
 
-      const_reverse_iterator(const const_reverse_iterator &other):
+      const_reverse_iterator(const const_reverse_iterator &other) noexcept:
          _const_iterator<true>(other) {}
 
-      const_reverse_iterator& operator=(const const_reverse_iterator& other) {
+      const_reverse_iterator& operator=(const const_reverse_iterator& other) 
+         noexcept {
          _const_iterator<true>::operator=(other);   
          return *this;
       }
 
-      const_reverse_iterator operator++() {
+      const_reverse_iterator operator++() noexcept {
          _const_iterator<true>::operator--();
          return *this;
       } 
 
-      const_reverse_iterator operator++(int val) {
+      const_reverse_iterator operator++(int val) noexcept {
          _const_iterator<true>::operator--(val);
          return *this;
       }
 
-      const_reverse_iterator operator--() {
+      const_reverse_iterator operator--() noexcept {
          _const_iterator<true>::operator++();
          return *this;
       } 
 
-      const_reverse_iterator operator--(int val) {
+      const_reverse_iterator operator--(int val) noexcept {
          _const_iterator<true>::operator++(val);
          return *this;
       }
 
-      const_reverse_iterator end() {
+      const_reverse_iterator end() noexcept {
          return const_reverse_iterator();
       }
    }; 
@@ -1545,11 +1546,11 @@ private:
    }
 
 public:
-   Vindex(): 
+   Vindex() noexcept: 
       _head(nullptr), 
       _order_ty(OrderType::INORDER) {}
 
-   void insert(const T& val) {
+   void insert(const T& val) noexcept {
       AVLNodeOwner n = std::make_unique<AVLNode>(val);
       ++n->height;
       ++n->depth;
@@ -1569,48 +1570,48 @@ public:
    }
 
    template <typename... Args>
-   void emplace_back(Args&&... args) {
+   void emplace_back(Args&&... args) noexcept {
       insert(T(std::forward<Args>(args)...));
    }
 
-   void remove(const T& val) {
+   void remove(const T& val) noexcept {
       _remove_and_rebalance(val, &_head, nullptr);
       _update_depths_if_rebalanced();
    }
 
-   std::string bfs_str(const std::string &delim = "|") {
+   std::string bfs_str(const std::string &delim = "|") noexcept {
       return _gather_bfs_str(delim);
    }
 
-   void order(OrderType order_ty) {
+   void order(OrderType order_ty) noexcept {
       _order_ty = order_ty;
    }
 
-   OrderType order() {
+   OrderType order() noexcept {
       return _order_ty;
    }
 
-   const_iterator cbegin() {
+   const_iterator cbegin() noexcept {
       auto it = const_iterator(this, _order_ty);
       _cend = it.end();
       return it;
    }
 
-   const_iterator cend() {
+   const_iterator cend() noexcept {
       return _cend;
    }
 
-   const_reverse_iterator crbegin() {
+   const_reverse_iterator crbegin() noexcept {
       auto it = const_reverse_iterator(this, _order_ty);
       _crend = it.end();
       return it;
    }
 
-   const_reverse_iterator crend() {
+   const_reverse_iterator crend() noexcept {
       return _crend;
    }
 
-   void clear() {
+   void clear() noexcept {
       _insertion_list.clear();
       _head = nullptr;
    }
