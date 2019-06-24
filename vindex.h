@@ -91,7 +91,7 @@ struct _AVLState: public T {
       left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
-template <typename T> class Vindex;
+template <typename T, typename KeyTy> class Vindex;
 
 namespace _Direction {
    enum Direction { LEFT, RIGHT, ROOT };
@@ -118,31 +118,33 @@ namespace _IterTracker {
       virtual IterTy& end() { return _end; }
    };
 
-   template <typename NodeDataTy, typename IterTy> 
+   template <typename NodeDataTy, typename KeyTy, typename IterTy> 
    class IterTracker: public IterTrackerBase<IterTy> {
    public:
       IterTracker(): IterTrackerBase<IterTy>() {}
 
-      IterTracker(Vindex<NodeDataTy> *vin): 
+      IterTracker(Vindex<NodeDataTy, KeyTy> *vin): 
          IterTrackerBase<IterTy>(
             vin->_insertion_list.begin(),
             vin->_insertion_list.end()) {
       }
    };
 
-   template <typename T>
-   using NodeListRevIter = typename Vindex<T>::NodeList::reverse_iterator;
+   template <typename T, typename KeyTy>
+   using NodeListRevIter = 
+      typename Vindex<T, KeyTy>::NodeList::reverse_iterator;
 
-   template <typename NodeDataTy>
+   template <typename NodeDataTy, typename KeyTy>
    class IterTracker<
          NodeDataTy, 
-         NodeListRevIter<NodeDataTy>
-      >: public IterTrackerBase<NodeListRevIter<NodeDataTy>> {
+         KeyTy,
+         NodeListRevIter<NodeDataTy, KeyTy>
+      >: public IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>> {
    public:
-      IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy>>() {}
+      IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>() {}
 
-      IterTracker(Vindex<NodeDataTy> *vin):
-         IterTrackerBase<NodeListRevIter<NodeDataTy>>(
+      IterTracker(Vindex<NodeDataTy, KeyTy> *vin):
+         IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>(
             vin->_insertion_list.rbegin(),
             vin->_insertion_list.rend()) {}
    };
@@ -152,7 +154,7 @@ namespace OrderType {
    enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
 }
 
-template <typename T>
+template <typename T, typename KeyTy>
 class Vindex {
 private:
    template <typename NodeDataTy, typename IterTy>
@@ -201,13 +203,15 @@ private:
       typedef Vindex::AVLNode AVLNode;
       typedef Vindex::AVLNodeOwner AVLNodeOwner;
       typedef Vindex::Direction Direction;
-      typedef typename Vindex<T>::NodeList::iterator NodeListIter;
-      typedef typename Vindex<T>::NodeList::reverse_iterator NodeListRevIter;
+      typedef 
+         typename Vindex<T, KeyTy>::NodeList::iterator NodeListIter;
+      typedef 
+         typename Vindex<T, KeyTy>::NodeList::reverse_iterator NodeListRevIter;
       typedef 
          typename 
             std::conditional<reverse, NodeListRevIter, NodeListIter>::type 
          IterTy;
-      typedef _IterTracker::IterTracker<T, IterTy> IterTracker;
+      typedef _IterTracker::IterTracker<T, KeyTy, IterTy> IterTracker;
 
       AVLNode *_curr;
       AVLNode *_prev;
@@ -847,11 +851,11 @@ private:
       }
 
       const T& operator*() const {
-         return _curr ? _curr->data : Vindex<T>::_default()->data;
+         return _curr ? _curr->data : Vindex<T, KeyTy>::_default()->data;
       }
 
       const T* operator->() const {
-         return _curr ? &_curr->data : &Vindex<T>::_default()->data;
+         return _curr ? &_curr->data : &Vindex<T, KeyTy>::_default()->data;
       }
 
       _const_iterator end() const { 

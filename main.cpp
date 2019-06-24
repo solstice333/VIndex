@@ -6,10 +6,57 @@
 
 using namespace std;
 
+class BasicInt;
 class Int;
 
-typedef Vindex<int> IntVindex;
-typedef Vindex<Int> IntVindex2;
+typedef Vindex<BasicInt, int> IntVindex;
+typedef Vindex<Int, int> IntVindex2;
+
+class BasicInt {
+private:
+   int _val;
+public:
+   BasicInt(): _val(0) {}
+   BasicInt(int i): _val(i) {}
+
+   int val() const { return _val; }
+
+   void val(int i) { _val = i; }
+
+   string str() const {
+      stringstream ss;
+      ss << _val;
+      return ss.str();
+   }
+
+   bool operator<(const BasicInt &other) const { 
+      return this->_val < other._val; 
+   }
+
+   bool operator>(const BasicInt &other) const { 
+      return this->_val > other._val; 
+   }
+
+   bool operator<=(const BasicInt &other) const { 
+      return this->_val <= other._val; 
+   }
+
+   bool operator>=(const BasicInt &other) const { 
+      return this->_val >= other._val; 
+   }
+
+   bool operator==(const BasicInt &other) const { 
+      return this->_val == other._val; 
+   }
+
+   bool operator!=(const BasicInt &other) const { 
+      return this->_val != other._val; 
+   }
+};
+
+ostream& operator<<(ostream &os, const BasicInt &i) {
+   return os << i.str();
+}
 
 class Int {
 private:
@@ -756,7 +803,7 @@ public:
       assert(*++it == 30);
       assert(it != _vin.cend());
 
-      Vindex<int>::const_iterator it2 = it;
+      Vindex<BasicInt, int>::const_iterator it2 = it;
       assert(*it2 == 30);
 
       assert(*++it == 40);
