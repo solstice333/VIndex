@@ -214,8 +214,8 @@ private:
       bool _prev_incr;
       OrderType _order_ty;
 
-      size_t _curr_lv;
-      size_t _prev_lv;
+      int _curr_lv;
+      int _prev_lv;
 
       IterTracker _tracker;
 
@@ -237,7 +237,7 @@ private:
       }
 
       AVLNode *_get_deepest_right_node_recurs(
-         AVLNode *tree, size_t *curr_lv=nullptr) {
+         AVLNode *tree, int *curr_lv=nullptr) {
          AVLNode *left = tree->left_raw();
          AVLNode *right = tree->right_raw();
 
@@ -258,7 +258,7 @@ private:
       }
 
       AVLNode *_get_deepest_right_node(
-         AVLNode *tree, size_t *curr_lv=nullptr) {
+         AVLNode *tree, int *curr_lv=nullptr) {
          if (curr_lv)
             *curr_lv = 0;
          return _get_deepest_right_node_recurs(tree, curr_lv);
@@ -323,10 +323,10 @@ private:
       }
 
       AVLNode *_retrace_while_child(
-         AVLNode *n, Direction dir, size_t *parent_distance=nullptr) {
+         AVLNode *n, Direction dir, int *parent_distance=nullptr) {
          assert(n && n->parent, "NullPointerError");
 
-         size_t dist = 0;
+         int dist = 0;
          AVLNode *parent = n->parent;
          AVLNodeOwner *parents_child = dir == Direction::RIGHT ? 
             &parent->right : &parent->left;
@@ -495,7 +495,7 @@ private:
       }
 
       AVLNode *_get_node_at_depth(
-         AVLNode *tree, size_t tree_lv, size_t want_lv, Direction dir) {
+         AVLNode *tree, int tree_lv, int want_lv, Direction dir) {
          if (!tree || tree_lv > want_lv)
             return nullptr;
          else if (tree_lv == want_lv)
@@ -516,12 +516,12 @@ private:
       }
 
       AVLNode *_get_leftest_node_at_depth(
-         AVLNode *tree, size_t tree_lv, size_t want_lv) {
+         AVLNode *tree, int tree_lv, int want_lv) {
          return _get_node_at_depth(tree, tree_lv, want_lv, Direction::LEFT);
       }
 
       AVLNode *_get_rightest_node_at_depth(
-         AVLNode *tree, size_t tree_lv, size_t want_lv) {
+         AVLNode *tree, int tree_lv, int want_lv) {
          return _get_node_at_depth(tree, tree_lv, want_lv, Direction::RIGHT);
       }
 
@@ -539,7 +539,7 @@ private:
             assert(false, "InvalidOperationError");
       }
 
-      AVLNode *_get_next_sibling(AVLNode *n, size_t depth, Direction dir) {
+      AVLNode *_get_next_sibling(AVLNode *n, int depth, Direction dir) {
          assert(n, "NullPointerError");
 
          AVLNode *parent = n->parent;
@@ -552,7 +552,7 @@ private:
             if (pos1 == n && pos2)
                return pos2;
             else if (pos2 == n) {
-               size_t parent_distance = 0;
+               int parent_distance = 0;
                parent = _retrace_while_child(n, dir, &parent_distance);
 
                return parent ? 
@@ -574,7 +574,7 @@ private:
             return nullptr;
       }
 
-      AVLNode *_get_start_node(AVLNode *refnode, size_t depth, Direction dir) {
+      AVLNode *_get_start_node(AVLNode *refnode, int depth, Direction dir) {
          AVLNode *n = refnode;
          AVLNode *prev = nullptr;
          assert(dir != Direction::ROOT, "InvalidDirectionError");
@@ -612,8 +612,8 @@ private:
             return nullptr;
       }
 
-      void _swap(size_t *a, size_t *b) {
-         size_t tmp = *a;
+      void _swap(int *a, int *b) {
+         int tmp = *a;
          *a = *b;
          *b = tmp;
       }
@@ -862,7 +862,7 @@ private:
          return _str();
       }
 
-      size_t curr_level() const {
+      int curr_level() const {
          return _curr_lv;
       }
    };
