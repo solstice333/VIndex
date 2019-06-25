@@ -166,6 +166,7 @@ class Vindex {
 private:
    template <typename NodeDataTy, typename IterTy>
    friend class _IterTracker::IterTracker;
+   friend class TestIntVindex;
 
    typedef _AVLState<_Node<T>> AVLNode;
    typedef std::unique_ptr<AVLNode> AVLNodeOwner;
@@ -178,8 +179,7 @@ private:
    typedef OrderType::OrderType OrderType;
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
    typedef std::map<OrderType, std::string> OrderTypeToStr;
-   typedef std::reference_wrapper<AVLNode> AVLNodeRef;
-   typedef std::unordered_map<KeyTy, AVLNodeRef> Index;
+   typedef std::unordered_map<KeyTy, AVLNode *> Index;
 
 public:
    class const_iterator;
@@ -802,13 +802,29 @@ private:
          return *this;
       }
 
+      _const_iterator *_non_const_this() const {
+         return const_cast<_const_iterator *>(this);
+      }
+
+      const _const_iterator *_const_this() {
+         return const_cast<const _const_iterator *>(this);
+      }
+
    public:
       bool operator==(const _const_iterator& other) const {
          return _curr == other._curr;
       }
 
+      bool operator==(const _const_iterator& other) {
+         return _const_this()->operator==(other);
+      }
+
       bool operator!=(const _const_iterator& other) const {
          return !operator==(other);
+      }
+
+      bool operator!=(const _const_iterator& other) {
+         return _const_this()->operator!=(other);
       }
 
       _const_iterator operator++() {
@@ -863,20 +879,40 @@ private:
          return _curr ? _curr->data : Vindex<KeyTy, T>::_default()->data;
       }
 
+      const T& operator*() {
+         return _const_this()->operator*();
+      }
+
       const T* operator->() const {
          return _curr ? &_curr->data : &Vindex<KeyTy, T>::_default()->data;
+      }
+
+      const T* operator->() {
+         return _const_this()->operator->();
       }
 
       _const_iterator end() const { 
          return _const_iterator();
       }
 
+      _const_iterator end() { 
+         return _const_this()->end();
+      }
+
       std::string str() const {
          return _str();
       }
 
+      std::string str() {
+         return _const_this()->str();
+      }
+
       int curr_level() const {
          return _curr_lv;
+      }
+
+      int curr_level() {
+         return _const_this()->curr_level();
       }
    };
 
@@ -886,10 +922,20 @@ private:
    const_reverse_iterator _crend;
    NodeList _rebalanced_trees;
    NodeList _insertion_list;
+   Index _index;
    size_t _member_offset;
 
 public:
    class const_iterator: public _const_iterator<false> {
+   private:
+      const_iterator *_non_const_this() const {
+         return const_cast<const_iterator *>(this);
+      }
+
+      const const_iterator *_const_this() {
+         return const_cast<const const_iterator *>(this);
+      }
+
    public:
       const_iterator() noexcept {}
 
@@ -901,7 +947,7 @@ public:
 
       const_iterator& operator=(const const_iterator& other) noexcept {
          _const_iterator<false>::operator=(other);   
-         return *this;
+         return const_cast<const_iterator&>(*this);
       }
 
       const_iterator operator++() noexcept {
@@ -924,12 +970,25 @@ public:
          return *this;
       }
 
-      const_iterator end() noexcept {
+      const_iterator end() const noexcept {
          return const_iterator();
+      }
+
+      const_iterator end() noexcept {
+         return _const_this()->end();
       }
    };
 
    class const_reverse_iterator: public _const_iterator<true> {
+   private:
+      const_reverse_iterator *_non_const_this() const {
+         return const_cast<const_reverse_iterator *>(this);
+      }
+
+      const const_reverse_iterator *_const_this() {
+         return const_cast<const const_reverse_iterator *>(this);
+      }
+
    public:
       const_reverse_iterator() noexcept {}
 
@@ -942,7 +1001,7 @@ public:
       const_reverse_iterator& operator=(const const_reverse_iterator& other) 
          noexcept {
          _const_iterator<true>::operator=(other);   
-         return *this;
+         return const_cast<const_reverse_iterator&>(*this);
       }
 
       const_reverse_iterator operator++() noexcept {
@@ -965,8 +1024,12 @@ public:
          return *this;
       }
 
-      const_reverse_iterator end() noexcept {
+      const_reverse_iterator end() const noexcept {
          return const_reverse_iterator();
+      }
+
+      const_reverse_iterator end() noexcept {
+         return _const_this()->end();
       }
    }; 
 
@@ -1085,6 +1148,24 @@ private:
 
    bool _has_children(AVLNode *n) {
       return _num_children(n) > 0;
+   }
+
+   KeyTy *_get_member(T *data) const {
+      char *base = reinterpret_cast<char *>(data);
+      KeyTy *mem = reinterpret_cast<KeyTy *>(base + _member_offset);
+      return mem;
+   }
+
+   KeyTy *_get_member(T *data) {
+      return _const_this()->_get_member(data);
+   }
+
+   KeyTy *_get_member(AVLNode *n) const {
+      return _get_member(&n->data);
+   }
+
+   KeyTy *_get_member(AVLNode *n) {
+      return _const_this()->_get_member(n);
    }
 
    // TODO function to get highest rebalanced tree
@@ -1330,6 +1411,7 @@ private:
       else {
          child_tree = std::move(*n);
          _insertion_list.emplace_back(child_tree.get());
+         _index[*_get_member(child_tree.get())] = child_tree.get();
       }
 
       (*subtree)->height = _height(subtree->get());
@@ -1462,6 +1544,7 @@ private:
          _remove_and_rebalance(val, &(*tree)->right, tree->get());
       else {
          _insertion_list.remove(tree->get());
+         _index.erase(*_get_member(tree->get()));
 
          if (_num_children(tree->get()) == 1)
             *tree = std::move(_on_removal_one_child(tree));
@@ -1500,8 +1583,9 @@ private:
       dq->push_back(nullptr);
    }
 
-   void _gather_bfs(
-      NodeDQ *dq, size_t *curr_depth, size_t *node_cnt, const NodeListener &func) {
+   void _gather_bfs(NodeDQ *dq, size_t *curr_depth,
+      size_t *node_cnt, const NodeListener &func) {
+
       if (dq->empty()) 
          return;
 
@@ -1559,6 +1643,26 @@ private:
       return ss.str();
    }
 
+   std::string _bfs_str(const std::string &delim = "|") noexcept {
+      return _gather_bfs_str(delim);
+   }
+
+   std::string _index_str(const std::string &delim = "|") noexcept {
+      std::stringstream ss;
+      for (auto it = _index.begin(); it != _index.end(); ++it) {
+         ss << it->first << ": " << _node_str(*it->second) << delim;
+      }
+      return ss.str();
+   }
+
+   Vindex *_non_const_this() const {
+      return const_cast<Vindex *>(this);
+   }
+
+   const Vindex *_const_this() {
+      return const_cast<const Vindex *>(this);
+   }
+
 public:
    Vindex(size_t member_offset) noexcept: 
       _head(nullptr), 
@@ -1575,6 +1679,7 @@ public:
          _head = std::move(n);
          ++_head->height;
          _insertion_list.emplace_back(_head_raw()); 
+         _index[*_get_member(_head_raw())] = _head_raw();
          return;
       }
       _head = std::move(_insert(&n, &_head));
@@ -1595,20 +1700,20 @@ public:
       _update_depths_if_rebalanced();
    }
 
-   std::string bfs_str(const std::string &delim = "|") noexcept {
-      return _gather_bfs_str(delim);
-   }
-
    void order(OrderType order_ty) noexcept {
       _order_ty = order_ty;
    }
 
-   OrderType order() noexcept {
+   OrderType order() const noexcept {
       return _order_ty;
    }
 
+   OrderType order() noexcept {
+      return _const_this()->order();
+   }
+
    const_iterator cbegin() noexcept {
-      auto it = const_iterator(this, _order_ty);
+      const_iterator it(_non_const_this(), _order_ty);
       _cend = it.end();
       return it;
    }
@@ -1617,18 +1722,8 @@ public:
       return _cend;
    }
 
-   const_iterator find(const KeyTy& key) noexcept {
-      auto it = cbegin();
-      return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
-         T& casted_elem = const_cast<T&>(elem);
-         char *base_address = reinterpret_cast<char *>(&casted_elem);
-         KeyTy *mem = reinterpret_cast<KeyTy *>(base_address + _member_offset);
-         return key == *mem;
-      });
-   }
-
    const_reverse_iterator crbegin() noexcept {
-      auto it = const_reverse_iterator(this, _order_ty);
+      const_reverse_iterator it(_non_const_this(), _order_ty);
       _crend = it.end();
       return it;
    }
@@ -1637,8 +1732,26 @@ public:
       return _crend;
    }
 
+   const_iterator find(const KeyTy& key) noexcept {
+      auto it = cbegin();
+      return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
+         T& casted_elem = const_cast<T&>(elem);
+         KeyTy *mem = _get_member(&casted_elem);
+         return key == *mem;
+      });
+   }
+
+   const T& at(const KeyTy& key) const {
+      return _index.at(key)->data;
+   }
+
+   const T& at(const KeyTy& key) {
+      return _const_this()->at(key);
+   }
+
    void clear() noexcept {
       _insertion_list.clear();
+      _index.clear();
       _head = nullptr;
    }
 };

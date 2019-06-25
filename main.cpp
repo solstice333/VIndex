@@ -112,12 +112,12 @@ public:
 
    template <typename V>
    void bfs_dump(V *vin) {
-      cout << vin->bfs_str("\n") << endl << endl;
+      cout << vin->_bfs_str("\n") << endl << endl;
    }
 
    template <typename V>
    void bfs_dump_one_line(V *vin) {
-      cout << vin->bfs_str() << endl << endl;
+      cout << vin->_bfs_str() << endl << endl;
    }
 
    void vin_bfs_dump() {
@@ -141,7 +141,7 @@ public:
       _vin.insert(24);
       _vin.insert(20);
       _vin.insert(16);
-      assert(_vin.bfs_str() == "(data: 20, height: 2, left: 16, right: 24, parent: null)|(data: 16, height: 1, left: null, right: null, parent: 20) (data: 24, height: 1, left: null, right: null, parent: 20)");
+      assert(_vin._bfs_str() == "(data: 20, height: 2, left: 16, right: 24, parent: null)|(data: 16, height: 1, left: null, right: null, parent: 20) (data: 24, height: 1, left: null, right: null, parent: 20)");
    }
 
    void test_insert_left_left_right_right() {
@@ -152,7 +152,7 @@ public:
       _vin.insert(12);
       _vin.insert(30);
       _vin.insert(35);
-      assert(_vin.bfs_str() == "(data: 20, height: 3, left: 16, right: 30, parent: null)|(data: 16, height: 2, left: 12, right: null, parent: 20) (data: 30, height: 2, left: 24, right: 35, parent: 20)|(data: 12, height: 1, left: null, right: null, parent: 16) (null) (data: 24, height: 1, left: null, right: null, parent: 30) (data: 35, height: 1, left: null, right: null, parent: 30)");
+      assert(_vin._bfs_str() == "(data: 20, height: 3, left: 16, right: 30, parent: null)|(data: 16, height: 2, left: 12, right: null, parent: 20) (data: 30, height: 2, left: 24, right: 35, parent: 20)|(data: 12, height: 1, left: null, right: null, parent: 16) (null) (data: 24, height: 1, left: null, right: null, parent: 30) (data: 35, height: 1, left: null, right: null, parent: 30)");
    }
 
    void test_insert_left_right_right_left() {
@@ -162,28 +162,28 @@ public:
       _vin.insert(25);
       _vin.insert(40);
       _vin.insert(35);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 20, right: 35, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 35, height: 2, left: 30, right: 40, parent: 25)|(null) (null) (data: 30, height: 1, left: null, right: null, parent: 35) (data: 40, height: 1, left: null, right: null, parent: 35)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 35, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 35, height: 2, left: 30, right: 40, parent: 25)|(null) (null) (data: 30, height: 1, left: null, right: null, parent: 35) (data: 40, height: 1, left: null, right: null, parent: 35)");
       _vin.insert(42);
       _vin.insert(18);
       _vin.insert(22);
       _vin.insert(16);
-      assert(_vin.bfs_str() == "(data: 35, height: 4, left: 20, right: 40, parent: null)|(data: 20, height: 3, left: 18, right: 25, parent: 35) (data: 40, height: 2, left: null, right: 42, parent: 35)|(data: 18, height: 2, left: 16, right: null, parent: 20) (data: 25, height: 2, left: 22, right: 30, parent: 20) (null) (data: 42, height: 1, left: null, right: null, parent: 40)|(data: 16, height: 1, left: null, right: null, parent: 18) (null) (data: 22, height: 1, left: null, right: null, parent: 25) (data: 30, height: 1, left: null, right: null, parent: 25) (null) (null) (null) (null)");
+      assert(_vin._bfs_str() == "(data: 35, height: 4, left: 20, right: 40, parent: null)|(data: 20, height: 3, left: 18, right: 25, parent: 35) (data: 40, height: 2, left: null, right: 42, parent: 35)|(data: 18, height: 2, left: 16, right: null, parent: 20) (data: 25, height: 2, left: 22, right: 30, parent: 20) (null) (data: 42, height: 1, left: null, right: null, parent: 40)|(data: 16, height: 1, left: null, right: null, parent: 18) (null) (data: 22, height: 1, left: null, right: null, parent: 25) (data: 30, height: 1, left: null, right: null, parent: 25) (null) (null) (null) (null)");
    }
 
    void test_dne_removal() {
       _vin.clear();
       _vin.remove(40);
-      assert(_vin.bfs_str() == "");
+      assert(_vin._bfs_str() == "");
       _vin.insert(30);
       _vin.remove(40);
-      assert(_vin.bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
+      assert(_vin._bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
    }
 
    void test_leaf_removal() {
       _vin.clear();
       _vin.insert(30);
       _vin.remove(30);
-      assert(_vin.bfs_str() == "");
+      assert(_vin._bfs_str() == "");
 
       _vin.insert(30);
       _vin.insert(20);
@@ -192,7 +192,7 @@ public:
       _vin.insert(35);
       _vin.remove(30);
       _vin.remove(20);
-      assert(_vin.bfs_str() == "(data: 35, height: 2, left: 25, right: 40, parent: null)|(data: 25, height: 1, left: null, right: null, parent: 35) (data: 40, height: 1, left: null, right: null, parent: 35)");
+      assert(_vin._bfs_str() == "(data: 35, height: 2, left: 25, right: 40, parent: null)|(data: 25, height: 1, left: null, right: null, parent: 35) (data: 40, height: 1, left: null, right: null, parent: 35)");
 
       _vin.clear();
       _vin.insert(25);
@@ -203,7 +203,7 @@ public:
       _vin.insert(40);
       _vin.insert(33);
       _vin.remove(40);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 20, right: 33, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 33, height: 2, left: 30, right: 35, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 30, height: 1, left: null, right: null, parent: 33) (data: 35, height: 1, left: null, right: null, parent: 33)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 33, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 33, height: 2, left: 30, right: 35, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 30, height: 1, left: null, right: null, parent: 33) (data: 35, height: 1, left: null, right: null, parent: 33)");
 
       _vin.clear();
       _vin.insert(25);
@@ -214,7 +214,7 @@ public:
       _vin.insert(40);
       _vin.insert(27);
       _vin.remove(40);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 20, right: 30, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 30, height: 2, left: 27, right: 35, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 27, height: 1, left: null, right: null, parent: 30) (data: 35, height: 1, left: null, right: null, parent: 30)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 30, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 30, height: 2, left: 27, right: 35, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 27, height: 1, left: null, right: null, parent: 30) (data: 35, height: 1, left: null, right: null, parent: 30)");
 
       _vin.clear();
       _vin.insert(25);
@@ -225,7 +225,7 @@ public:
       _vin.insert(40);
       _vin.insert(24);
       _vin.remove(15);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 22, right: 35, parent: null)|(data: 22, height: 2, left: 20, right: 24, parent: 25) (data: 35, height: 2, left: null, right: 40, parent: 25)|(data: 20, height: 1, left: null, right: null, parent: 22) (data: 24, height: 1, left: null, right: null, parent: 22) (null) (data: 40, height: 1, left: null, right: null, parent: 35)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 22, right: 35, parent: null)|(data: 22, height: 2, left: 20, right: 24, parent: 25) (data: 35, height: 2, left: null, right: 40, parent: 25)|(data: 20, height: 1, left: null, right: null, parent: 22) (data: 24, height: 1, left: null, right: null, parent: 22) (null) (data: 40, height: 1, left: null, right: null, parent: 35)");
 
       _vin.clear();
       _vin.insert(25);
@@ -236,7 +236,7 @@ public:
       _vin.insert(40);
       _vin.insert(21);
       _vin.remove(15);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 21, right: 35, parent: null)|(data: 21, height: 2, left: 20, right: 22, parent: 25) (data: 35, height: 2, left: null, right: 40, parent: 25)|(data: 20, height: 1, left: null, right: null, parent: 21) (data: 22, height: 1, left: null, right: null, parent: 21) (null) (data: 40, height: 1, left: null, right: null, parent: 35)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 21, right: 35, parent: null)|(data: 21, height: 2, left: 20, right: 22, parent: 25) (data: 35, height: 2, left: null, right: 40, parent: 25)|(data: 20, height: 1, left: null, right: null, parent: 21) (data: 22, height: 1, left: null, right: null, parent: 21) (null) (data: 40, height: 1, left: null, right: null, parent: 35)");
   }
 
    void test_one_child_removal() {
@@ -248,23 +248,23 @@ public:
       _vin.insert(40);
       _vin.remove(30);
       _vin.remove(35);
-      assert(_vin.bfs_str() == "(data: 25, height: 2, left: 20, right: 40, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 40, height: 1, left: null, right: null, parent: 25)");
+      assert(_vin._bfs_str() == "(data: 25, height: 2, left: 20, right: 40, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 40, height: 1, left: null, right: null, parent: 25)");
 
       _vin.remove(20);
       _vin.remove(25);
-      assert(_vin.bfs_str() == "(data: 40, height: 1, left: null, right: null, parent: null)");
+      assert(_vin._bfs_str() == "(data: 40, height: 1, left: null, right: null, parent: null)");
 
       _vin.clear();
       _vin.insert(25);
       _vin.insert(20);
       _vin.remove(25);
-      assert(_vin.bfs_str() == "(data: 20, height: 1, left: null, right: null, parent: null)");
+      assert(_vin._bfs_str() == "(data: 20, height: 1, left: null, right: null, parent: null)");
 
       _vin.clear();
       _vin.insert(25);
       _vin.insert(30);
       _vin.remove(25);
-      assert(_vin.bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
+      assert(_vin._bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
 
       _vin.clear();
       _vin.insert(25);
@@ -272,7 +272,7 @@ public:
       _vin.insert(35);
       _vin.insert(40);
       _vin.remove(35);
-      assert(_vin.bfs_str() == "(data: 25, height: 2, left: 20, right: 40, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 40, height: 1, left: null, right: null, parent: 25)");
+      assert(_vin._bfs_str() == "(data: 25, height: 2, left: 20, right: 40, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 40, height: 1, left: null, right: null, parent: 25)");
 
       _vin.clear();
       _vin.insert(25);
@@ -280,7 +280,7 @@ public:
       _vin.insert(35);
       _vin.insert(30);
       _vin.remove(35);
-      assert(_vin.bfs_str() == "(data: 25, height: 2, left: 20, right: 30, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 30, height: 1, left: null, right: null, parent: 25)");
+      assert(_vin._bfs_str() == "(data: 25, height: 2, left: 20, right: 30, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 30, height: 1, left: null, right: null, parent: 25)");
 
       _vin.clear();
       _vin.insert(25);
@@ -288,7 +288,7 @@ public:
       _vin.insert(35);
       _vin.insert(18);
       _vin.remove(20);
-      assert(_vin.bfs_str() == "(data: 25, height: 2, left: 18, right: 35, parent: null)|(data: 18, height: 1, left: null, right: null, parent: 25) (data: 35, height: 1, left: null, right: null, parent: 25)");
+      assert(_vin._bfs_str() == "(data: 25, height: 2, left: 18, right: 35, parent: null)|(data: 18, height: 1, left: null, right: null, parent: 25) (data: 35, height: 1, left: null, right: null, parent: 25)");
 
       _vin.clear();
       _vin.insert(25);
@@ -296,7 +296,7 @@ public:
       _vin.insert(35);
       _vin.insert(23);
       _vin.remove(20);
-      assert(_vin.bfs_str() == "(data: 25, height: 2, left: 23, right: 35, parent: null)|(data: 23, height: 1, left: null, right: null, parent: 25) (data: 35, height: 1, left: null, right: null, parent: 25)");
+      assert(_vin._bfs_str() == "(data: 25, height: 2, left: 23, right: 35, parent: null)|(data: 23, height: 1, left: null, right: null, parent: 25) (data: 35, height: 1, left: null, right: null, parent: 25)");
    }
 
    void test_two_children_removal() {
@@ -305,7 +305,7 @@ public:
       _vin.insert(20);
       _vin.insert(35);
       _vin.remove(25);
-      assert(_vin.bfs_str() == "(data: 35, height: 2, left: 20, right: null, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 35) (null)");
+      assert(_vin._bfs_str() == "(data: 35, height: 2, left: 20, right: null, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 35) (null)");
 
       _vin.clear();
       _vin.insert(25);
@@ -315,7 +315,7 @@ public:
       _vin.insert(30);
       _vin.insert(40);
       _vin.remove(35);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 20, right: 40, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 40, height: 2, left: 30, right: null, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 30, height: 1, left: null, right: null, parent: 40) (null)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 40, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 40, height: 2, left: 30, right: null, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 30, height: 1, left: null, right: null, parent: 40) (null)");
 
       _vin.clear();
       _vin.insert(25);
@@ -323,7 +323,7 @@ public:
       _vin.insert(30);
       _vin.insert(23);
       _vin.remove(25);
-      assert(_vin.bfs_str() == "(data: 23, height: 2, left: 20, right: 30, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 23) (data: 30, height: 1, left: null, right: null, parent: 23)");
+      assert(_vin._bfs_str() == "(data: 23, height: 2, left: 20, right: 30, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 23) (data: 30, height: 1, left: null, right: null, parent: 23)");
 
       _vin.clear();
       _vin.insert(25);
@@ -331,7 +331,7 @@ public:
       _vin.insert(30);
       _vin.insert(18);
       _vin.remove(25);
-      assert(_vin.bfs_str() == "(data: 20, height: 2, left: 18, right: 30, parent: null)|(data: 18, height: 1, left: null, right: null, parent: 20) (data: 30, height: 1, left: null, right: null, parent: 20)");
+      assert(_vin._bfs_str() == "(data: 20, height: 2, left: 18, right: 30, parent: null)|(data: 18, height: 1, left: null, right: null, parent: 20) (data: 30, height: 1, left: null, right: null, parent: 20)");
 
       _vin.clear();
       _vin.insert(25);
@@ -342,7 +342,7 @@ public:
       _vin.insert(40);
       _vin.insert(33);
       _vin.remove(35);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 20, right: 33, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 33, height: 2, left: 30, right: 40, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 30, height: 1, left: null, right: null, parent: 33) (data: 40, height: 1, left: null, right: null, parent: 33)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 33, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 33, height: 2, left: 30, right: 40, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 30, height: 1, left: null, right: null, parent: 33) (data: 40, height: 1, left: null, right: null, parent: 33)");
 
       _vin.clear();
       _vin.insert(25);
@@ -353,7 +353,7 @@ public:
       _vin.insert(40);
       _vin.insert(27);
       _vin.remove(35);
-      assert(_vin.bfs_str() == "(data: 25, height: 3, left: 20, right: 30, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 30, height: 2, left: 27, right: 40, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 27, height: 1, left: null, right: null, parent: 30) (data: 40, height: 1, left: null, right: null, parent: 30)");
+      assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 30, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 30, height: 2, left: 27, right: 40, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 27, height: 1, left: null, right: null, parent: 30) (data: 40, height: 1, left: null, right: null, parent: 30)");
    }
 
    void test_in_order_iter() {
@@ -413,6 +413,9 @@ public:
       const IntVindex::const_iterator const_it = _vin.cbegin();
       const IntVindex::const_iterator const_end = _vin.cend();
       assert(*const_it == 15);
+      assert(const_it->val == 15);
+      assert(const_end == const_end);
+      assert(const_it != const_end);
    }
 
    void test_in_order_iter_arrow_data() {
@@ -1293,7 +1296,7 @@ public:
       _vin2.emplace_back(26);
       _vin2.emplace_back(33);
 
-      assert(_vin2.bfs_str() == "(data: i25, height: 4, left: i16, right: i35, parent: null)|(data: i16, height: 2, left: i15, right: i20, parent: i25) (data: i35, height: 3, left: i30, right: i40, parent: i25)|(data: i15, height: 1, left: null, right: null, parent: i16) (data: i20, height: 1, left: null, right: null, parent: i16) (data: i30, height: 2, left: i26, right: i33, parent: i35) (data: i40, height: 1, left: null, right: null, parent: i35)|(null) (null) (null) (null) (data: i26, height: 1, left: null, right: null, parent: i30) (data: i33, height: 1, left: null, right: null, parent: i30) (null) (null)");
+      assert(_vin2._bfs_str() == "(data: i25, height: 4, left: i16, right: i35, parent: null)|(data: i16, height: 2, left: i15, right: i20, parent: i25) (data: i35, height: 3, left: i30, right: i40, parent: i25)|(data: i15, height: 1, left: null, right: null, parent: i16) (data: i20, height: 1, left: null, right: null, parent: i16) (data: i30, height: 2, left: i26, right: i33, parent: i35) (data: i40, height: 1, left: null, right: null, parent: i35)|(null) (null) (null) (null) (data: i26, height: 1, left: null, right: null, parent: i30) (data: i33, height: 1, left: null, right: null, parent: i30) (null) (null)");
    }
 
    void test_find() {
@@ -1316,6 +1319,33 @@ public:
       it = _vin.find(100);
       assert(it == _vin.cend());
       assert(*it == 0);
+   }
+
+   void test_index_insert_removal() {
+      _vin2.clear();
+      _vin2.insert(25);
+      _vin2.insert(20);
+      _vin2.insert(35);
+      _vin2.insert(15);
+      _vin2.insert(30);
+      _vin2.insert(40);
+      _vin2.insert(16);
+      _vin2.insert(33);     
+
+      assert(_vin2._index.size() == 8);
+      assert(_vin2.at(33).val == 33);
+      assert(_vin2.at(16).val == 16);
+      assert(_vin2.at(40).val == 40);
+      assert(_vin2.at(30).val == 30);
+      assert(_vin2.at(15).val == 15);
+      assert(_vin2.at(35).val == 35);
+      assert(_vin2.at(20).val == 20);
+      assert(_vin2.at(25).val == 25);
+
+      bool caught = false;
+      try { _vin2.at(100); }
+      catch (const out_of_range&) { caught = true; }
+      assert(caught);
    }
 };
 
@@ -1346,4 +1376,5 @@ int main () {
    vin.test_emplace_back();
 
    vin.test_find();
+   vin.test_index_insert_removal();
 }
