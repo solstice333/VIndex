@@ -9,48 +9,45 @@ using namespace std;
 class BasicInt;
 class Int;
 
-typedef Vindex<BasicInt, int> IntVindex;
-typedef Vindex<Int, int> IntVindex2;
+typedef Vindex<int, BasicInt> IntVindex;
+typedef Vindex<int, Int> IntVindex2;
 
 class BasicInt {
-private:
-   int _val;
 public:
-   BasicInt(): _val(0) {}
-   BasicInt(int i): _val(i) {}
+   int val;
 
-   int val() const { return _val; }
+   BasicInt(): val(0) {}
 
-   void val(int i) { _val = i; }
+   BasicInt(int i): val(i) {}
 
    string str() const {
       stringstream ss;
-      ss << _val;
+      ss << val;
       return ss.str();
    }
 
    bool operator<(const BasicInt &other) const { 
-      return this->_val < other._val; 
+      return this->val < other.val; 
    }
 
    bool operator>(const BasicInt &other) const { 
-      return this->_val > other._val; 
+      return this->val > other.val; 
    }
 
    bool operator<=(const BasicInt &other) const { 
-      return this->_val <= other._val; 
+      return this->val <= other.val; 
    }
 
    bool operator>=(const BasicInt &other) const { 
-      return this->_val >= other._val; 
+      return this->val >= other.val; 
    }
 
    bool operator==(const BasicInt &other) const { 
-      return this->_val == other._val; 
+      return this->val == other.val; 
    }
 
    bool operator!=(const BasicInt &other) const { 
-      return this->_val != other._val; 
+      return this->val != other.val; 
    }
 };
 
@@ -59,24 +56,30 @@ ostream& operator<<(ostream &os, const BasicInt &i) {
 }
 
 class Int {
-private:
-   int _val;
 public:
-   Int(): _val(0) {}
-   Int(int i): _val(i) {}
-   int val() const { return _val; }
-   void val(int i) { _val = i; }
+   int val;
+
+   Int(): val(0) {}
+
+   Int(int i): val(i) {}
+
    string str() const { 
       stringstream ss;
-      ss << "i" << _val;
+      ss << "i" << val;
       return ss.str();
    }
-   bool operator<(const Int &other) const { return this->_val < other._val; }
-   bool operator>(const Int &other) const { return this->_val > other._val; }
-   bool operator<=(const Int &other) const { return this->_val <= other._val; }
-   bool operator>=(const Int &other) const { return this->_val >= other._val; }
-   bool operator==(const Int &other) const { return this->_val == other._val; }
-   bool operator!=(const Int &other) const { return this->_val != other._val; }
+
+   bool operator<(const Int &other) const { return this->val < other.val; }
+
+   bool operator>(const Int &other) const { return this->val > other.val; }
+
+   bool operator<=(const Int &other) const { return this->val <= other.val; }
+
+   bool operator>=(const Int &other) const { return this->val >= other.val; }
+
+   bool operator==(const Int &other) const { return this->val == other.val; }
+
+   bool operator!=(const Int &other) const { return this->val != other.val; }
 };
 
 ostream& operator<<(ostream &os, const Int &i) {
@@ -89,6 +92,11 @@ private:
    IntVindex2 _vin2;
 
 public:
+   TestIntVindex(): 
+      _vin(member_offset(BasicInt, val)),
+      _vin2(member_offset(Int, val)) 
+      {}
+
    operator IntVindex&() {
       return _vin;
    }
@@ -423,7 +431,7 @@ public:
       stringstream ss2;
       for (IntVindex2::const_iterator it = _vin2.cbegin();
          it != _vin2.cend(); ++it) {
-         ss << it->val();
+         ss << it->val;
          ss2 << *it;
       }
 
@@ -803,7 +811,7 @@ public:
       assert(*++it == 30);
       assert(it != _vin.cend());
 
-      Vindex<BasicInt, int>::const_iterator it2 = it;
+      Vindex<int, BasicInt>::const_iterator it2 = it;
       assert(*it2 == 30);
 
       assert(*++it == 40);
@@ -1287,6 +1295,28 @@ public:
 
       assert(_vin2.bfs_str() == "(data: i25, height: 4, left: i16, right: i35, parent: null)|(data: i16, height: 2, left: i15, right: i20, parent: i25) (data: i35, height: 3, left: i30, right: i40, parent: i25)|(data: i15, height: 1, left: null, right: null, parent: i16) (data: i20, height: 1, left: null, right: null, parent: i16) (data: i30, height: 2, left: i26, right: i33, parent: i35) (data: i40, height: 1, left: null, right: null, parent: i35)|(null) (null) (null) (null) (data: i26, height: 1, left: null, right: null, parent: i30) (data: i33, height: 1, left: null, right: null, parent: i30) (null) (null)");
    }
+
+   void test_find() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(33);
+
+      _vin.order(OrderType::INORDER);
+
+      auto it = _vin.find(16);
+      assert(*it == 16);
+      assert(*++it == 20);
+
+      it = _vin.find(100);
+      assert(it == _vin.cend());
+      assert(*it == 0);
+   }
 };
 
 int main () {
@@ -1314,4 +1344,6 @@ int main () {
    vin.test_insertion_order_rev_iter();
 
    vin.test_emplace_back();
+
+   vin.test_find();
 }

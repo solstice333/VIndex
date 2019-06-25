@@ -14,6 +14,7 @@
 #include <list>
 #include <functional>
 #include <mutex>
+#include <unordered_map>
 
 #define DEPTH_DATA_ENABLED 0
 
@@ -28,6 +29,12 @@
       << ", line " << __LINE__ << "."\
       << std::endl << message << std::endl, abort(), 0) : 1
 #endif
+
+#define member_offset(CLS, MEM)\
+   []() -> size_t {\
+      CLS o;\
+      return reinterpret_cast<size_t>(&o.MEM) - reinterpret_cast<size_t>(&o);\
+   }()
 
 template <typename T, typename DerivedTy>
 class _Singleton {
@@ -123,7 +130,7 @@ namespace _IterTracker {
    public:
       IterTracker(): IterTrackerBase<IterTy>() {}
 
-      IterTracker(Vindex<NodeDataTy, KeyTy> *vin): 
+      IterTracker(Vindex<KeyTy, NodeDataTy> *vin): 
          IterTrackerBase<IterTy>(
             vin->_insertion_list.begin(),
             vin->_insertion_list.end()) {
@@ -132,7 +139,7 @@ namespace _IterTracker {
 
    template <typename T, typename KeyTy>
    using NodeListRevIter = 
-      typename Vindex<T, KeyTy>::NodeList::reverse_iterator;
+      typename Vindex<KeyTy, T>::NodeList::reverse_iterator;
 
    template <typename NodeDataTy, typename KeyTy>
    class IterTracker<
@@ -143,7 +150,7 @@ namespace _IterTracker {
    public:
       IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>() {}
 
-      IterTracker(Vindex<NodeDataTy, KeyTy> *vin):
+      IterTracker(Vindex<KeyTy, NodeDataTy> *vin):
          IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>(
             vin->_insertion_list.rbegin(),
             vin->_insertion_list.rend()) {}
@@ -154,7 +161,7 @@ namespace OrderType {
    enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
 }
 
-template <typename T, typename KeyTy>
+template <typename KeyTy, typename T>
 class Vindex {
 private:
    template <typename NodeDataTy, typename IterTy>
@@ -171,6 +178,8 @@ private:
    typedef OrderType::OrderType OrderType;
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
    typedef std::map<OrderType, std::string> OrderTypeToStr;
+   typedef std::reference_wrapper<AVLNode> AVLNodeRef;
+   typedef std::unordered_map<KeyTy, AVLNodeRef> Index;
 
 public:
    class const_iterator;
@@ -204,9 +213,9 @@ private:
       typedef Vindex::AVLNodeOwner AVLNodeOwner;
       typedef Vindex::Direction Direction;
       typedef 
-         typename Vindex<T, KeyTy>::NodeList::iterator NodeListIter;
+         typename Vindex<KeyTy, T>::NodeList::iterator NodeListIter;
       typedef 
-         typename Vindex<T, KeyTy>::NodeList::reverse_iterator NodeListRevIter;
+         typename Vindex<KeyTy, T>::NodeList::reverse_iterator NodeListRevIter;
       typedef 
          typename 
             std::conditional<reverse, NodeListRevIter, NodeListIter>::type 
@@ -851,11 +860,11 @@ private:
       }
 
       const T& operator*() const {
-         return _curr ? _curr->data : Vindex<T, KeyTy>::_default()->data;
+         return _curr ? _curr->data : Vindex<KeyTy, T>::_default()->data;
       }
 
       const T* operator->() const {
-         return _curr ? &_curr->data : &Vindex<T, KeyTy>::_default()->data;
+         return _curr ? &_curr->data : &Vindex<KeyTy, T>::_default()->data;
       }
 
       _const_iterator end() const { 
@@ -877,13 +886,14 @@ private:
    const_reverse_iterator _crend;
    NodeList _rebalanced_trees;
    NodeList _insertion_list;
+   size_t _member_offset;
 
 public:
    class const_iterator: public _const_iterator<false> {
    public:
       const_iterator() noexcept {}
 
-      const_iterator(Vindex *vin, OrderType order_ty) noexcept : 
+      const_iterator(Vindex *vin, OrderType order_ty) noexcept: 
          _const_iterator<false>(vin, order_ty) {}
 
       const_iterator(const const_iterator &other) noexcept :
@@ -1550,9 +1560,11 @@ private:
    }
 
 public:
-   Vindex() noexcept: 
+   Vindex(size_t member_offset) noexcept: 
       _head(nullptr), 
-      _order_ty(OrderType::INORDER) {}
+      _order_ty(OrderType::INORDER), 
+      _member_offset(member_offset) 
+      {}
 
    void insert(const T& val) noexcept {
       AVLNodeOwner n = std::make_unique<AVLNode>(val);
@@ -1603,6 +1615,16 @@ public:
 
    const_iterator cend() noexcept {
       return _cend;
+   }
+
+   const_iterator find(const KeyTy& key) noexcept {
+      auto it = cbegin();
+      return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
+         T& casted_elem = const_cast<T&>(elem);
+         char *base_address = reinterpret_cast<char *>(&casted_elem);
+         KeyTy *mem = reinterpret_cast<KeyTy *>(base_address + _member_offset);
+         return key == *mem;
+      });
    }
 
    const_reverse_iterator crbegin() noexcept {
