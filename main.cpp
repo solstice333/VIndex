@@ -1346,6 +1346,21 @@ public:
       try { _vin2.at(100); }
       catch (const out_of_range&) { caught = true; }
       assert(caught);
+
+      _vin2.remove(15);
+      assert(_vin2._index.size() == 7);
+      assert(_vin2.at(33).val == 33);
+      assert(_vin2.at(16).val == 16);
+      assert(_vin2.at(40).val == 40);
+      assert(_vin2.at(30).val == 30);
+      assert(_vin2.at(35).val == 35);
+      assert(_vin2.at(20).val == 20);
+      assert(_vin2.at(25).val == 25);
+
+      caught = false;
+      try { _vin2.at(15); }
+      catch (const out_of_range&) { caught = true; }
+      assert(caught);
    }
 };
 
