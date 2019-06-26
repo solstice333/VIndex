@@ -36,6 +36,36 @@
       return reinterpret_cast<size_t>(&o.MEM) - reinterpret_cast<size_t>(&o);\
    }()
 
+template <typename ResTy>
+struct _IConstResult {
+   virtual const ResTy& data() = 0;
+   virtual void data(const ResTy &val) = 0;
+};
+
+template <typename ResTy>
+class _ConstResult: public _IConstResult<ResTy> {
+private:
+   const ResTy& _data;
+   void data(const ResTy &val) {};
+
+public:
+   _ConstResult(const ResTy &data): _data(data) {}
+   const ResTy& data() override { return _data; }
+};
+
+template <typename ResTy>
+struct ConstResultSuccess: public _ConstResult<ResTy> {
+   ConstResultSuccess(const ResTy &data): _ConstResult<ResTy>(data) {}
+};
+
+template <typename ResTy>
+struct ConstResultFailure: public _ConstResult<ResTy> {
+   ConstResultFailure(const ResTy &data): _ConstResult<ResTy>(data) {}
+};
+
+template <typename ResTy>
+using ConstResult = std::unique_ptr<_ConstResult<ResTy>>;
+
 template <typename T, typename DerivedTy>
 class _Singleton {
 private:
@@ -1156,6 +1186,10 @@ private:
       return mem;
    }
 
+   KeyTy *_get_member(const T *data) {
+      return _const_this()->_get_member(const_cast<T *>(data));
+   }
+
    KeyTy *_get_member(T *data) {
       return _const_this()->_get_member(data);
    }
@@ -1394,7 +1428,8 @@ private:
    }
 
    AVLNodeOwner& _insert(
-      AVLNodeOwner *n, AVLNodeOwner *subtree, AVLNodeOwner *parent = nullptr) {
+      AVLNodeOwner *n, AVLNodeOwner *subtree, 
+      T **result, AVLNodeOwner *parent = nullptr) {
 
       (*n)->parent = subtree->get();
       ++(*n)->depth;
@@ -1403,8 +1438,9 @@ private:
 
       if (child_tree) {
          _modify_proxy_tree(&child_tree,
-            [this, n, subtree](AVLNodeOwner *working_tree) -> AVLNodeOwner {
-               return std::move(_insert(n, working_tree, subtree));
+            [this, n, subtree, result](
+               AVLNodeOwner *working_tree) -> AVLNodeOwner {
+               return std::move(_insert(n, working_tree, result, subtree));
             });
          child_tree->parent = subtree->get();
       }
@@ -1412,6 +1448,7 @@ private:
          child_tree = std::move(*n);
          _insertion_list.emplace_back(child_tree.get());
          _index[*_get_member(child_tree.get())] = child_tree.get();
+         *result = &child_tree->data;
       }
 
       (*subtree)->height = _height(subtree->get());
@@ -1670,7 +1707,10 @@ public:
       _member_offset(member_offset) 
       {}
 
-   void insert(const T& val) noexcept {
+   ConstResult<T> insert(const T& val) noexcept {
+      if (_index.find(*_get_member(&val)) != _index.end())
+         return std::make_unique<ConstResultFailure<T>>(_default()->data);
+
       AVLNodeOwner n = std::make_unique<AVLNode>(val);
       ++n->height;
       ++n->depth;
@@ -1680,14 +1720,18 @@ public:
          ++_head->height;
          _insertion_list.emplace_back(_head_raw()); 
          _index[*_get_member(_head_raw())] = _head_raw();
-         return;
+         return std::make_unique<ConstResultSuccess<T>>(_head->data);
       }
-      _head = std::move(_insert(&n, &_head));
+
+      T *result;
+      _head = std::move(_insert(&n, &_head, &result));
       _head->parent = nullptr;
 
 #if DEPTH_DATA_ENABLED
       _update_depths_if_rebalanced();
 #endif
+
+      return std::make_unique<ConstResultSuccess<T>>(*result);
    }
 
    template <typename... Args>

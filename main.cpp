@@ -1362,6 +1362,59 @@ public:
       catch (const out_of_range&) { caught = true; }
       assert(caught);
    }
+
+   void test_insert_return() {
+      _vin.clear();
+
+      int cnt = 0;
+
+      auto assert_successful_results = 
+         [&cnt](ConstResult<BasicInt> &r, int exp) {
+            if (auto res = 
+               dynamic_cast<ConstResultSuccess<BasicInt> *>(r.get())) {
+               assert(res->data() == exp);
+               ++cnt;
+            }
+            else {
+               assert(false);
+               --cnt;
+            }
+         };
+
+      auto assert_failing_results = 
+         [&cnt](ConstResult<BasicInt> &r, int exp) {
+            if (auto res = 
+               dynamic_cast<ConstResultFailure<BasicInt> *>(r.get())) {
+               assert(res->data() == exp);
+               ++cnt;
+            }
+            else {
+               assert(false);
+               --cnt;
+            }
+         };
+
+      ConstResult<BasicInt> r = _vin.insert(25);
+      assert_successful_results(r, 25);
+      r = _vin.insert(20);
+      assert_successful_results(r, 20);
+      r = _vin.insert(35);
+      assert_successful_results(r, 35);
+      r = _vin.insert(15);
+      assert_successful_results(r, 15);
+      r = _vin.insert(30);
+      assert_successful_results(r, 30);
+      r = _vin.insert(40);
+      assert_successful_results(r, 40);
+      r = _vin.insert(16);
+      assert_successful_results(r, 16);
+      r = _vin.insert(33);     
+      assert_successful_results(r, 33);
+
+      r = _vin.insert(15);     
+      assert_failing_results(r, 0);
+      assert(cnt == 9);
+   }
 };
 
 int main () {
@@ -1392,4 +1445,5 @@ int main () {
 
    vin.test_find();
    vin.test_index_insert_removal();
+   vin.test_insert_return();
 }
