@@ -1430,6 +1430,8 @@ public:
 
       decltype(my_vindex) my_vindex2 = make_vindex(Int, val);
       assert(my_vindex2._bfs_str() == "");
+
+      decltype(my_vindex)::const_iterator it = my_vindex.cbegin();
    }
 };
 
