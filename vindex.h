@@ -36,6 +36,9 @@
       return reinterpret_cast<size_t>(&o.MEM) - reinterpret_cast<size_t>(&o);\
    }()
 
+#define make_vindex(CLS, MEM)\
+   Vindex<decltype(CLS::MEM), CLS>(member_offset(CLS, MEM))
+
 template <typename ResTy>
 struct _IConstResult {
    virtual const ResTy& data() = 0;
@@ -1114,11 +1117,15 @@ private:
       return ss.str();
    }
 
-   AVLNode *_head_raw() {
+   AVLNode *_head_raw() const {
       return _head.get();
    }
 
-   size_t _nodes_at_lv(size_t lv) {
+   AVLNode *_head_raw() {
+      return _const_this()->_head_raw();
+   }
+
+   static size_t _nodes_at_lv(size_t lv) {
       return 1 << (lv - 1);
    }
 
@@ -1596,32 +1603,50 @@ private:
       return *tree;
    }
 
-   bool _is_dq_all_nulls(const NodeDQ &dq) {
+   bool _is_dq_all_nulls(const NodeDQ &dq) const {
       auto it = find_if(
          dq.begin(), dq.end(), [](AVLNode *n) -> bool { return n; });
       return it == dq.end();
    }
 
-   void _on_max_nodes_per_line(NodeDQ *dq, const VoidFunc &func) {
+   bool _is_dq_all_nulls(const NodeDQ &dq) {
+      return _const_this()->_is_dq_all_nulls(dq);
+   }
+
+   void _on_max_nodes_per_line(NodeDQ *dq, const VoidFunc &func) const {
       func();
       if (_is_dq_all_nulls(*dq))
          dq->clear();
    }
 
-   void _on_valid_node(NodeDQ *dq, AVLNode *n, const NodeListener &func) {
+   void _on_max_nodes_per_line(NodeDQ *dq, const VoidFunc &func) {
+      _const_this()->_on_max_nodes_per_line(dq, func);
+   }
+
+   void _on_valid_node(
+      NodeDQ *dq, AVLNode *n, const NodeListener &func) const {
       func(n);
       dq->push_back(n->left_raw());
       dq->push_back(n->right_raw());
    }
 
-   void _on_null_node(NodeDQ *dq, const NodeListener &func) {
+   void _on_valid_node(
+      NodeDQ *dq, AVLNode *n, const NodeListener &func) {
+      _const_this()->_on_valid_node(dq, n, func);
+   }
+
+   void _on_null_node(NodeDQ *dq, const NodeListener &func) const {
       func(nullptr);
       dq->push_back(nullptr);
       dq->push_back(nullptr);
    }
 
+   void _on_null_node(NodeDQ *dq, const NodeListener &func) {
+      _const_this()->_on_null_node(dq, func);
+   }
+
    void _gather_bfs(NodeDQ *dq, size_t *curr_depth,
-      size_t *node_cnt, const NodeListener &func) {
+      size_t *node_cnt, const NodeListener &func) const {
 
       if (dq->empty()) 
          return;
@@ -1643,7 +1668,12 @@ private:
       _gather_bfs(dq, curr_depth, node_cnt, func);
    }
 
-   NodeList _gather_bfs_list() {
+   void _gather_bfs(NodeDQ *dq, size_t *curr_depth,
+      size_t *node_cnt, const NodeListener &func) {
+      _const_this()->_gather_bfs(dq, curr_depth, node_cnt, func);
+   }
+
+   NodeList _gather_bfs_list() const {
       NodeDQ dq;
       NodeList nl;
       size_t curr_depth = 1;
@@ -1657,7 +1687,11 @@ private:
       return nl;
    }
 
-   std::string _gather_bfs_str(const std::string &delim="|") {
+   NodeList _gather_bfs_list() {
+      return _const_this()->_gather_bfs_list();
+   }
+
+   std::string _gather_bfs_str(const std::string &delim="|") const {
       using namespace std;
       NodeList nl = _gather_bfs_list();
 
@@ -1680,16 +1714,28 @@ private:
       return ss.str();
    }
 
-   std::string _bfs_str(const std::string &delim = "|") noexcept {
+   std::string _gather_bfs_str(const std::string &delim="|") {
+      return _const_this()->_gather_bfs_str(delim);
+   }
+
+   std::string _bfs_str(const std::string &delim = "|") const {
       return _gather_bfs_str(delim);
    }
 
-   std::string _index_str(const std::string &delim = "|") noexcept {
+   std::string _bfs_str(const std::string &delim = "|") {
+      return _const_this()->_bfs_str(delim);
+   }
+
+   std::string _index_str(const std::string &delim = "|") const {
       std::stringstream ss;
       for (auto it = _index.begin(); it != _index.end(); ++it) {
          ss << it->first << ": " << _node_str(*it->second) << delim;
       }
       return ss.str();
+   }
+
+   std::string _index_str(const std::string &delim = "|") {
+      return _const_this()->_index_str();
    }
 
    Vindex *_non_const_this() const {
