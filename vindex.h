@@ -833,7 +833,7 @@ private:
       }
 
       const _const_iterator *_const_this() {
-         return const_cast<const _const_iterator *>(this);
+         return static_cast<const _const_iterator *>(this);
       }
 
    public:
@@ -955,7 +955,7 @@ public:
    class const_iterator: public _const_iterator<false> {
    private:
       const const_iterator *_const_this() {
-         return const_cast<const const_iterator *>(this);
+         return static_cast<const const_iterator *>(this);
       }
 
    public:
@@ -1004,7 +1004,7 @@ public:
    class const_reverse_iterator: public _const_iterator<true> {
    private:
       const const_reverse_iterator *_const_this() {
-         return const_cast<const const_reverse_iterator *>(this);
+         return static_cast<const const_reverse_iterator *>(this);
       }
 
    public:
@@ -1736,7 +1736,7 @@ private:
    }
 
    const Vindex *_const_this() {
-      return const_cast<const Vindex *>(this);
+      return static_cast<const Vindex *>(this);
    }
 
 public:
