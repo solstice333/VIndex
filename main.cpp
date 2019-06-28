@@ -1433,6 +1433,8 @@ public:
 
       decltype(my_vindex)::const_iterator it = my_vindex.cbegin();
    }
+
+   // TODO add tests where the key type needs std::hash() specialized
 };
 
 int main () {

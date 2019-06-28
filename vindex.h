@@ -835,10 +835,6 @@ private:
          return *this;
       }
 
-      _const_iterator *_non_const_this() const {
-         return const_cast<_const_iterator *>(this);
-      }
-
       const _const_iterator *_const_this() {
          return const_cast<const _const_iterator *>(this);
       }
@@ -961,10 +957,6 @@ private:
 public:
    class const_iterator: public _const_iterator<false> {
    private:
-      const_iterator *_non_const_this() const {
-         return const_cast<const_iterator *>(this);
-      }
-
       const const_iterator *_const_this() {
          return const_cast<const const_iterator *>(this);
       }
@@ -1014,10 +1006,6 @@ public:
 
    class const_reverse_iterator: public _const_iterator<true> {
    private:
-      const_reverse_iterator *_non_const_this() const {
-         return const_cast<const_reverse_iterator *>(this);
-      }
-
       const const_reverse_iterator *_const_this() {
          return const_cast<const const_reverse_iterator *>(this);
       }
@@ -1738,10 +1726,6 @@ private:
       return _const_this()->_index_str();
    }
 
-   Vindex *_non_const_this() const {
-      return const_cast<Vindex *>(this);
-   }
-
    const Vindex *_const_this() {
       return const_cast<const Vindex *>(this);
    }
@@ -1803,7 +1787,7 @@ public:
    }
 
    const_iterator cbegin() noexcept {
-      const_iterator it(_non_const_this(), _order_ty);
+      const_iterator it(this, _order_ty);
       _cend = it.end();
       return it;
    }
@@ -1813,7 +1797,7 @@ public:
    }
 
    const_reverse_iterator crbegin() noexcept {
-      const_reverse_iterator it(_non_const_this(), _order_ty);
+      const_reverse_iterator it(this, _order_ty);
       _crend = it.end();
       return it;
    }
