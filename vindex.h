@@ -36,9 +36,6 @@
       return reinterpret_cast<size_t>(&o.MEM) - reinterpret_cast<size_t>(&o);\
    }()
 
-#define make_vindex(CLS, MEM)\
-   Vindex<decltype(CLS::MEM), CLS>(member_offset(CLS, MEM))
-
 template <typename ResTy>
 struct _IConstResult {
    virtual const ResTy& data() = 0;

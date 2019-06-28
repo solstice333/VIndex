@@ -1416,24 +1416,6 @@ public:
       assert(cnt == 9);
    }
 
-   void test_make_vindex() {
-      auto my_vindex = make_vindex(Int, val);
-      my_vindex.insert(25);
-      my_vindex.insert(20);
-      my_vindex.insert(35);
-      my_vindex.insert(15);
-      my_vindex.insert(30);
-      my_vindex.insert(40);
-      my_vindex.insert(16);
-      my_vindex.insert(33);     
-      assert(my_vindex._bfs_str() == "(data: i25, height: 4, left: i16, right: i35, parent: null)|(data: i16, height: 2, left: i15, right: i20, parent: i25) (data: i35, height: 3, left: i30, right: i40, parent: i25)|(data: i15, height: 1, left: null, right: null, parent: i16) (data: i20, height: 1, left: null, right: null, parent: i16) (data: i30, height: 2, left: null, right: i33, parent: i35) (data: i40, height: 1, left: null, right: null, parent: i35)|(null) (null) (null) (null) (null) (data: i33, height: 1, left: null, right: null, parent: i30) (null) (null)");
-
-      decltype(my_vindex) my_vindex2 = make_vindex(Int, val);
-      assert(my_vindex2._bfs_str() == "");
-
-      decltype(my_vindex)::const_iterator it = my_vindex.cbegin();
-   }
-
    // TODO add tests where the key type needs std::hash() specialized
 };
 
@@ -1465,5 +1447,4 @@ int main () {
    vin.test_find();
    vin.test_index_insert_removal();
    vin.test_insert_return();
-   vin.test_make_vindex();
 }
