@@ -969,7 +969,7 @@ public:
 
       const_iterator& operator=(const const_iterator& other) noexcept {
          _const_iterator<false>::operator=(other);   
-         return const_cast<const_iterator&>(*this);
+         return *this;
       }
 
       const_iterator operator++() noexcept {
@@ -1019,7 +1019,7 @@ public:
       const_reverse_iterator& operator=(const const_reverse_iterator& other) 
          noexcept {
          _const_iterator<true>::operator=(other);   
-         return const_cast<const_reverse_iterator&>(*this);
+         return *this;
       }
 
       const_reverse_iterator operator++() noexcept {
@@ -1172,24 +1172,36 @@ private:
       return _num_children(n) > 0;
    }
 
+   // TODO delete all instances of _get_member() for a template type param
    KeyTy *_get_member(T *data) const {
       char *base = reinterpret_cast<char *>(data);
       KeyTy *mem = reinterpret_cast<KeyTy *>(base + _member_offset);
       return mem;
    }
 
-   KeyTy *_get_member(const T *data) {
-      return _const_this()->_get_member(const_cast<T *>(data));
+   // TODO delete all instances of _get_member() for a template type param
+   // TODO here is the only const_cast that un-consts
+   KeyTy *_get_member(const T *data) const {
+      T *immutable_data = const_cast<T *>(data);
+      return _get_member(immutable_data);
    }
 
+   // TODO delete all instances of _get_member() for a template type param
    KeyTy *_get_member(T *data) {
       return _const_this()->_get_member(data);
    }
 
+   // TODO delete all instances of _get_member() for a template type param
+   KeyTy *_get_member(const T *data) {
+      return _const_this()->_get_member(data);
+   }
+
+   // TODO delete all instances of _get_member() for a template type param
    KeyTy *_get_member(AVLNode *n) const {
       return _get_member(&n->data);
    }
 
+   // TODO delete all instances of _get_member() for a template type param
    KeyTy *_get_member(AVLNode *n) {
       return _const_this()->_get_member(n);
    }
@@ -1806,8 +1818,7 @@ public:
    const_iterator find(const KeyTy& key) noexcept {
       auto it = cbegin();
       return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
-         T& casted_elem = const_cast<T&>(elem);
-         KeyTy *mem = _get_member(&casted_elem);
+         KeyTy *mem = _get_member(&elem);
          return key == *mem;
       });
    }
