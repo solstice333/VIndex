@@ -6,14 +6,13 @@
 
 using namespace std;
 
-class BasicInt;
-class Int;
+struct BasicInt;
+struct Int;
 
 typedef Vindex<int, BasicInt> IntVindex;
 typedef Vindex<int, Int> IntVindex2;
 
-class BasicInt {
-public:
+struct BasicInt {
    int val;
 
    BasicInt(): val(0) {}
@@ -55,8 +54,7 @@ ostream& operator<<(ostream &os, const BasicInt &i) {
    return os << i.str();
 }
 
-class Int {
-public:
+struct Int {
    int val;
 
    Int(): val(0) {}
@@ -86,6 +84,25 @@ ostream& operator<<(ostream &os, const Int &i) {
    return os << i.str();
 }
 
+struct Foo {
+   BasicInt key;
+   BasicInt val;
+
+   Foo(int key, int val): key(key), val(val) {};
+
+   bool operator<(const Int &other) const { return this->val < other.val; }
+
+   bool operator>(const Int &other) const { return this->val > other.val; }
+
+   bool operator<=(const Int &other) const { return this->val <= other.val; }
+
+   bool operator>=(const Int &other) const { return this->val >= other.val; }
+
+   bool operator==(const Int &other) const { return this->val == other.val; }
+
+   bool operator!=(const Int &other) const { return this->val != other.val; }  
+};
+
 class TestIntVindex {
 private:
    IntVindex _vin;
@@ -93,7 +110,7 @@ private:
 
 public:
    TestIntVindex(): 
-      _vin(make_member_getter(BasicInt, val)),
+      _vin(make_extractor(BasicInt, val)),
       _vin2([](const Int& i) -> int { return i.val; })
       {}
 

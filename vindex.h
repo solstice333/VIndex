@@ -30,11 +30,17 @@
       << std::endl << message << std::endl, abort(), 0) : 1
 #endif
 
-#define make_member_getter(CLS, MEM)\
+#define make_extractor(CLS, MEM)\
    [](const CLS& obj) -> decltype(CLS::MEM) { return obj.MEM; }
 
 #define make_vindex(CLS, MEM)\
-   Vindex<decltype(CLS::MEM), CLS>(make_member_getter(CLS, MEM))
+   Vindex<decltype(CLS::MEM), CLS>(make_extractor(CLS, MEM))
+
+template <typename ResTy>
+struct _IResult {
+   virtual ResTy data() = 0;
+   virtual void data(const ResTy &val) = 0;
+};
 
 template <typename ResTy>
 struct _IConstResult {
@@ -54,6 +60,17 @@ public:
 };
 
 template <typename ResTy>
+class _Result: public _IResult<ResTy> {
+private:
+   ResTy _data;
+   void data(const ResTy &val) {};
+
+public:
+   _Result(ResTy &data): _data(data) {}
+   ResTy data() override { return _data; }
+};
+
+template <typename ResTy>
 struct ConstResultSuccess: public _ConstResult<ResTy> {
    ConstResultSuccess(const ResTy &data): _ConstResult<ResTy>(data) {}
 };
@@ -64,7 +81,20 @@ struct ConstResultFailure: public _ConstResult<ResTy> {
 };
 
 template <typename ResTy>
+struct ResultSuccess: public _Result<ResTy> {
+   ResultSuccess(ResTy data): _Result<ResTy>(data) {}
+};
+
+template <typename ResTy>
+struct ResultFailure: public _Result<ResTy> {
+   ResultFailure(ResTy data): _Result<ResTy>(data) {}
+};
+
+template <typename ResTy>
 using ConstResult = std::unique_ptr<_ConstResult<ResTy>>;
+
+template <typename ResTy>
+using Result = std::unique_ptr<_Result<ResTy>>;
 
 template <typename T, typename DerivedTy>
 class _Singleton {
@@ -210,7 +240,7 @@ private:
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
    typedef std::map<OrderType, std::string> OrderTypeToStr;
    typedef std::unordered_map<KeyTy, AVLNode *> Index;
-   typedef std::function<KeyTy(const T&)> MemberGetter;
+   typedef std::function<KeyTy(const T&)> Extractor;
 
 public:
    class const_iterator;
@@ -950,7 +980,7 @@ private:
    NodeList _rebalanced_trees;
    NodeList _insertion_list;
    Index _index;
-   MemberGetter _get_member;
+   Extractor _get_member;
 
 public:
    class const_iterator: public _const_iterator<false> {
@@ -1400,7 +1430,7 @@ private:
 
    AVLNodeOwner& _insert(
       AVLNodeOwner *n, AVLNodeOwner *subtree, 
-      T **result, AVLNodeOwner *parent = nullptr) {
+      AVLNode **result, AVLNodeOwner *parent = nullptr) {
 
       (*n)->parent = subtree->get();
       ++(*n)->depth;
@@ -1417,9 +1447,7 @@ private:
       }
       else {
          child_tree = std::move(*n);
-         _insertion_list.emplace_back(child_tree.get());
-         _index[_get_member(child_tree->data)] = child_tree.get();
-         *result = &child_tree->data;
+         *result = child_tree.get();
       }
 
       (*subtree)->height = _height(subtree->get());
@@ -1429,6 +1457,28 @@ private:
          [this](AVLNodeOwner *working_tree) -> AVLNodeOwner {
             return std::move(_rebalance(working_tree));
          });
+   }
+
+   Result<AVLNode *> _insert_entry(const T& val) {
+      AVLNodeOwner n = std::make_unique<AVLNode>(val);
+      ++n->height;
+      ++n->depth;
+
+      if (!_head) {
+         _head = std::move(n);
+         ++_head->height;
+         return std::make_unique<ResultSuccess<AVLNode *>>(_head.get());
+      }
+
+      AVLNode *result;
+      _head = std::move(_insert(&n, &_head, &result));
+      _head->parent = nullptr;
+
+#if DEPTH_DATA_ENABLED
+      _update_depths_if_rebalanced();
+#endif
+
+      return std::make_unique<ResultSuccess<AVLNode *>>(result);
    }
 
    AVLNodeOwner _on_removal_leaf(AVLNodeOwner *n, AVLNodeOwner *rm = nullptr) {
@@ -1707,7 +1757,7 @@ private:
    }
 
 public:
-   Vindex(const MemberGetter& get_member) noexcept: 
+   Vindex(const Extractor& get_member) noexcept: 
       _head(nullptr), 
       _order_ty(OrderType::INORDER), 
       _get_member(get_member)
@@ -1716,28 +1766,10 @@ public:
    ConstResult<T> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T>>(_default()->data);
-
-      AVLNodeOwner n = std::make_unique<AVLNode>(val);
-      ++n->height;
-      ++n->depth;
-
-      if (!_head) {
-         _head = std::move(n);
-         ++_head->height;
-         _insertion_list.emplace_back(_head_raw()); 
-         _index[_get_member(_head->data)] = _head_raw();
-         return std::make_unique<ConstResultSuccess<T>>(_head->data);
-      }
-
-      T *result;
-      _head = std::move(_insert(&n, &_head, &result));
-      _head->parent = nullptr;
-
-#if DEPTH_DATA_ENABLED
-      _update_depths_if_rebalanced();
-#endif
-
-      return std::make_unique<ConstResultSuccess<T>>(*result);
+      Result<AVLNode *> res = _insert_entry(val);
+      _insertion_list.emplace_back(res->data());
+      _index[_get_member(res->data()->data)] = res->data();
+      return std::make_unique<ConstResultSuccess<T>>(res->data()->data);
    }
 
    template <typename... Args>
