@@ -33,6 +33,9 @@
 #define make_member_getter(CLS, MEM)\
    [](const CLS& obj) -> decltype(CLS::MEM) { return obj.MEM; }
 
+#define make_vindex(CLS, MEM)\
+   Vindex<decltype(CLS::MEM), CLS>(make_member_getter(CLS, MEM))
+
 template <typename ResTy>
 struct _IConstResult {
    virtual const ResTy& data() = 0;

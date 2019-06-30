@@ -94,7 +94,7 @@ private:
 public:
    TestIntVindex(): 
       _vin(make_member_getter(BasicInt, val)),
-      _vin2(make_member_getter(Int, val))
+      _vin2([](const Int& i) -> int { return i.val; })
       {}
 
    operator IntVindex&() {
@@ -1416,6 +1416,22 @@ public:
       assert(cnt == 9);
    }
 
+   void test_make_vindex() {
+      auto myvin = make_vindex(Int, val);   
+
+      myvin.insert(30);
+      myvin.insert(20);
+      myvin.insert(25);
+      myvin.insert(40);
+      myvin.insert(35);
+      myvin.insert(42);
+      myvin.insert(18);
+      myvin.insert(22);
+      myvin.insert(16);
+
+      assert(myvin._bfs_str() == "(data: i35, height: 4, left: i20, right: i40, parent: null)|(data: i20, height: 3, left: i18, right: i25, parent: i35) (data: i40, height: 2, left: null, right: i42, parent: i35)|(data: i18, height: 2, left: i16, right: null, parent: i20) (data: i25, height: 2, left: i22, right: i30, parent: i20) (null) (data: i42, height: 1, left: null, right: null, parent: i40)|(data: i16, height: 1, left: null, right: null, parent: i18) (null) (data: i22, height: 1, left: null, right: null, parent: i25) (data: i30, height: 1, left: null, right: null, parent: i25) (null) (null) (null) (null)");
+   }
+
    // TODO add tests where the key type needs std::hash() specialized
 };
 
@@ -1447,4 +1463,5 @@ int main () {
    vin.test_find();
    vin.test_index_insert_removal();
    vin.test_insert_return();
+   vin.test_make_vindex();
 }
