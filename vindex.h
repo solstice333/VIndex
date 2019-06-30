@@ -66,7 +66,7 @@ private:
    void data(const ResTy &val) {};
 
 public:
-   _Result(ResTy &data): _data(data) {}
+   _Result(const ResTy& data): _data(data) {}
    ResTy data() override { return _data; }
 };
 
@@ -82,12 +82,12 @@ struct ConstResultFailure: public _ConstResult<ResTy> {
 
 template <typename ResTy>
 struct ResultSuccess: public _Result<ResTy> {
-   ResultSuccess(ResTy data): _Result<ResTy>(data) {}
+   ResultSuccess(const ResTy& data): _Result<ResTy>(data) {}
 };
 
 template <typename ResTy>
 struct ResultFailure: public _Result<ResTy> {
-   ResultFailure(ResTy data): _Result<ResTy>(data) {}
+   ResultFailure(const ResTy& data): _Result<ResTy>(data) {}
 };
 
 template <typename ResTy>
