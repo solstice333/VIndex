@@ -1417,7 +1417,7 @@ public:
    }
 
    void test_make_vindex() {
-      auto myvin = make_vindex(Int, val);   
+      Vindex<int, Int> myvin([](const Int& i) -> int { return i.val; });
 
       myvin.insert(30);
       myvin.insert(20);
@@ -1430,6 +1430,20 @@ public:
       myvin.insert(16);
 
       assert(myvin._bfs_str() == "(data: i35, height: 4, left: i20, right: i40, parent: null)|(data: i20, height: 3, left: i18, right: i25, parent: i35) (data: i40, height: 2, left: null, right: i42, parent: i35)|(data: i18, height: 2, left: i16, right: null, parent: i20) (data: i25, height: 2, left: i22, right: i30, parent: i20) (null) (data: i42, height: 1, left: null, right: null, parent: i40)|(data: i16, height: 1, left: null, right: null, parent: i18) (null) (data: i22, height: 1, left: null, right: null, parent: i25) (data: i30, height: 1, left: null, right: null, parent: i25) (null) (null) (null) (null)");
+
+      auto myvin2 = make_vindex(Int, val);   
+
+      myvin2.insert(30);
+      myvin2.insert(20);
+      myvin2.insert(25);
+      myvin2.insert(40);
+      myvin2.insert(35);
+      myvin2.insert(42);
+      myvin2.insert(18);
+      myvin2.insert(22);
+      myvin2.insert(16);
+
+      assert(myvin2._bfs_str() == "(data: i35, height: 4, left: i20, right: i40, parent: null)|(data: i20, height: 3, left: i18, right: i25, parent: i35) (data: i40, height: 2, left: null, right: i42, parent: i35)|(data: i18, height: 2, left: i16, right: null, parent: i20) (data: i25, height: 2, left: i22, right: i30, parent: i20) (null) (data: i42, height: 1, left: null, right: null, parent: i40)|(data: i16, height: 1, left: null, right: null, parent: i18) (null) (data: i22, height: 1, left: null, right: null, parent: i25) (data: i30, height: 1, left: null, right: null, parent: i25) (null) (null) (null) (null)");
    }
 
    // TODO add tests where the key type needs std::hash() specialized
