@@ -30,11 +30,8 @@
       << std::endl << message << std::endl, abort(), 0) : 1
 #endif
 
-#define member_offset(CLS, MEM)\
-   []() -> size_t {\
-      CLS o;\
-      return reinterpret_cast<size_t>(&o.MEM) - reinterpret_cast<size_t>(&o);\
-   }()
+#define make_member_getter(CLS, MEM)\
+   [](const CLS& obj) -> decltype(CLS::MEM) { return obj.MEM; }
 
 template <typename ResTy>
 struct _IConstResult {
@@ -210,6 +207,7 @@ private:
    typedef std::function<AVLNodeOwner(AVLNodeOwner *)> TreeEditAction;
    typedef std::map<OrderType, std::string> OrderTypeToStr;
    typedef std::unordered_map<KeyTy, AVLNode *> Index;
+   typedef std::function<KeyTy(const T&)> MemberGetter;
 
 public:
    class const_iterator;
@@ -949,7 +947,7 @@ private:
    NodeList _rebalanced_trees;
    NodeList _insertion_list;
    Index _index;
-   size_t _member_offset;
+   MemberGetter _get_member;
 
 public:
    class const_iterator: public _const_iterator<false> {
@@ -1170,40 +1168,6 @@ private:
 
    bool _has_children(AVLNode *n) {
       return _num_children(n) > 0;
-   }
-
-   // TODO delete all instances of _get_member() for a template type param
-   KeyTy *_get_member(T *data) const {
-      char *base = reinterpret_cast<char *>(data);
-      KeyTy *mem = reinterpret_cast<KeyTy *>(base + _member_offset);
-      return mem;
-   }
-
-   // TODO delete all instances of _get_member() for a template type param
-   // TODO here is the only const_cast that un-consts
-   KeyTy *_get_member(const T *data) const {
-      T *immutable_data = const_cast<T *>(data);
-      return _get_member(immutable_data);
-   }
-
-   // TODO delete all instances of _get_member() for a template type param
-   KeyTy *_get_member(T *data) {
-      return _const_this()->_get_member(data);
-   }
-
-   // TODO delete all instances of _get_member() for a template type param
-   KeyTy *_get_member(const T *data) {
-      return _const_this()->_get_member(data);
-   }
-
-   // TODO delete all instances of _get_member() for a template type param
-   KeyTy *_get_member(AVLNode *n) const {
-      return _get_member(&n->data);
-   }
-
-   // TODO delete all instances of _get_member() for a template type param
-   KeyTy *_get_member(AVLNode *n) {
-      return _const_this()->_get_member(n);
    }
 
    // TODO function to get highest rebalanced tree
@@ -1451,7 +1415,7 @@ private:
       else {
          child_tree = std::move(*n);
          _insertion_list.emplace_back(child_tree.get());
-         _index[*_get_member(child_tree.get())] = child_tree.get();
+         _index[_get_member(child_tree->data)] = child_tree.get();
          *result = &child_tree->data;
       }
 
@@ -1585,7 +1549,7 @@ private:
          _remove_and_rebalance(val, &(*tree)->right, tree->get());
       else {
          _insertion_list.remove(tree->get());
-         _index.erase(*_get_member(tree->get()));
+         _index.erase(_get_member((*tree)->data));
 
          if (_num_children(tree->get()) == 1)
             *tree = std::move(_on_removal_one_child(tree));
@@ -1740,14 +1704,14 @@ private:
    }
 
 public:
-   Vindex(size_t member_offset) noexcept: 
+   Vindex(const MemberGetter& get_member) noexcept: 
       _head(nullptr), 
       _order_ty(OrderType::INORDER), 
-      _member_offset(member_offset) 
+      _get_member(get_member)
       {}
 
    ConstResult<T> insert(const T& val) noexcept {
-      if (_index.find(*_get_member(&val)) != _index.end())
+      if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T>>(_default()->data);
 
       AVLNodeOwner n = std::make_unique<AVLNode>(val);
@@ -1758,7 +1722,7 @@ public:
          _head = std::move(n);
          ++_head->height;
          _insertion_list.emplace_back(_head_raw()); 
-         _index[*_get_member(_head_raw())] = _head_raw();
+         _index[_get_member(_head->data)] = _head_raw();
          return std::make_unique<ConstResultSuccess<T>>(_head->data);
       }
 
@@ -1818,8 +1782,7 @@ public:
    const_iterator find(const KeyTy& key) noexcept {
       auto it = cbegin();
       return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
-         KeyTy *mem = _get_member(&elem);
-         return key == *mem;
+         return key == _get_member(elem);
       });
    }
 

@@ -93,8 +93,8 @@ private:
 
 public:
    TestIntVindex(): 
-      _vin(member_offset(BasicInt, val)),
-      _vin2(member_offset(Int, val)) 
+      _vin(make_member_getter(BasicInt, val)),
+      _vin2(make_member_getter(Int, val))
       {}
 
    operator IntVindex&() {
