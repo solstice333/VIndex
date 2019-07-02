@@ -1584,7 +1584,6 @@ private:
       );
    }
 
-   // TODO: return a Result<AVLNode *>
    void _remove_and_rebalance(
       const T& val, AVLNodeOwner *subtree, AVLNode *parent, AVLNodeOwner *rm) {
 
@@ -1841,6 +1840,8 @@ public:
    const T& at(const KeyTy& key) {
       return _const_this()->at(key);
    }
+
+   // TODO add size()
 
    void clear() noexcept {
       _insertion_list.clear();
