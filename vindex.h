@@ -36,65 +36,64 @@
 #define make_vindex(CLS, MEM)\
    Vindex<decltype(CLS::MEM), CLS>(make_extractor(CLS, MEM))
 
-template <typename ResTy>
-struct _IResult {
-   virtual ResTy data() = 0;
-   virtual void data(const ResTy &val) = 0;
-};
-
-template <typename ResTy>
+template <typename T>
 struct _IConstResult {
-   virtual const ResTy& data() = 0;
-   virtual void data(const ResTy &val) = 0;
+   virtual const T& data() = 0;
 };
 
-template <typename ResTy>
-class _ConstResult: public _IConstResult<ResTy> {
+template <typename T>
+class _ConstResult: public _IConstResult<T> {
 private:
-   const ResTy& _data;
-   void data(const ResTy &val) {};
+   T _data;
 
 public:
-   _ConstResult(const ResTy &data): _data(data) {}
-   const ResTy& data() override { return _data; }
+   _ConstResult(const T &data): _data(data) {}
+   const T& data() override { return _data; }
 };
 
-template <typename ResTy>
-class _Result: public _IResult<ResTy> {
+template <typename T>
+struct ConstResultSuccess: public _ConstResult<T> {
+   ConstResultSuccess(const T &data): _ConstResult<T>(data) {}
+};
+
+template <typename T>
+struct ConstResultFailure: public _ConstResult<T> {
+   ConstResultFailure(const T &data): _ConstResult<T>(data) {}
+};
+
+template <typename T>
+using ConstResult = std::unique_ptr<_ConstResult<T>>;
+
+template <typename T>
+struct _IResult {
+   virtual T& data() = 0;
+};
+
+template <typename T>
+class _Result: public _IResult<T> {
 private:
-   ResTy _data;
-   void data(const ResTy &val) {};
+   T _data;
 
 public:
-   _Result(const ResTy& data): _data(data) {}
-   ResTy data() override { return _data; }
+   template <typename U>
+   _Result(U&& data): _data(std::forward<U>(data)) {}
+   T& data() override { return _data; }
 };
 
-template <typename ResTy>
-struct ConstResultSuccess: public _ConstResult<ResTy> {
-   ConstResultSuccess(const ResTy &data): _ConstResult<ResTy>(data) {}
+template <typename T>
+struct ResultSuccess: public _Result<T> {
+   template <typename U>
+   ResultSuccess(U&& data): _Result<T>(std::forward<U>(data)) {}
 };
 
-template <typename ResTy>
-struct ConstResultFailure: public _ConstResult<ResTy> {
-   ConstResultFailure(const ResTy &data): _ConstResult<ResTy>(data) {}
+template <typename T>
+struct ResultFailure: public _Result<T> {
+   template <typename U>
+   ResultFailure(U&& data): _Result<T>(std::forward<U>(data)) {}
 };
 
-template <typename ResTy>
-struct ResultSuccess: public _Result<ResTy> {
-   ResultSuccess(const ResTy& data): _Result<ResTy>(data) {}
-};
-
-template <typename ResTy>
-struct ResultFailure: public _Result<ResTy> {
-   ResultFailure(const ResTy& data): _Result<ResTy>(data) {}
-};
-
-template <typename ResTy>
-using ConstResult = std::unique_ptr<_ConstResult<ResTy>>;
-
-template <typename ResTy>
-using Result = std::unique_ptr<_Result<ResTy>>;
+template <typename T>
+using Result = std::unique_ptr<_Result<T>>;
 
 template <typename T, typename DerivedTy>
 class _Singleton {
@@ -1428,7 +1427,7 @@ private:
       return **n < **subtree ? (*subtree)->left : (*subtree)->right;
    }
 
-   AVLNodeOwner& _insert(
+   AVLNodeOwner& _insert_recurs(
       AVLNodeOwner *n, AVLNodeOwner *subtree, 
       AVLNode **result, AVLNodeOwner *parent = nullptr) {
 
@@ -1441,7 +1440,8 @@ private:
          _modify_proxy_tree(&child_tree,
             [this, n, subtree, result](
                AVLNodeOwner *working_tree) -> AVLNodeOwner {
-               return std::move(_insert(n, working_tree, result, subtree));
+               return std::move(
+                  _insert_recurs(n, working_tree, result, subtree));
             });
          child_tree->parent = subtree->get();
       }
@@ -1459,7 +1459,7 @@ private:
          });
    }
 
-   Result<AVLNode *> _insert_entry(const T& val) {
+   Result<AVLNode *> _insert(const T& val) {
       AVLNodeOwner n = std::make_unique<AVLNode>(val);
       ++n->height;
       ++n->depth;
@@ -1471,7 +1471,7 @@ private:
       }
 
       AVLNode *result;
-      _head = std::move(_insert(&n, &_head, &result));
+      _head = std::move(_insert_recurs(&n, &_head, &result));
       _head->parent = nullptr;
 
 #if DEPTH_DATA_ENABLED
@@ -1563,28 +1563,34 @@ private:
       }
    }
 
-   AVLNodeOwner& _on_removal_two_children(AVLNodeOwner *n) {
+   AVLNodeOwner& _on_removal_two_children(
+      AVLNodeOwner *n, AVLNodeOwner *rm = nullptr) {
       assert(n, "NullPointerError");
 
       return  _modify_proxy_tree(n, 
-         [this, &n](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+         [this, &n, &rm](AVLNodeOwner *working_tree) -> AVLNodeOwner {
             AVLNodeOwner next;
+            AVLNodeOwner tmp;
+            if (!rm)
+               rm = &tmp;
 
             (*working_tree)->right = 
                std::move(_rm_next_in_order(&(*working_tree)->right, &next));
             (*working_tree)->height = _height(working_tree->get());
             _transfer_to_next(&next, working_tree);
+            *rm = std::move(*working_tree);
             return next;
          }
       );
    }
 
+   // TODO: return a Result<AVLNode *>
    void _remove_and_rebalance(
-      const T& val, AVLNodeOwner *subtree, AVLNode *parent) {
+      const T& val, AVLNodeOwner *subtree, AVLNode *parent, AVLNodeOwner *rm) {
 
       _modify_proxy_tree(subtree,
-         [this, &val](AVLNodeOwner *working_tree) -> AVLNodeOwner {
-            *working_tree = std::move(_remove(val, working_tree));
+         [this, &val, &rm](AVLNodeOwner *working_tree) -> AVLNodeOwner {
+            *working_tree = std::move(_remove(val, working_tree, rm));
             return std::move(_rebalance(working_tree));
          });
 
@@ -1592,24 +1598,23 @@ private:
          (*subtree)->parent = parent;
    }
 
-   AVLNodeOwner& _remove(const T& val, AVLNodeOwner *tree) {
-      if (!*tree)
+   AVLNodeOwner& _remove(const T& val, AVLNodeOwner *tree, AVLNodeOwner *rm) {
+      if (!*tree) {
+         *rm = nullptr;
          return *tree;
+      }
 
       if (val < (*tree)->data)
-         _remove_and_rebalance(val, &(*tree)->left, tree->get());
+         _remove_and_rebalance(val, &(*tree)->left, tree->get(), rm);
       else if (val > (*tree)->data)
-         _remove_and_rebalance(val, &(*tree)->right, tree->get());
+         _remove_and_rebalance(val, &(*tree)->right, tree->get(), rm);
       else {
-         _insertion_list.remove(tree->get());
-         _index.erase(_get_member((*tree)->data));
-
          if (_num_children(tree->get()) == 1)
-            *tree = std::move(_on_removal_one_child(tree));
+            *tree = std::move(_on_removal_one_child(tree, rm));
          else if (!_num_children(tree->get()))
-            *tree = std::move(_on_removal_leaf(tree));
+            *tree = std::move(_on_removal_leaf(tree, rm));
          else
-            *tree = std::move(_on_removal_two_children(tree));
+            *tree = std::move(_on_removal_two_children(tree, rm));
       }
 
       if (*tree)
@@ -1763,13 +1768,13 @@ public:
       _get_member(get_member)
       {}
 
-   ConstResult<T> insert(const T& val) noexcept {
+   ConstResult<T&> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
-         return std::make_unique<ConstResultFailure<T>>(_default()->data);
-      Result<AVLNode *> res = _insert_entry(val);
+         return std::make_unique<ConstResultFailure<T&>>(_default()->data);
+      Result<AVLNode *> res = _insert(val);
       _insertion_list.emplace_back(res->data());
       _index[_get_member(res->data()->data)] = res->data();
-      return std::make_unique<ConstResultSuccess<T>>(res->data()->data);
+      return std::make_unique<ConstResultSuccess<T&>>(res->data()->data);
    }
 
    template <typename... Args>
@@ -1777,9 +1782,17 @@ public:
       insert(T(std::forward<Args>(args)...));
    }
 
-   void remove(const T& val) noexcept {
-      _remove_and_rebalance(val, &_head, nullptr);
+   Result<T> remove(const T& val) noexcept {
+      AVLNodeOwner rm;
+      _remove_and_rebalance(val, &_head, nullptr, &rm);
       _update_depths_if_rebalanced();
+
+      if (rm) {
+         _insertion_list.remove(rm.get());
+         _index.erase(_get_member(rm->data));
+         return std::make_unique<ResultSuccess<T>>(rm->data);
+      }
+      return std::make_unique<ResultFailure<T>>(_default()->data);
    }
 
    void order(OrderType order_ty) noexcept {

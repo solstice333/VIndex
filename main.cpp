@@ -189,17 +189,30 @@ public:
 
    void test_dne_removal() {
       _vin.clear();
-      _vin.remove(40);
+      Result<BasicInt> res = _vin.remove(40);
+      auto resf = dynamic_cast<ResultFailure<BasicInt> *>(res.get());
+      assert(resf);
+      assert(resf->data().val == 0);
       assert(_vin._bfs_str() == "");
+
+      resf->data().val = 30;
+      assert(resf->data().val == 30);
+
       _vin.insert(30);
-      _vin.remove(40);
+      res = _vin.remove(40);
+      resf = dynamic_cast<ResultFailure<BasicInt> *>(res.get());
+      assert(resf);
+      assert(resf->data().val == 0);
       assert(_vin._bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
    }
 
    void test_leaf_removal() {
       _vin.clear();
       _vin.insert(30);
-      _vin.remove(30);
+      Result<BasicInt> res = _vin.remove(30);
+      auto ress = dynamic_cast<ResultSuccess<BasicInt> *>(res.get());
+      assert(ress);
+      assert(ress->data().val == 30);
       assert(_vin._bfs_str() == "");
 
       _vin.insert(30);
@@ -208,7 +221,10 @@ public:
       _vin.insert(40);
       _vin.insert(35);
       _vin.remove(30);
-      _vin.remove(20);
+      res = _vin.remove(20);
+      ress = dynamic_cast<ResultSuccess<BasicInt> *>(res.get());
+      assert(ress);
+      assert(ress->data().val == 20);
       assert(_vin._bfs_str() == "(data: 35, height: 2, left: 25, right: 40, parent: null)|(data: 25, height: 1, left: null, right: null, parent: 35) (data: 40, height: 1, left: null, right: null, parent: 35)");
 
       _vin.clear();
@@ -264,10 +280,17 @@ public:
       _vin.insert(30);
       _vin.insert(40);
       _vin.remove(30);
-      _vin.remove(35);
+      Result<BasicInt> res = _vin.remove(35);
+      auto ress = dynamic_cast<ResultSuccess<BasicInt> *>(res.get());
+      assert(ress);
+      assert(ress->data().val == 35);
       assert(_vin._bfs_str() == "(data: 25, height: 2, left: 20, right: 40, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 25) (data: 40, height: 1, left: null, right: null, parent: 25)");
 
-      _vin.remove(20);
+      res = _vin.remove(20);
+      ress = dynamic_cast<ResultSuccess<BasicInt> *>(res.get());
+      assert(ress);
+      assert(ress->data().val == 20);
+
       _vin.remove(25);
       assert(_vin._bfs_str() == "(data: 40, height: 1, left: null, right: null, parent: null)");
 
@@ -321,7 +344,10 @@ public:
       _vin.insert(25);
       _vin.insert(20);
       _vin.insert(35);
-      _vin.remove(25);
+      Result<BasicInt> res = _vin.remove(25);
+      auto ress = dynamic_cast<ResultSuccess<BasicInt> *>(res.get());
+      assert(ress);
+      assert(ress->data().val == 25);
       assert(_vin._bfs_str() == "(data: 35, height: 2, left: 20, right: null, parent: null)|(data: 20, height: 1, left: null, right: null, parent: 35) (null)");
 
       _vin.clear();
@@ -331,7 +357,10 @@ public:
       _vin.insert(15);
       _vin.insert(30);
       _vin.insert(40);
-      _vin.remove(35);
+      res = _vin.remove(35);
+      ress = dynamic_cast<ResultSuccess<BasicInt> *>(res.get());
+      assert(ress);
+      assert(ress->data().val == 35);
       assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 40, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 40, height: 2, left: 30, right: null, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 30, height: 1, left: null, right: null, parent: 40) (null)");
 
       _vin.clear();
@@ -1386,9 +1415,9 @@ public:
       int cnt = 0;
 
       auto assert_successful_results = 
-         [&cnt](ConstResult<BasicInt> &r, int exp) {
+         [&cnt](ConstResult<BasicInt&> &r, int exp) {
             if (auto res = 
-               dynamic_cast<ConstResultSuccess<BasicInt> *>(r.get())) {
+               dynamic_cast<ConstResultSuccess<BasicInt&> *>(r.get())) {
                assert(res->data() == exp);
                ++cnt;
             }
@@ -1399,9 +1428,9 @@ public:
          };
 
       auto assert_failing_results = 
-         [&cnt](ConstResult<BasicInt> &r, int exp) {
+         [&cnt](ConstResult<BasicInt&> &r, int exp) {
             if (auto res = 
-               dynamic_cast<ConstResultFailure<BasicInt> *>(r.get())) {
+               dynamic_cast<ConstResultFailure<BasicInt&> *>(r.get())) {
                assert(res->data() == exp);
                ++cnt;
             }
@@ -1411,7 +1440,7 @@ public:
             }
          };
 
-      ConstResult<BasicInt> r = _vin.insert(25);
+      ConstResult<BasicInt&> r = _vin.insert(25);
       assert_successful_results(r, 25);
       r = _vin.insert(20);
       assert_successful_results(r, 20);
