@@ -980,6 +980,7 @@ private:
    NodeList _insertion_list;
    Index _index;
    Extractor _get_member;
+   size_t _size;
 
 public:
    class const_iterator: public _const_iterator<false> {
@@ -1764,20 +1765,22 @@ public:
    Vindex(const Extractor& get_member) noexcept: 
       _head(nullptr), 
       _order_ty(OrderType::INORDER), 
-      _get_member(get_member)
+      _get_member(get_member),
+      _size(0)
       {}
 
    ConstResult<T&> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T&>>(_default()->data);
       Result<AVLNode *> res = _insert(val);
+      ++_size;
       _insertion_list.emplace_back(res->data());
       _index[_get_member(res->data()->data)] = res->data();
       return std::make_unique<ConstResultSuccess<T&>>(res->data()->data);
    }
 
    template <typename... Args>
-   void emplace_back(Args&&... args) noexcept {
+   void emplace(Args&&... args) noexcept {
       insert(T(std::forward<Args>(args)...));
    }
 
@@ -1841,12 +1844,15 @@ public:
       return _const_this()->at(key);
    }
 
-   // TODO add size()
+   size_t size() noexcept {
+      return _size;
+   }
 
    void clear() noexcept {
       _insertion_list.clear();
       _index.clear();
       _head = nullptr;
+      _size = 0;
    }
 };
 

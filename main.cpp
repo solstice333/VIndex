@@ -1329,18 +1329,18 @@ public:
       assert(it == _vin.crend());
    }
 
-   void test_emplace_back() {
+   void test_emplace() {
       _vin2.clear();
          
-      _vin2.emplace_back(25);
-      _vin2.emplace_back(20);
-      _vin2.emplace_back(35);
-      _vin2.emplace_back(15);
-      _vin2.emplace_back(30);
-      _vin2.emplace_back(40);
-      _vin2.emplace_back(16);
-      _vin2.emplace_back(26);
-      _vin2.emplace_back(33);
+      _vin2.emplace(25);
+      _vin2.emplace(20);
+      _vin2.emplace(35);
+      _vin2.emplace(15);
+      _vin2.emplace(30);
+      _vin2.emplace(40);
+      _vin2.emplace(16);
+      _vin2.emplace(26);
+      _vin2.emplace(33);
 
       assert(_vin2._bfs_str() == "(data: i25, height: 4, left: i16, right: i35, parent: null)|(data: i16, height: 2, left: i15, right: i20, parent: i25) (data: i35, height: 3, left: i30, right: i40, parent: i25)|(data: i15, height: 1, left: null, right: null, parent: i16) (data: i20, height: 1, left: null, right: null, parent: i16) (data: i30, height: 2, left: i26, right: i33, parent: i35) (data: i40, height: 1, left: null, right: null, parent: i35)|(null) (null) (null) (null) (data: i26, height: 1, left: null, right: null, parent: i30) (data: i33, height: 1, left: null, right: null, parent: i30) (null) (null)");
    }
@@ -1492,6 +1492,19 @@ public:
       assert(myvin2._bfs_str() == "(data: i35, height: 4, left: i20, right: i40, parent: null)|(data: i20, height: 3, left: i18, right: i25, parent: i35) (data: i40, height: 2, left: null, right: i42, parent: i35)|(data: i18, height: 2, left: i16, right: null, parent: i20) (data: i25, height: 2, left: i22, right: i30, parent: i20) (null) (data: i42, height: 1, left: null, right: null, parent: i40)|(data: i16, height: 1, left: null, right: null, parent: i18) (null) (data: i22, height: 1, left: null, right: null, parent: i25) (data: i30, height: 1, left: null, right: null, parent: i25) (null) (null) (null) (null)");
    }
 
+   void test_size() {
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(16);
+      _vin.insert(33);
+      assert(_vin.size() == 8);
+   }
+
    // TODO add tests where the key type needs std::hash() specialized
 };
 
@@ -1519,9 +1532,10 @@ int main () {
    vin.test_breadth_first_order_rev_iter();
    vin.test_insertion_order_rev_iter();
 
-   vin.test_emplace_back();
+   vin.test_emplace();
    vin.test_find();
    vin.test_index_insert_removal();
    vin.test_insert_return();
    vin.test_make_vindex();
+   vin.test_size();
 }
