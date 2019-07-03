@@ -37,63 +37,49 @@
    Vindex<decltype(CLS::MEM), CLS>(make_extractor(CLS, MEM))
 
 template <typename T>
-struct _IConstResult {
-   virtual const T& data() = 0;
+class _IConstResult {
+public:
+   virtual ~_IConstResult() {}
 };
 
 template <typename T>
-class _ConstResult: public _IConstResult<T> {
+class ConstResultSuccess: public _IConstResult<T> {
 private:
    T _data;
 
 public:
-   _ConstResult(const T &data): _data(data) {}
-   const T& data() override { return _data; }
+   ConstResultSuccess(const T &data): _data(data) {}
+   const T& data() { return _data; }
 };
 
 template <typename T>
-struct ConstResultSuccess: public _ConstResult<T> {
-   ConstResultSuccess(const T &data): _ConstResult<T>(data) {}
+class ConstResultFailure: public _IConstResult<T> {};
+
+template <typename T>
+using ConstResult = std::unique_ptr<_IConstResult<T>>;
+
+template <typename T>
+class _IResult {
+public:
+   virtual ~_IResult() {}
 };
 
 template <typename T>
-struct ConstResultFailure: public _ConstResult<T> {
-   ConstResultFailure(const T &data): _ConstResult<T>(data) {}
-};
-
-template <typename T>
-using ConstResult = std::unique_ptr<_ConstResult<T>>;
-
-template <typename T>
-struct _IResult {
-   virtual T& data() = 0;
-};
-
-template <typename T>
-class _Result: public _IResult<T> {
+class ResultSuccess: public _IResult<T> {
 private:
    T _data;
 
 public:
    template <typename U>
-   _Result(U&& data): _data(std::forward<U>(data)) {}
-   T& data() override { return _data; }
+   ResultSuccess(U&& data): _data(std::forward<U>(data)) {}
+   T& data() { return _data; }
 };
 
 template <typename T>
-struct ResultSuccess: public _Result<T> {
-   template <typename U>
-   ResultSuccess(U&& data): _Result<T>(std::forward<U>(data)) {}
-};
+class ResultFailure: public _IResult<T> {};
 
 template <typename T>
-struct ResultFailure: public _Result<T> {
-   template <typename U>
-   ResultFailure(U&& data): _Result<T>(std::forward<U>(data)) {}
-};
-
-template <typename T>
-using Result = std::unique_ptr<_Result<T>>;
+using Result = std::unique_ptr<_IResult<T>>;
 
 template <typename T, typename DerivedTy>
 class _Singleton {
@@ -1460,7 +1446,7 @@ private:
          });
    }
 
-   Result<AVLNode *> _insert(const T& val) {
+   AVLNode * _insert(const T& val) {
       AVLNodeOwner n = std::make_unique<AVLNode>(val);
       ++n->height;
       ++n->depth;
@@ -1468,7 +1454,7 @@ private:
       if (!_head) {
          _head = std::move(n);
          ++_head->height;
-         return std::make_unique<ResultSuccess<AVLNode *>>(_head.get());
+         return _head.get();
       }
 
       AVLNode *result;
@@ -1479,7 +1465,7 @@ private:
       _update_depths_if_rebalanced();
 #endif
 
-      return std::make_unique<ResultSuccess<AVLNode *>>(result);
+      return result;
    }
 
    AVLNodeOwner _on_removal_leaf(AVLNodeOwner *n, AVLNodeOwner *rm = nullptr) {
@@ -1771,12 +1757,12 @@ public:
 
    ConstResult<T&> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
-         return std::make_unique<ConstResultFailure<T&>>(_default()->data);
-      Result<AVLNode *> res = _insert(val);
+         return std::make_unique<ConstResultFailure<T&>>();
+      AVLNode *n = _insert(val);
       ++_size;
-      _insertion_list.emplace_back(res->data());
-      _index[_get_member(res->data()->data)] = res->data();
-      return std::make_unique<ConstResultSuccess<T&>>(res->data()->data);
+      _insertion_list.emplace_back(n);
+      _index[_get_member(n->data)] = n;
+      return std::make_unique<ConstResultSuccess<T&>>(n->data);
    }
 
    template <typename... Args>
@@ -1794,7 +1780,7 @@ public:
          _index.erase(_get_member(rm->data));
          return std::make_unique<ResultSuccess<T>>(rm->data);
       }
-      return std::make_unique<ResultFailure<T>>(_default()->data);
+      return std::make_unique<ResultFailure<T>>();
    }
 
    void order(OrderType order_ty) noexcept {
