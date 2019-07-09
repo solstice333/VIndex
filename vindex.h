@@ -848,25 +848,13 @@ private:
          return *this;
       }
 
-      const _const_iterator *_const_this() {
-         return static_cast<const _const_iterator *>(this);
-      }
-
    public:
       bool operator==(const _const_iterator& other) const {
          return _curr == other._curr;
       }
 
-      bool operator==(const _const_iterator& other) {
-         return _const_this()->operator==(other);
-      }
-
       bool operator!=(const _const_iterator& other) const {
          return !operator==(other);
-      }
-
-      bool operator!=(const _const_iterator& other) {
-         return _const_this()->operator!=(other);
       }
 
       _const_iterator operator++() {
@@ -921,40 +909,20 @@ private:
          return _curr ? _curr->data : Vindex<KeyTy, T>::_default()->data;
       }
 
-      const T& operator*() {
-         return _const_this()->operator*();
-      }
-
       const T* operator->() const {
          return _curr ? &_curr->data : &Vindex<KeyTy, T>::_default()->data;
-      }
-
-      const T* operator->() {
-         return _const_this()->operator->();
       }
 
       _const_iterator end() const { 
          return _const_iterator();
       }
 
-      _const_iterator end() { 
-         return _const_this()->end();
-      }
-
       std::string str() const {
          return _str();
       }
 
-      std::string str() {
-         return _const_this()->str();
-      }
-
       int curr_level() const {
          return _curr_lv;
-      }
-
-      int curr_level() {
-         return _const_this()->curr_level();
       }
    };
 
@@ -970,11 +938,6 @@ private:
 
 public:
    class const_iterator: public _const_iterator<false> {
-   private:
-      const const_iterator *_const_this() {
-         return static_cast<const const_iterator *>(this);
-      }
-
    public:
       const_iterator() noexcept {}
 
@@ -1012,18 +975,9 @@ public:
       const_iterator end() const noexcept {
          return const_iterator();
       }
-
-      const_iterator end() noexcept {
-         return _const_this()->end();
-      }
    };
 
    class const_reverse_iterator: public _const_iterator<true> {
-   private:
-      const const_reverse_iterator *_const_this() {
-         return static_cast<const const_reverse_iterator *>(this);
-      }
-
    public:
       const_reverse_iterator() noexcept {}
 
@@ -1061,10 +1015,6 @@ public:
 
       const_reverse_iterator end() const noexcept {
          return const_reverse_iterator();
-      }
-
-      const_reverse_iterator end() noexcept {
-         return _const_this()->end();
       }
    }; 
 
@@ -1121,10 +1071,6 @@ private:
 
    AVLNode *_head_raw() const {
       return _head.get();
-   }
-
-   AVLNode *_head_raw() {
-      return _const_this()->_head_raw();
    }
 
    static size_t _nodes_at_lv(size_t lv) {
@@ -1614,18 +1560,10 @@ private:
       return it == dq.end();
    }
 
-   bool _is_dq_all_nulls(const NodeDQ &dq) {
-      return _const_this()->_is_dq_all_nulls(dq);
-   }
-
    void _on_max_nodes_per_line(NodeDQ *dq, const VoidFunc &func) const {
       func();
       if (_is_dq_all_nulls(*dq))
          dq->clear();
-   }
-
-   void _on_max_nodes_per_line(NodeDQ *dq, const VoidFunc &func) {
-      _const_this()->_on_max_nodes_per_line(dq, func);
    }
 
    void _on_valid_node(
@@ -1635,19 +1573,10 @@ private:
       dq->push_back(n->right_raw());
    }
 
-   void _on_valid_node(
-      NodeDQ *dq, AVLNode *n, const NodeListener &func) {
-      _const_this()->_on_valid_node(dq, n, func);
-   }
-
    void _on_null_node(NodeDQ *dq, const NodeListener &func) const {
       func(nullptr);
       dq->push_back(nullptr);
       dq->push_back(nullptr);
-   }
-
-   void _on_null_node(NodeDQ *dq, const NodeListener &func) {
-      _const_this()->_on_null_node(dq, func);
    }
 
    void _gather_bfs(NodeDQ *dq, size_t *curr_depth,
@@ -1673,11 +1602,6 @@ private:
       _gather_bfs(dq, curr_depth, node_cnt, func);
    }
 
-   void _gather_bfs(NodeDQ *dq, size_t *curr_depth,
-      size_t *node_cnt, const NodeListener &func) {
-      _const_this()->_gather_bfs(dq, curr_depth, node_cnt, func);
-   }
-
    NodeList _gather_bfs_list() const {
       NodeDQ dq;
       NodeList nl;
@@ -1690,10 +1614,6 @@ private:
       _gather_bfs(&dq, &curr_depth, &node_cnt,
          [&nl](AVLNode *n) { nl.push_back(n); });
       return nl;
-   }
-
-   NodeList _gather_bfs_list() {
-      return _const_this()->_gather_bfs_list();
    }
 
    std::string _gather_bfs_str(const std::string &delim="|") const {
@@ -1719,16 +1639,8 @@ private:
       return ss.str();
    }
 
-   std::string _gather_bfs_str(const std::string &delim="|") {
-      return _const_this()->_gather_bfs_str(delim);
-   }
-
    std::string _bfs_str(const std::string &delim = "|") const {
       return _gather_bfs_str(delim);
-   }
-
-   std::string _bfs_str(const std::string &delim = "|") {
-      return _const_this()->_bfs_str(delim);
    }
 
    std::string _index_str(const std::string &delim = "|") const {
@@ -1737,14 +1649,6 @@ private:
          ss << it->first << ": " << _node_str(*it->second) << delim;
       }
       return ss.str();
-   }
-
-   std::string _index_str(const std::string &delim = "|") {
-      return _const_this()->_index_str();
-   }
-
-   const Vindex *_const_this() {
-      return static_cast<const Vindex *>(this);
    }
 
 public:
@@ -1791,10 +1695,6 @@ public:
       return _order_ty;
    }
 
-   OrderType order() noexcept {
-      return _const_this()->order();
-   }
-
    const_iterator cbegin() noexcept {
       const_iterator it(this, _order_ty);
       _cend = it.end();
@@ -1824,10 +1724,6 @@ public:
 
    const T& at(const KeyTy& key) const {
       return _index.at(key)->data;
-   }
-
-   const T& at(const KeyTy& key) {
-      return _const_this()->at(key);
    }
 
    size_t size() noexcept {
