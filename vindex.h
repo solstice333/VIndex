@@ -134,7 +134,7 @@ struct _AVLState: public T {
       return right.get();
    }
 
-   _AVLState(BASE_TY data): 
+   _AVLState(const BASE_TY& data): 
       T(data), height(0), depth(0), 
       left(nullptr), right(nullptr), parent(nullptr) {}
 
