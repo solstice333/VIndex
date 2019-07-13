@@ -48,7 +48,7 @@ private:
    T _data;
 
 public:
-   ConstResultSuccess(const T &data): _data(data) {}
+   ConstResultSuccess(const T& data): _data(data) {}
    const T& data() { return _data; }
 };
 
@@ -823,7 +823,7 @@ private:
             assert(false, "NotYetImplementedError");
       }
 
-      _const_iterator(const _const_iterator &other): 
+      _const_iterator(const _const_iterator& other): 
          _curr(other._curr), 
          _prev(other._prev), 
          _prev_incr(other._prev_incr), 
@@ -834,7 +834,7 @@ private:
 
          _tracker(other._tracker) {}
 
-      _const_iterator& operator=(const _const_iterator &other) {
+      _const_iterator& operator=(const _const_iterator& other) {
          _curr = other._curr;
          _prev = other._prev;
          _prev_incr = other._prev_incr;
@@ -944,7 +944,7 @@ public:
       const_iterator(Vindex* vin, OrderType order_ty) noexcept: 
          _const_iterator<false>(vin, order_ty) {}
 
-      const_iterator(const const_iterator &other) noexcept :
+      const_iterator(const const_iterator& other) noexcept :
          _const_iterator<false>(other) {}
 
       const_iterator& operator=(const const_iterator& other) noexcept {
@@ -984,7 +984,7 @@ public:
       const_reverse_iterator(Vindex* vin, OrderType order_ty) noexcept: 
          _const_iterator<true>(vin, order_ty) {}
 
-      const_reverse_iterator(const const_reverse_iterator &other) noexcept:
+      const_reverse_iterator(const const_reverse_iterator& other) noexcept:
          _const_iterator<true>(other) {}
 
       const_reverse_iterator& operator=(const const_reverse_iterator& other) 
@@ -1051,7 +1051,7 @@ private:
       return ss.str();
    }
 
-   static std::string _node_str(const AVLNode &n) {
+   static std::string _node_str(const AVLNode& n) {
       using namespace std;
       stringstream ss;
       ss << "(" 
@@ -1217,7 +1217,7 @@ private:
    }
 
    void _single_rotation_parts(
-      const AVLNodeOwner &x,
+      const AVLNodeOwner& x,
       AVLNodeOwner* y, AVLNodeOwner* t2, 
       AVLNodeOwner** x_owner, AVLNodeOwner** t2_owner,
       Direction y_dxn) {
@@ -1246,7 +1246,7 @@ private:
    }
 
    AVLNodeOwner& _modify_proxy_tree(
-      AVLNodeOwner* tree, const TreeEditAction &edit) {
+      AVLNodeOwner* tree, const TreeEditAction& edit) {
 
       AVLNodeOwner working_tree = std::move(*tree);
       *tree = edit(&working_tree);
@@ -1367,7 +1367,7 @@ private:
       (*n)->parent = subtree->get();
       ++(*n)->depth;
 
-      AVLNodeOwner &child_tree = _child_insertion_side(n, subtree);
+      AVLNodeOwner& child_tree = _child_insertion_side(n, subtree);
 
       if (child_tree) {
          _modify_proxy_tree(&child_tree,
@@ -1554,33 +1554,33 @@ private:
       return *tree;
    }
 
-   bool _is_dq_all_nulls(const NodeDQ &dq) const {
+   bool _is_dq_all_nulls(const NodeDQ& dq) const {
       auto it = find_if(
          dq.begin(), dq.end(), [](AVLNode* n) -> bool { return n; });
       return it == dq.end();
    }
 
-   void _on_max_nodes_per_line(NodeDQ* dq, const VoidFunc &func) const {
+   void _on_max_nodes_per_line(NodeDQ* dq, const VoidFunc& func) const {
       func();
       if (_is_dq_all_nulls(*dq))
          dq->clear();
    }
 
    void _on_valid_node(
-      NodeDQ* dq, AVLNode* n, const NodeListener &func) const {
+      NodeDQ* dq, AVLNode* n, const NodeListener& func) const {
       func(n);
       dq->push_back(n->left_raw());
       dq->push_back(n->right_raw());
    }
 
-   void _on_null_node(NodeDQ* dq, const NodeListener &func) const {
+   void _on_null_node(NodeDQ* dq, const NodeListener& func) const {
       func(nullptr);
       dq->push_back(nullptr);
       dq->push_back(nullptr);
    }
 
    void _gather_bfs(NodeDQ* dq, size_t* curr_depth,
-      size_t* node_cnt, const NodeListener &func) const {
+      size_t* node_cnt, const NodeListener& func) const {
 
       if (dq->empty()) 
          return;
@@ -1616,7 +1616,7 @@ private:
       return nl;
    }
 
-   std::string _gather_bfs_str(const std::string &delim="|") const {
+   std::string _gather_bfs_str(const std::string& delim="|") const {
       using namespace std;
       NodeList nl = _gather_bfs_list();
 
@@ -1639,11 +1639,11 @@ private:
       return ss.str();
    }
 
-   std::string _bfs_str(const std::string &delim = "|") const {
+   std::string _bfs_str(const std::string& delim = "|") const {
       return _gather_bfs_str(delim);
    }
 
-   std::string _index_str(const std::string &delim = "|") const {
+   std::string _index_str(const std::string& delim = "|") const {
       std::stringstream ss;
       for (auto it = _index.begin(); it != _index.end(); ++it) {
          ss << it->first << ": " << _node_str(*it->second) << delim;
