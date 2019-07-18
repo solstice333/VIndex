@@ -61,7 +61,7 @@ struct IComparator {
    }
 
    virtual bool eq(const T& a, const T& b) const { 
-      return !(lt(a, b) && gt(a, b)); 
+      return !lt(a, b) && !gt(a, b); 
    }
 
    virtual bool ne(const T& a, const T& b) const { 
