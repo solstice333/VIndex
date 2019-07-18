@@ -510,10 +510,10 @@ public:
    }
 
    void insert(const T& x) {
-      DefaultComparator<T> dc;
       auto real_n = std::make_unique<BSTNode<T>>(x);
       T& data = real_n->data;
-      auto real_entry = _heads.template get<HeadType::node_data>(dc);
+      auto real_entry = _heads.template 
+         get<HeadType::node_data>(default_comparator());
       assert(real_entry);
 
       _insert(&real_n, &real_entry->second, real_entry->first);  
