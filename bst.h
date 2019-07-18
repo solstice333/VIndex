@@ -35,15 +35,17 @@ std::once_flag _Singleton<T, DerivedTy>::flag;
 template <typename T, typename DerivedTy>
 T _Singleton<T, DerivedTy>::resource;
 
-template <typename T>
-struct IComparator {
-   static size_t combine_hashes(const std::vector<size_t>& hashes) {
+namespace hash_helpers {
+   size_t combine(const std::vector<size_t>& hashes) {
       size_t res = 17;
       for (auto it = hashes.begin(); it != hashes.end(); ++it)
          res = res*31 + *it;
       return res;
    }
+};
 
+template <typename T>
+struct IComparator {
    virtual bool operator==(const IComparator& other) const = 0;
 
    virtual bool lt(const T& a, const T& b) const = 0;

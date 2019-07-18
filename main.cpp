@@ -15,6 +15,17 @@ struct Foo {
    }
 };
 
+template <>
+struct std::hash<Foo> {
+   size_t operator()(const Foo& foo) {
+      std::hash<int> int_hasher;
+      std::vector<size_t> v;
+      v.emplace_back(int_hasher(foo.x));
+      v.emplace_back(int_hasher(foo.y));
+      return hash_helpers::combine(v);
+   }
+};
+
 struct FooYComparator: public IComparator<Foo> {
    bool operator==(const IComparator& other) const override {
       return dynamic_cast<const FooYComparator *>(&other);
