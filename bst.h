@@ -200,14 +200,15 @@ public:
          return _iter;
       }
 
-      iterator& end() {
-         _iter = _heads->end();
-         return *this;
+      iterator end() {
+         iterator it = *this;
+         it._iter = it._heads->end();
+         return it;
       }
    };
 
 private:
-   iterator _iter;
+   iterator _end_iter;
 
    static size_t hash_comparator(const ComparatorOwner& c) {
       return std::hash<Comparator>()(*c);
@@ -301,13 +302,13 @@ public:
    }
 
    iterator begin() {
-      _iter = iterator(_secondary_heads);
-      return _iter;
+      iterator it(_secondary_heads);
+      _end_iter = it.end();
+      return it;
    }
 
    iterator end() {
-      iterator iter = _iter;
-      return iter.end();
+      return _end_iter;
    }
 };
 
