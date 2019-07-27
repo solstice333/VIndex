@@ -1499,6 +1499,10 @@ public:
       assert(_vin.size() == 8);
    }
 
+   void test_ctor_multiple_comparators() {
+      // Vindex<int, BasicInt> vin_cmp([])
+   }
+   
    // TODO add tests where the key type needs std::hash() specialized
 };
 
@@ -1532,4 +1536,6 @@ int main () {
    vin.test_insert_return();
    vin.test_make_vindex();
    vin.test_size();
+
+   vin.test_ctor_multiple_comparators();
 }

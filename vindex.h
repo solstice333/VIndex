@@ -15,6 +15,7 @@
 #include <functional>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 #define DEPTH_DATA_ENABLED 0
 
@@ -35,6 +36,83 @@
 
 #define make_vindex(CLS, MEM)\
    Vindex<decltype(CLS::MEM), CLS>(make_extractor(CLS, MEM))
+
+template <typename T, typename KeyTy> class Vindex;
+
+namespace hash_helpers {
+   size_t combine(const std::vector<size_t>& hashes) {
+      size_t res = 17;
+      for (auto it = hashes.begin(); it != hashes.end(); ++it)
+         res = res*31 + *it;
+      return res;
+   }
+}
+
+namespace head_type {
+   struct node_ref {};
+   struct node_data {};
+}
+
+namespace _Direction {
+   enum Direction { LEFT, RIGHT, ROOT };
+}
+
+namespace _IterTracker {
+   template <typename IterTy>
+   class IterTrackerBase {
+   private:
+      IterTy _curr;
+      IterTy _begin;
+      IterTy _end;
+
+   protected:
+      IterTrackerBase() {}
+      IterTrackerBase(IterTy curr, IterTy begin, IterTy end): 
+         _curr(curr), _begin(begin), _end(end) {}
+      IterTrackerBase(IterTy begin, IterTy end): 
+         IterTrackerBase(begin, begin, end) {}
+
+   public:
+      virtual IterTy& curr() { return _curr; }
+      virtual IterTy& begin() { return _begin; }
+      virtual IterTy& end() { return _end; }
+   };
+
+   template <typename NodeDataTy, typename KeyTy, typename IterTy> 
+   class IterTracker: public IterTrackerBase<IterTy> {
+   public:
+      IterTracker(): IterTrackerBase<IterTy>() {}
+
+      IterTracker(Vindex<KeyTy, NodeDataTy>* vin): 
+         IterTrackerBase<IterTy>(
+            vin->_insertion_list.begin(),
+            vin->_insertion_list.end()) {
+      }
+   };
+
+   template <typename T, typename KeyTy>
+   using NodeListRevIter = 
+      typename Vindex<KeyTy, T>::NodeList::reverse_iterator;
+
+   template <typename NodeDataTy, typename KeyTy>
+   class IterTracker<
+         NodeDataTy, 
+         KeyTy,
+         NodeListRevIter<NodeDataTy, KeyTy>
+      >: public IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>> {
+   public:
+      IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>() {}
+
+      IterTracker(Vindex<KeyTy, NodeDataTy>* vin):
+         IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>(
+            vin->_insertion_list.rbegin(),
+            vin->_insertion_list.rend()) {}
+   };
+}
+
+namespace OrderType {
+   enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
+}
 
 template <typename T>
 class _IConstResult {
@@ -105,15 +183,64 @@ template <typename T, typename DerivedTy>
 T _Singleton<T, DerivedTy>::resource;
 
 template <typename T>
+struct IComparator {
+   virtual bool operator==(const IComparator& other) const = 0;
+
+   virtual bool lt(const T& a, const T& b) const = 0;
+
+   virtual bool gt(const T &a, const T& b) const { 
+      return lt(b, a); 
+   }
+
+   virtual bool lte(const T& a, const T& b) const { 
+      return !gt(a, b); 
+   }
+
+   virtual bool gte(const T& a, const T& b) const { 
+      return !lt(a, b); 
+   }
+
+   virtual bool eq(const T& a, const T& b) const { 
+      return !lt(a, b) && !gt(a, b); 
+   }
+
+   virtual bool ne(const T& a, const T& b) const { 
+      return !eq(a, b); 
+   }
+
+   virtual size_t hash() const { 
+      return typeid(*this).hash_code(); 
+   }
+
+   virtual ~IComparator() {}
+};
+
+template <typename T>
+struct std::hash<IComparator<T>> {
+   virtual size_t operator()(const IComparator<T>& other) const {
+      return other.hash();
+   }
+};
+
+template <typename T>
+struct DefaultComparator: public IComparator<T> {
+   bool operator==(const IComparator<T>& other) const override { 
+      return dynamic_cast<const DefaultComparator *>(&other); 
+   }
+
+   bool lt(const T& a, const T& b) const override { 
+      return a < b; 
+   }
+};
+
+template <typename T>
 struct _Node {
    T data;
+   _Node() {}
    _Node(const T& data): data(data) {}
-   bool operator<(const _Node& n) { return data < n.data; }
-   bool operator>(const _Node& n) { return data > n.data; }
-   bool operator<=(const _Node& n) { return data <= n.data; }
-   bool operator>=(const _Node& n) { return data >= n.data; }
-   bool operator==(const _Node& n) { return data == n.data; }
-   bool operator!=(const _Node& n) { return data != n.data; }
+
+   // TODO delete later
+   bool operator<(const _Node& other) { return data < other.data; }
 };
 
 template <typename T, typename BASE_TY = decltype(T::data)>
@@ -134,77 +261,207 @@ struct _AVLState: public T {
       return right.get();
    }
 
-   _AVLState(const BASE_TY& data): 
-      T(data), height(0), depth(0), 
-      left(nullptr), right(nullptr), parent(nullptr) {}
-
    _AVLState(): 
       T(BASE_TY()), height(0), depth(0),
       left(nullptr), right(nullptr), parent(nullptr) {}
+
+   _AVLState(const BASE_TY& data): 
+      T(data), height(0), depth(0), 
+      left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
-template <typename T, typename KeyTy> class Vindex;
+template <typename T>
+class _Heads {
+public:
+   typedef IComparator<T> Comparator;
+   typedef _AVLState<_Node<T&>> NodeRef;
+   typedef std::unique_ptr<NodeRef> NodeRefOwner;
 
-namespace _Direction {
-   enum Direction { LEFT, RIGHT, ROOT };
-}
+private:
+   typedef std::unique_ptr<Comparator> ComparatorOwner; 
+   typedef _AVLState<_Node<T>> NodeData;
+   typedef std::unique_ptr<NodeData> NodeDataOwner;
 
-namespace _IterTracker {
-   template <typename IterTy>
-   class IterTrackerBase {
+   std::pair<ComparatorOwner, NodeDataOwner> _primary_head;
+
+   std::unordered_map<
+      ComparatorOwner, 
+      NodeRefOwner,
+      std::function<size_t(const ComparatorOwner&)>,
+      std::function<bool(const ComparatorOwner&, const ComparatorOwner&)>
+   > _secondary_heads;
+
+public:
+   class iterator: public std::iterator<
+      std::forward_iterator_tag, 
+      typename decltype(_secondary_heads)::value_type
+   > {
    private:
-      IterTy _curr;
-      IterTy _begin;
-      IterTy _end;
+      friend class _Heads<T>;
 
-   protected:
-      IterTrackerBase() {}
-      IterTrackerBase(IterTy curr, IterTy begin, IterTy end): 
-         _curr(curr), _begin(begin), _end(end) {}
-      IterTrackerBase(IterTy begin, IterTy end): 
-         IterTrackerBase(begin, begin, end) {}
+      typedef decltype(_Heads::_secondary_heads) HeadMap;
+      typedef typename HeadMap::iterator MapIter;
+      typedef typename HeadMap::value_type MapEntry;
+      typedef typename HeadMap::mapped_type MapVal;
+
+      typedef std::pair<Comparator&, MapVal&> Entry;
+      typedef std::vector<Entry> EntryArray;
+      typedef typename EntryArray::iterator EntryArrayIter;
+
+      std::shared_ptr<EntryArray> _heads;
+      EntryArrayIter _iter;
 
    public:
-      virtual IterTy& curr() { return _curr; }
-      virtual IterTy& begin() { return _begin; }
-      virtual IterTy& end() { return _end; }
-   };
+      iterator() {}
 
-   template <typename NodeDataTy, typename KeyTy, typename IterTy> 
-   class IterTracker: public IterTrackerBase<IterTy> {
-   public:
-      IterTracker(): IterTrackerBase<IterTy>() {}
+      iterator(HeadMap& heads): _heads(std::make_shared<EntryArray>()) {
+         for (auto it = heads.begin(); it != heads.end(); ++it) {
+            _heads->emplace_back(std::make_pair<
+               std::reference_wrapper<Comparator>, 
+               std::reference_wrapper<MapVal>
+            >(*it->first, it->second));
+         }
+         _iter = _heads->begin();
+      }
 
-      IterTracker(Vindex<KeyTy, NodeDataTy>* vin): 
-         IterTrackerBase<IterTy>(
-            vin->_insertion_list.begin(),
-            vin->_insertion_list.end()) {
+      bool operator==(const iterator& other) {
+         return _iter == other._iter;
+      }
+
+      bool operator!=(const iterator& other) {
+         return _iter != other._iter;
+      }
+
+      iterator& operator++() {
+         ++_iter;
+         return *this;   
+      }
+
+      iterator operator++(int) {
+         auto tmp = *this;
+         operator++();
+         return tmp;
+      }
+
+      Entry& operator*() {
+         return *_iter;
+      }
+
+      EntryArrayIter operator->() {
+         return _iter;
+      }
+
+      iterator end() {
+         iterator it = *this;
+         it._iter = it._heads->end();
+         return it;
       }
    };
 
-   template <typename T, typename KeyTy>
-   using NodeListRevIter = 
-      typename Vindex<KeyTy, T>::NodeList::reverse_iterator;
+private:
+   iterator _end_iter;
 
-   template <typename NodeDataTy, typename KeyTy>
-   class IterTracker<
-         NodeDataTy, 
-         KeyTy,
-         NodeListRevIter<NodeDataTy, KeyTy>
-      >: public IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>> {
-   public:
-      IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>() {}
+   static size_t hash_comparator(const ComparatorOwner& c) {
+      return std::hash<Comparator>()(*c);
+   }
 
-      IterTracker(Vindex<KeyTy, NodeDataTy>* vin):
-         IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>(
-            vin->_insertion_list.rbegin(),
-            vin->_insertion_list.rend()) {}
-   };
-}
+   static bool is_equal_comparator(
+      const ComparatorOwner& c1, const ComparatorOwner& c2) {
+      return *c1 == *c2;
+   }
 
-namespace OrderType {
-   enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
-}
+   template <typename ComparatorTy>
+   std::unique_ptr<std::pair<Comparator&, NodeRefOwner&>> 
+      _get(const ComparatorTy& cmp, head_type::node_ref) {
+
+      auto it = _secondary_heads.find(std::make_unique<ComparatorTy>(cmp));
+      if (it != _secondary_heads.end())
+         return std::make_unique<std::pair<Comparator&, NodeRefOwner&>>(
+            *it->first, it->second);
+      return std::unique_ptr<std::pair<Comparator&, NodeRefOwner&>>();
+   }
+
+   template <typename ComparatorTy>
+   std::unique_ptr<std::pair<Comparator&, const NodeRefOwner&>> 
+      _get(const ComparatorTy& cmp, head_type::node_ref) const {
+
+      auto it = _secondary_heads.find(std::make_unique<ComparatorTy>(cmp));
+      if (it != _secondary_heads.end())
+         return std::make_unique<std::pair<Comparator&, const NodeRefOwner&>>(
+            *it->first, it->second);
+      return std::unique_ptr<std::pair<Comparator&, const NodeRefOwner&>>();
+   }
+
+   template <typename ComparatorTy>
+   std::unique_ptr<std::pair<Comparator&, NodeDataOwner&>> 
+      _get(const ComparatorTy& cmp, head_type::node_data) {
+
+      if (_primary_head.first && cmp == *_primary_head.first)
+         return std::make_unique<std::pair<Comparator&, NodeDataOwner&>>(
+            *_primary_head.first, _primary_head.second);
+      return std::unique_ptr<std::pair<Comparator&, NodeDataOwner&>>();
+   }
+
+   template <typename ComparatorTy>
+   std::unique_ptr<std::pair<Comparator&, const NodeDataOwner&>> 
+      _get(const ComparatorTy& cmp, head_type::node_data) const {
+
+      if (_primary_head.first && cmp == *_primary_head.first)
+         return std::make_unique<std::pair<Comparator&, const NodeDataOwner&>>(
+            *_primary_head.first, _primary_head.second);
+      return std::unique_ptr<std::pair<Comparator&, const NodeDataOwner&>>();
+   }
+
+public:
+   _Heads(): _secondary_heads(0, hash_comparator, is_equal_comparator) {}
+
+   template <typename ComparatorTy>
+   void push(const ComparatorTy& cmp) { 
+      ComparatorOwner new_cmp = std::make_unique<ComparatorTy>(cmp);
+      if (!_primary_head.first)
+         _primary_head.first = std::move(new_cmp);
+      else if (_secondary_heads.find(new_cmp) == _secondary_heads.end())
+         _secondary_heads[std::move(new_cmp)];
+   }
+
+   template <typename HeadTy, typename ComparatorTy>
+   std::unique_ptr<
+      std::pair<
+         Comparator&, 
+         typename std::conditional<
+            std::is_same<HeadTy, head_type::node_ref>::value, 
+            const NodeRefOwner&, 
+            const NodeDataOwner&
+         >::type
+      >
+   > get(const ComparatorTy& cmp) const {
+      return _get(cmp, HeadTy());
+   }
+
+   template <typename HeadTy, typename ComparatorTy>
+   std::unique_ptr<
+      std::pair<
+         Comparator&, 
+         typename std::conditional<
+            std::is_same<HeadTy, head_type::node_ref>::value, 
+            NodeRefOwner&, 
+            NodeDataOwner&
+         >::type
+      >
+   > get(const ComparatorTy& cmp) {
+      return _get(cmp, HeadTy());
+   }
+
+   iterator begin() {
+      iterator it(_secondary_heads);
+      _end_iter = it.end();
+      return it;
+   }
+
+   iterator end() {
+      return _end_iter;
+   }
+};
 
 template <typename KeyTy, typename T>
 class Vindex {
