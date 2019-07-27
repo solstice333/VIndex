@@ -470,24 +470,40 @@ private:
    friend class _IterTracker::IterTracker;
    friend class TestIntVindex;
 
-   typedef _AVLState<_Node<T>> AVLNode;
-   typedef std::unique_ptr<AVLNode> AVLNodeOwner;
-   typedef std::map<AVLNode*, AVLNodeOwner> NodeCache;
-   typedef typename NodeCache::iterator NodeCacheIter;
-   typedef std::deque<AVLNode*> NodeDQ;
-   typedef std::function<void(AVLNode*)> NodeListener;
-   typedef std::function<void()> VoidFunc;
    typedef _Direction::Direction Direction;
    typedef OrderType::OrderType OrderType;
-   typedef std::function<AVLNodeOwner(AVLNodeOwner*)> TreeEditAction;
-   typedef std::map<OrderType, std::string> OrderTypeToStr;
-   typedef std::unordered_map<KeyTy, AVLNode*> Index;
+   typedef std::function<void()> VoidFunc;
    typedef std::function<KeyTy(const T&)> Extractor;
+   typedef std::map<OrderType, std::string> OrderTypeToStr;
+
+   template <typename U>
+   using AVLNode = _AVLState<_Node<U>>;
+
+   template <typename U>
+   using AVLNodeOwner = std::unique_ptr<AVLNode<U>>;
+
+   template <typename U>
+   using NodeCache = std::map<AVLNode<U>*, AVLNodeOwner<U>>;
+
+   template <typename U>
+   using NodeCacheIter = typename NodeCache<U>::iterator;
+
+   template <typename U>
+   using NodeDQ = std::deque<AVLNode<U>*>;
+
+   template <typename U>
+   using NodeListener = std::function<void(AVLNode<U>*)>;
+
+   template <typename U>
+   using TreeEditAction = std::function<AVLNodeOwner<U>(AVLNodeOwner<U>*)>;
+
+   template <typename U>
+   using Index = std::unordered_map<KeyTy, AVLNode<U>*>;
 
 public:
    class const_iterator;
    class const_reverse_iterator;
-   typedef std::list<AVLNode*> NodeList;
+   typedef std::list<AVLNode<T>*> NodeList;
 
 private:
    class OrderTypeToStrSingleton : 
@@ -503,30 +519,40 @@ private:
    }; 
 
    class AVLNodeDefaultSingleton :
-      public _Singleton<AVLNode, AVLNodeDefaultSingleton> {
+      public _Singleton<AVLNode<T>, AVLNodeDefaultSingleton> {
    public:
-      static void init(AVLNode*) {}
+      static void init(AVLNode<T>*) {}
    };
 
    template <bool reverse>
    class _const_iterator : 
       public std::iterator<std::bidirectional_iterator_tag, T> {
    private:
-      typedef Vindex::AVLNode AVLNode;
-      typedef Vindex::AVLNodeOwner AVLNodeOwner;
       typedef Vindex::Direction Direction;
+
+      template <typename U>
+      using AVLNode = Vindex::AVLNode<U>;
+
+      template <typename U>
+      using AVLNodeOwner = Vindex::AVLNodeOwner<U>;
+
       typedef 
-         typename Vindex<KeyTy, T>::NodeList::iterator NodeListIter;
+         typename Vindex<KeyTy, T>::NodeList::iterator 
+         NodeListIter;
+
       typedef 
-         typename Vindex<KeyTy, T>::NodeList::reverse_iterator NodeListRevIter;
+         typename Vindex<KeyTy, T>::NodeList::reverse_iterator 
+         NodeListRevIter;
+
       typedef 
          typename 
             std::conditional<reverse, NodeListRevIter, NodeListIter>::type 
          IterTy;
+
       typedef _IterTracker::IterTracker<T, KeyTy, IterTy> IterTracker;
 
-      AVLNode* _curr;
-      AVLNode* _prev;
+      AVLNode<T>* _curr;
+      AVLNode<T>* _prev;
       bool _prev_incr;
       OrderType _order_ty;
 
@@ -535,15 +561,15 @@ private:
 
       IterTracker _tracker;
 
-      AVLNode* _get_leftest_node(AVLNode* tree) {
+      AVLNode<T>* _get_leftest_node(AVLNode<T>* tree) {
          return tree->left ? _get_leftest_node(tree->left_raw()) : tree;
       }
 
-      AVLNode* _get_rightest_node(AVLNode* tree) {
+      AVLNode<T>* _get_rightest_node(AVLNode<T>* tree) {
          return tree->right ? _get_rightest_node(tree->right_raw()) : tree;
       }
 
-      AVLNode* _get_right_deepest_node(AVLNode* tree) {
+      AVLNode<T>* _get_right_deepest_node(AVLNode<T>* tree) {
          if (tree->right)
             return _get_right_deepest_node(tree->right_raw());
          else if (tree->left)
@@ -552,10 +578,10 @@ private:
             return tree;
       }
 
-      AVLNode* _get_deepest_right_node_recurs(
-         AVLNode* tree, int* curr_lv=nullptr) {
-         AVLNode* left = tree->left_raw();
-         AVLNode* right = tree->right_raw();
+      AVLNode<T>* _get_deepest_right_node_recurs(
+         AVLNode<T>* tree, int* curr_lv=nullptr) {
+         AVLNode<T>* left = tree->left_raw();
+         AVLNode<T>* right = tree->right_raw();
 
          if (curr_lv)
             ++*curr_lv;
@@ -573,31 +599,31 @@ private:
             return tree;
       }
 
-      AVLNode* _get_deepest_right_node(
-         AVLNode* tree, int* curr_lv=nullptr) {
+      AVLNode<T>* _get_deepest_right_node(
+         AVLNode<T>* tree, int* curr_lv=nullptr) {
          if (curr_lv)
             *curr_lv = 0;
          return _get_deepest_right_node_recurs(tree, curr_lv);
       }
 
-      AVLNode* _get_root_node(AVLNode* tree) {
+      AVLNode<T>* _get_root_node(AVLNode<T>* tree) {
          return tree;
       }
 
-      AVLNode* _get_left_sibling(AVLNode* tree) {
+      AVLNode<T>* _get_left_sibling(AVLNode<T>* tree) {
          assert(tree && tree->parent, "NullPointerError");
-         AVLNode* parent = tree->parent;
+         AVLNode<T>* parent = tree->parent;
          return parent->right_raw() == tree ? parent->left_raw() : nullptr;
       }
 
-      AVLNode* _get_right_sibling(AVLNode* tree) {
+      AVLNode<T>* _get_right_sibling(AVLNode<T>* tree) {
          assert(tree && tree->parent, "NullPointerError");
-         AVLNode* parent = tree->parent;
+         AVLNode<T>* parent = tree->parent;
          return parent->left_raw() == tree ? parent->right_raw() : nullptr;
       }
 
-      bool _visited_subtree(AVLNode* subtree) {
-         AVLNode* child = subtree; 
+      bool _visited_subtree(AVLNode<T>* subtree) {
+         AVLNode<T>* child = subtree; 
 
          while (child) {
             if (child == _prev)
@@ -619,7 +645,7 @@ private:
          if (!_curr || !_curr->parent)
             return false;
 
-         AVLNode* parent = _curr->parent;
+         AVLNode<T>* parent = _curr->parent;
          return parent->left_raw() == _curr ?
             _visited_subtree(parent->right_raw()) :
             _visited_subtree(parent->left_raw());
@@ -629,7 +655,7 @@ private:
          if (!_curr)
             return false;
 
-         AVLNode* parent = _curr->parent;
+         AVLNode<T>* parent = _curr->parent;
          while (parent) {
             if (_prev == parent)
                return true;
@@ -638,13 +664,13 @@ private:
          return false;
       }
 
-      AVLNode* _retrace_while_child(
-         AVLNode* n, Direction dir, int* parent_distance=nullptr) {
+      AVLNode<T>* _retrace_while_child(
+         AVLNode<T>* n, Direction dir, int* parent_distance=nullptr) {
          assert(n && n->parent, "NullPointerError");
 
          int dist = 0;
-         AVLNode* parent = n->parent;
-         AVLNodeOwner* parents_child = dir == Direction::RIGHT ? 
+         AVLNode<T>* parent = n->parent;
+         AVLNodeOwner<T>* parents_child = dir == Direction::RIGHT ? 
             &parent->right : &parent->left;
 
          while (parent && parents_child->get() == n) {
@@ -659,16 +685,16 @@ private:
          return parent;
       }
 
-      AVLNode* _retrace_until_unvisited_right_child() {
-         AVLNode* n = _retrace_while_child(_curr, Direction::RIGHT);
+      AVLNode<T>* _retrace_until_unvisited_right_child() {
+         AVLNode<T>* n = _retrace_while_child(_curr, Direction::RIGHT);
          return n ? (n->right ? n->right_raw() : nullptr) : nullptr;
       }
 
-      AVLNode* _retrace_until_left_child() {
+      AVLNode<T>* _retrace_until_left_child() {
          assert(_curr && _curr->parent, "NullPointerError");
 
-         AVLNode* curr = _curr;
-         AVLNode* parent = curr->parent;
+         AVLNode<T>* curr = _curr;
+         AVLNode<T>* parent = curr->parent;
 
          while (parent && !parent->left) {
             curr = curr->parent;
@@ -677,13 +703,13 @@ private:
          return parent->left_raw();
       }
 
-      AVLNode* _retrace_until_unvisited_left_child() {
-         AVLNode* n = _retrace_while_child(_curr, Direction::LEFT);
+      AVLNode<T>* _retrace_until_unvisited_left_child() {
+         AVLNode<T>* n = _retrace_while_child(_curr, Direction::LEFT);
          return n ? (n->left ? n->left_raw() : nullptr) : nullptr;
       }
 
       void _in_order_increment() {
-         AVLNode* tmp = _curr;
+         AVLNode<T>* tmp = _curr;
          if (!_prev_incr)
             _curr = _prev;   
          else if (_visited_left_subtree() || _visited_parent() || !_prev)
@@ -701,7 +727,7 @@ private:
       }
 
       void _in_order_decrement() {
-         AVLNode* tmp = _curr;
+         AVLNode<T>* tmp = _curr;
          if (_prev_incr)
             _curr = _prev;
          else if (_visited_right_subtree() || _visited_parent() || !_prev)
@@ -717,7 +743,7 @@ private:
       }
 
       void _pre_order_increment() {
-         AVLNode* tmp = _curr;   
+         AVLNode<T>* tmp = _curr;   
 
          if (!_prev_incr)
             _curr = _prev;
@@ -738,13 +764,13 @@ private:
       }
 
       void _pre_order_decrement() {
-         AVLNode* tmp = _curr;
+         AVLNode<T>* tmp = _curr;
 
          if (_prev_incr)
             _curr = _prev;
          else if (tmp) { 
             if (tmp->parent && tmp->parent->right_raw() == tmp) {
-               AVLNode* left_sibling = _get_left_sibling(tmp);
+               AVLNode<T>* left_sibling = _get_left_sibling(tmp);
                _curr = left_sibling ? 
                   _get_right_deepest_node(left_sibling) : tmp->parent;
             }
@@ -762,13 +788,13 @@ private:
       }
 
       void _post_order_increment() {
-         AVLNode* tmp = _curr;
+         AVLNode<T>* tmp = _curr;
 
          if (!_prev_incr)
             _curr = _prev;
          else if (tmp) {
             if (tmp->parent && tmp->parent->left_raw() == tmp) {
-               AVLNode* right_sibling = _get_right_sibling(tmp);
+               AVLNode<T>* right_sibling = _get_right_sibling(tmp);
                _curr = right_sibling ?
                   _get_leftest_node(right_sibling) : tmp->parent;
             }
@@ -786,7 +812,7 @@ private:
       }
 
       void _post_order_decrement() {
-         AVLNode* tmp = _curr;
+         AVLNode<T>* tmp = _curr;
 
          if (_prev_incr)
             _curr = _prev;
@@ -810,14 +836,14 @@ private:
          _prev = tmp;
       }
 
-      AVLNode* _get_node_at_depth(
-         AVLNode* tree, int tree_lv, int want_lv, Direction dir) {
+      AVLNode<T>* _get_node_at_depth(
+         AVLNode<T>* tree, int tree_lv, int want_lv, Direction dir) {
          if (!tree || tree_lv > want_lv)
             return nullptr;
          else if (tree_lv == want_lv)
             return tree;
          else if (tree_lv < want_lv) {
-            AVLNode* n = _get_node_at_depth(
+            AVLNode<T>* n = _get_node_at_depth(
                dir == Direction::RIGHT ? tree->right_raw() : tree->left_raw(), 
                tree_lv + 1, want_lv, dir);
             if (!n)
@@ -831,18 +857,19 @@ private:
             assert(false, "InvalidOperationError");
       }
 
-      AVLNode* _get_leftest_node_at_depth(
-         AVLNode* tree, int tree_lv, int want_lv) {
+      AVLNode<T>* _get_leftest_node_at_depth(
+         AVLNode<T>* tree, int tree_lv, int want_lv) {
          return _get_node_at_depth(tree, tree_lv, want_lv, Direction::LEFT);
       }
 
-      AVLNode* _get_rightest_node_at_depth(
-         AVLNode* tree, int tree_lv, int want_lv) {
+      AVLNode<T>* _get_rightest_node_at_depth(
+         AVLNode<T>* tree, int tree_lv, int want_lv) {
          return _get_node_at_depth(tree, tree_lv, want_lv, Direction::RIGHT);
       }
 
       void _get_next_sibling_positions(
-         AVLNode* parent, Direction dir, AVLNode** pos1, AVLNode** pos2) {
+         AVLNode<T>* parent, Direction dir, 
+         AVLNode<T>** pos1, AVLNode<T>** pos2) {
          if (dir == Direction::RIGHT) {
             *pos1 = parent->left_raw();
             *pos2 = parent->right_raw();
@@ -855,14 +882,14 @@ private:
             assert(false, "InvalidOperationError");
       }
 
-      AVLNode* _get_next_sibling(AVLNode* n, int depth, Direction dir) {
+      AVLNode<T>* _get_next_sibling(AVLNode<T>* n, int depth, Direction dir) {
          assert(n, "NullPointerError");
 
-         AVLNode* parent = n->parent;
+         AVLNode<T>* parent = n->parent;
 
          if (parent) {
-            AVLNode* pos1 = nullptr;
-            AVLNode* pos2 = nullptr;
+            AVLNode<T>* pos1 = nullptr;
+            AVLNode<T>* pos2 = nullptr;
             _get_next_sibling_positions(parent, dir, &pos1, &pos2);
 
             if (pos1 == n && pos2)
@@ -890,9 +917,10 @@ private:
             return nullptr;
       }
 
-      AVLNode* _get_start_node(AVLNode* refnode, int depth, Direction dir) {
-         AVLNode* n = refnode;
-         AVLNode* prev = nullptr;
+      AVLNode<T>* _get_start_node(
+         AVLNode<T>* refnode, int depth, Direction dir) {
+         AVLNode<T>* n = refnode;
+         AVLNode<T>* prev = nullptr;
          assert(dir != Direction::ROOT, "InvalidDirectionError");
 
          do {
@@ -901,13 +929,14 @@ private:
          return prev;
       }
 
-      AVLNode* _get_first_node_on_lower_lv(AVLNode* refnode) {
+      AVLNode<T>* _get_first_node_on_lower_lv(AVLNode<T>* refnode) {
          ++_curr_lv;
-         AVLNode* n = _get_start_node(refnode, _curr_lv - 1, Direction::LEFT);
+         AVLNode<T>* n = 
+            _get_start_node(refnode, _curr_lv - 1, Direction::LEFT);
 
          do {
-            AVLNode* first = n->left_raw();
-            AVLNode* second = n->right_raw();
+            AVLNode<T>* first = n->left_raw();
+            AVLNode<T>* second = n->right_raw();
 
             if (first)
                return first;
@@ -919,7 +948,7 @@ private:
          return nullptr;
       }
 
-      AVLNode* _get_first_node_on_upper_lv(AVLNode* refnode) {
+      AVLNode<T>* _get_first_node_on_upper_lv(AVLNode<T>* refnode) {
          if (refnode) {
             --_curr_lv;
             return _get_start_node(refnode, _curr_lv - 1, Direction::RIGHT);
@@ -935,7 +964,7 @@ private:
       }
 
       void _breadth_first_increment() {
-         AVLNode* tmp = _curr;
+         AVLNode<T>* tmp = _curr;
 
          if (!_prev_incr) {
             _curr = _prev;
@@ -957,7 +986,7 @@ private:
       }
 
       void _breadth_first_decrement() {
-         AVLNode* tmp = _curr;
+         AVLNode<T>* tmp = _curr;
 
          if (_prev_incr) {
             _curr = _prev;
@@ -1007,7 +1036,7 @@ private:
             _insertion_order_advance(/*towards_end=*/false);
       }
 
-      std::string _node_data(AVLNode* n) const {
+      std::string _node_data(AVLNode<T>* n) const {
          using namespace std;
          stringstream ss;
          if (n)
@@ -1183,13 +1212,13 @@ private:
       }
    };
 
-   AVLNodeOwner _head;
+   AVLNodeOwner<T> _head;
    OrderType _order_ty;
    const_iterator _cend;
    const_reverse_iterator _crend;
    NodeList _rebalanced_trees;
    NodeList _insertion_list;
-   Index _index;
+   Index<T> _index;
    Extractor _get_member;
    size_t _size;
 
@@ -1276,7 +1305,7 @@ public:
    }; 
 
 private:
-   static AVLNode* _default() {
+   static AVLNode<T>* _default() {
       return &AVLNodeDefaultSingleton().get();
    }
 
@@ -1298,7 +1327,7 @@ private:
       return ss.str();
    }
 
-   static std::string _node_data_str(AVLNode* n) {
+   static std::string _node_data_str(AVLNode<T>* n) {
       using namespace std;
       stringstream ss;
       if (n)
@@ -1308,7 +1337,7 @@ private:
       return ss.str();
    }
 
-   static std::string _node_str(const AVLNode& n) {
+   static std::string _node_str(const AVLNode<T>& n) {
       using namespace std;
       stringstream ss;
       ss << "(" 
@@ -1326,7 +1355,7 @@ private:
       return ss.str();
    }
 
-   AVLNode* _head_raw() const {
+   AVLNode<T>* _head_raw() const {
       return _head.get();
    }
 
@@ -1334,7 +1363,7 @@ private:
       return 1 << (lv - 1);
    }
 
-   AVLNode* _find(AVLNode* subtree, const T& val) {
+   AVLNode<T>* _find(AVLNode<T>* subtree, const T& val) {
       if (!subtree)
          return nullptr;
 
@@ -1346,13 +1375,13 @@ private:
          return _find(subtree->right_raw(), val);
    }
 
-   AVLNode* _get_to_root_from(AVLNode* node) {
+   AVLNode<T>* _get_to_root_from(AVLNode<T>* node) {
       while (node->parent)
          node = node->parent;
       return node;
    }
 
-   AVLNodeOwner& _first_child(AVLNode* n) {
+   AVLNodeOwner<T>& _first_child(AVLNode<T>* n) {
       assert(n, "NullPointerError");
       if (n->left)
          return n->left;
@@ -1362,9 +1391,9 @@ private:
          assert(false, "NoChildError");
    }
 
-   Direction _which_child(AVLNode* n) {
+   Direction _which_child(AVLNode<T>* n) {
       assert(n, "NullPointerError");
-      AVLNode* parent = n->parent;
+      AVLNode<T>* parent = n->parent;
 
       if (!parent)
          return Direction::ROOT;
@@ -1376,7 +1405,7 @@ private:
          assert(false, "DetachedNodeError");
    }
 
-   int _num_children(AVLNode* n) {
+   int _num_children(AVLNode<T>* n) {
       int cnt = 0;
 
       if (!n)
@@ -1388,12 +1417,12 @@ private:
       return cnt;
    }
 
-   bool _has_children(AVLNode* n) {
+   bool _has_children(AVLNode<T>* n) {
       return _num_children(n) > 0;
    }
 
    // TODO function to get highest rebalanced tree
-   AVLNode* _get_highest_rebalanced_tree() {
+   AVLNode<T>* _get_highest_rebalanced_tree() {
       assert(false, "NotYetImplementedError");
    }
 
@@ -1404,7 +1433,7 @@ private:
       }
    }
 
-   int _height(AVLNode* tree) {
+   int _height(AVLNode<T>* tree) {
       if (!tree)
          return 0;
       return max(_height(tree->left_raw()), _height(tree->right_raw())) + 1;
@@ -1430,29 +1459,29 @@ private:
       return bf > 0;
    }
 
-   int _balance_factor(AVLNode* subtree) {
+   int _balance_factor(AVLNode<T>* subtree) {
       return subtree ? 
          _height(subtree->right_raw()) - _height(subtree->left_raw()) : 0;
    }
 
-   bool _is_left_left(AVLNode* subtree) {
+   bool _is_left_left(AVLNode<T>* subtree) {
       return _is_left_heavy(_balance_factor(subtree->left_raw()));
    }
 
-   bool _is_left_right(AVLNode* subtree) {
+   bool _is_left_right(AVLNode<T>* subtree) {
       return _is_right_heavy(_balance_factor(subtree->left_raw()));
    }
 
-   bool _is_right_right(AVLNode* subtree) {
+   bool _is_right_right(AVLNode<T>* subtree) {
       return _is_right_heavy(_balance_factor(subtree->right_raw()));
    }
 
-   bool _is_right_left(AVLNode* subtree) {
+   bool _is_right_left(AVLNode<T>* subtree) {
       return _is_left_heavy(_balance_factor(subtree->right_raw()));
    }
 
-   AVLNodeOwner* _xchild_by_rotation(AVLNode* x, Direction rot_dxn) {
-      AVLNodeOwner* xchild = nullptr;
+   AVLNodeOwner<T>* _xchild_by_rotation(AVLNode<T>* x, Direction rot_dxn) {
+      AVLNodeOwner<T>* xchild = nullptr;
       if (rot_dxn == Direction::LEFT)
          xchild = &x->left;
       else if (rot_dxn == Direction::RIGHT)
@@ -1462,8 +1491,8 @@ private:
       return xchild;
    }
 
-   AVLNodeOwner* _ychild_by_rotation(AVLNode* y, Direction rot_dxn) {
-      AVLNodeOwner* ychild = nullptr;
+   AVLNodeOwner<T>* _ychild_by_rotation(AVLNode<T>* y, Direction rot_dxn) {
+      AVLNodeOwner<T>* ychild = nullptr;
       if (rot_dxn == Direction::LEFT)
          ychild = &y->right;
       else if (rot_dxn = Direction::RIGHT)
@@ -1474,9 +1503,9 @@ private:
    }
 
    void _single_rotation_parts(
-      const AVLNodeOwner& x,
-      AVLNodeOwner* y, AVLNodeOwner* t2, 
-      AVLNodeOwner** x_owner, AVLNodeOwner** t2_owner,
+      const AVLNodeOwner<T>& x,
+      AVLNodeOwner<T>* y, AVLNodeOwner<T>* t2, 
+      AVLNodeOwner<T>** x_owner, AVLNodeOwner<T>** t2_owner,
       Direction y_dxn) {
 
       if (y_dxn == Direction::LEFT) {
@@ -1496,29 +1525,29 @@ private:
    }
 
    void _single_rotation_metadata_update(
-      AVLNodeOwner* parent, AVLNodeOwner** child) {
+      AVLNodeOwner<T>* parent, AVLNodeOwner<T>** child) {
       if (**child)
          (**child)->parent = parent->get();
       (*parent)->height = _height(parent->get());
    }
 
-   AVLNodeOwner& _modify_proxy_tree(
-      AVLNodeOwner* tree, const TreeEditAction& edit) {
+   AVLNodeOwner<T>& _modify_proxy_tree(
+      AVLNodeOwner<T>* tree, const TreeEditAction<T>& edit) {
 
-      AVLNodeOwner working_tree = std::move(*tree);
+      AVLNodeOwner<T> working_tree = std::move(*tree);
       *tree = edit(&working_tree);
       return *tree;
    }
 
-   AVLNodeOwner& _single_rotation(AVLNodeOwner* tree, Direction y_dxn) {
+   AVLNodeOwner<T>& _single_rotation(AVLNodeOwner<T>* tree, Direction y_dxn) {
       return _modify_proxy_tree(
          tree, 
-         [&y_dxn, this](AVLNodeOwner* x) -> AVLNodeOwner {
+         [&y_dxn, this](AVLNodeOwner<T>* x) -> AVLNodeOwner<T> {
 
-         AVLNodeOwner y;
-         AVLNodeOwner t2;
-         AVLNodeOwner* x_owner = nullptr;
-         AVLNodeOwner* t2_owner = nullptr;
+         AVLNodeOwner<T> y;
+         AVLNodeOwner<T> t2;
+         AVLNodeOwner<T>* x_owner = nullptr;
+         AVLNodeOwner<T>* t2_owner = nullptr;
 
          _single_rotation_parts(*x, &y, &t2, &x_owner, &t2_owner, y_dxn);
          *t2_owner = std::move(t2);
@@ -1530,56 +1559,56 @@ private:
       });
    }
 
-   AVLNodeOwner& _right_rotation(AVLNodeOwner* subtree) {
+   AVLNodeOwner<T>& _right_rotation(AVLNodeOwner<T>* subtree) {
       return _modify_proxy_tree(
          subtree, 
-         [this](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             return std::move(_single_rotation(working_tree, Direction::LEFT));
          });
    }
 
-   AVLNodeOwner& _left_rotation(AVLNodeOwner* subtree) {
+   AVLNodeOwner<T>& _left_rotation(AVLNodeOwner<T>* subtree) {
       return _modify_proxy_tree(
          subtree, 
-         [this](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             return std::move(_single_rotation(working_tree, Direction::RIGHT));
          });
    }
 
-   AVLNodeOwner& _left_right_double_rotation(AVLNodeOwner* subtree) {
+   AVLNodeOwner<T>& _left_right_double_rotation(AVLNodeOwner<T>* subtree) {
       _modify_proxy_tree(
          &(*subtree)->left,
-         [this](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             return std::move(_left_rotation(working_tree));
          });
       return _modify_proxy_tree(
          subtree,
-         [this](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             return std::move(_right_rotation(working_tree));
          });
    }
 
-   AVLNodeOwner& _right_left_double_rotation(AVLNodeOwner* subtree) {
+   AVLNodeOwner<T>& _right_left_double_rotation(AVLNodeOwner<T>* subtree) {
        _modify_proxy_tree(
          &(*subtree)->right,
-         [this](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             return std::move(_right_rotation(working_tree));
          });
       return _modify_proxy_tree(
          subtree,
-         [this](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             return std::move(_left_rotation(working_tree));
          });
    }
 
-   AVLNodeOwner& _rebalance(AVLNodeOwner* subtree) {
+   AVLNodeOwner<T>& _rebalance(AVLNodeOwner<T>* subtree) {
       int bf = _balance_factor(subtree->get());
-      AVLNodeOwner* balanced_tree = nullptr;
+      AVLNodeOwner<T>* balanced_tree = nullptr;
 
       if (_is_too_heavy(bf)) {
          balanced_tree = &_modify_proxy_tree(
             subtree,
-            [this, &bf](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+            [this, &bf](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
                if (_is_too_left_heavy(bf)) {
                   if (_is_left_left(working_tree->get()))
                      return std::move(_right_rotation(working_tree));
@@ -1613,23 +1642,24 @@ private:
       return *balanced_tree;
    }
 
-   AVLNodeOwner& _child_insertion_side(AVLNodeOwner* n, AVLNodeOwner* subtree) {
+   AVLNodeOwner<T>& _child_insertion_side(
+      AVLNodeOwner<T>* n, AVLNodeOwner<T>* subtree) {
       return **n < **subtree ? (*subtree)->left : (*subtree)->right;
    }
 
-   AVLNodeOwner& _insert_recurs(
-      AVLNodeOwner* n, AVLNodeOwner* subtree, 
-      AVLNode** result, AVLNodeOwner* parent = nullptr) {
+   AVLNodeOwner<T>& _insert_recurs(
+      AVLNodeOwner<T>* n, AVLNodeOwner<T>* subtree, 
+      AVLNode<T>** result, AVLNodeOwner<T>* parent = nullptr) {
 
       (*n)->parent = subtree->get();
       ++(*n)->depth;
 
-      AVLNodeOwner& child_tree = _child_insertion_side(n, subtree);
+      AVLNodeOwner<T>& child_tree = _child_insertion_side(n, subtree);
 
       if (child_tree) {
          _modify_proxy_tree(&child_tree,
             [this, n, subtree, result](
-               AVLNodeOwner* working_tree) -> AVLNodeOwner {
+               AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
                return std::move(
                   _insert_recurs(n, working_tree, result, subtree));
             });
@@ -1644,13 +1674,13 @@ private:
 
       return _modify_proxy_tree(
          subtree,
-         [this](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             return std::move(_rebalance(working_tree));
          });
    }
 
-   AVLNode*  _insert(const T& val) {
-      AVLNodeOwner n = std::make_unique<AVLNode>(val);
+   AVLNode<T>*  _insert(const T& val) {
+      AVLNodeOwner<T> n = std::make_unique<AVLNode<T>>(val);
       ++n->height;
       ++n->depth;
 
@@ -1660,7 +1690,7 @@ private:
          return _head.get();
       }
 
-      AVLNode* result;
+      AVLNode<T>* result;
       _head = std::move(_insert_recurs(&n, &_head, &result));
       _head->parent = nullptr;
 
@@ -1671,16 +1701,17 @@ private:
       return result;
    }
 
-   AVLNodeOwner _on_removal_leaf(AVLNodeOwner* n, AVLNodeOwner* rm = nullptr) {
+   AVLNodeOwner<T> _on_removal_leaf(
+      AVLNodeOwner<T>* n, AVLNodeOwner<T>* rm = nullptr) {
       assert(n, "NullPointerError");
       assert(!(*n)->left && !(*n)->right, "NotLeafError");
 
       if (rm)
          *rm = std::move(*n);
-      return AVLNodeOwner();
+      return AVLNodeOwner<T>();
    }
 
-   void _update_depths(AVLNode* n, size_t depth) {
+   void _update_depths(AVLNode<T>* n, size_t depth) {
       if (!n)
          return;
       n->depth = depth;
@@ -1690,22 +1721,23 @@ private:
          _update_depths(n->right_raw(), depth + 1);
    }
 
-   void _update_depths(AVLNode* n) {
+   void _update_depths(AVLNode<T>* n) {
       assert(n, "NullPointerError");
       size_t start_depth = n->parent ? n->parent->depth + 1 : 1;
       _update_depths(n, start_depth);
    }
 
-   AVLNodeOwner& _on_removal_one_child(
-      AVLNodeOwner* n, AVLNodeOwner* rm = nullptr) {
+   AVLNodeOwner<T>& _on_removal_one_child(
+      AVLNodeOwner<T>* n, AVLNodeOwner<T>* rm = nullptr) {
       assert(*n, "NullPointerError");
       assert(_num_children(n->get()) == 1, "MustHaveExactlyOneChildError");
 
       return _modify_proxy_tree(n,
-         [this, &rm](AVLNodeOwner* working_tree) -> AVLNodeOwner {
-            AVLNodeOwner child = std::move(_first_child(working_tree->get()));
+         [this, &rm](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
+            AVLNodeOwner<T> child = 
+               std::move(_first_child(working_tree->get()));
 
-            AVLNodeOwner tmp;
+            AVLNodeOwner<T> tmp;
             if (!rm)
                rm = &tmp;
 
@@ -1722,7 +1754,7 @@ private:
       );
    }
 
-   void _transfer_to_next(AVLNodeOwner* next, AVLNodeOwner* temp) {
+   void _transfer_to_next(AVLNodeOwner<T>* next, AVLNodeOwner<T>* temp) {
       (*next)->left = std::move((*temp)->left);
       (*next)->right = std::move((*temp)->right);
       (*next)->parent = (*temp)->parent;
@@ -1735,10 +1767,11 @@ private:
          (*next)->right->parent = next->get();
    }
 
-   AVLNodeOwner _rm_next_in_order(AVLNodeOwner* tree, AVLNodeOwner* next) {
+   AVLNodeOwner<T> _rm_next_in_order(
+      AVLNodeOwner<T>* tree, AVLNodeOwner<T>* next) {
       if ((*tree)->left) {
          return std::move(_modify_proxy_tree(&(*tree)->left,
-            [this, &next](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+            [this, &next](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
                *working_tree = std::move(_rm_next_in_order(working_tree, next));
                (*working_tree)->height = _height(working_tree->get());
                return std::move(*working_tree);
@@ -1753,14 +1786,14 @@ private:
       }
    }
 
-   AVLNodeOwner& _on_removal_two_children(
-      AVLNodeOwner* n, AVLNodeOwner* rm = nullptr) {
+   AVLNodeOwner<T>& _on_removal_two_children(
+      AVLNodeOwner<T>* n, AVLNodeOwner<T>* rm = nullptr) {
       assert(n, "NullPointerError");
 
       return  _modify_proxy_tree(n, 
-         [this, &n, &rm](AVLNodeOwner* working_tree) -> AVLNodeOwner {
-            AVLNodeOwner next;
-            AVLNodeOwner tmp;
+         [this, &n, &rm](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
+            AVLNodeOwner<T> next;
+            AVLNodeOwner<T> tmp;
             if (!rm)
                rm = &tmp;
 
@@ -1775,10 +1808,11 @@ private:
    }
 
    void _remove_and_rebalance(
-      const T& val, AVLNodeOwner* subtree, AVLNode* parent, AVLNodeOwner* rm) {
+      const T& val, AVLNodeOwner<T>* subtree, 
+      AVLNode<T>* parent, AVLNodeOwner<T>* rm) {
 
       _modify_proxy_tree(subtree,
-         [this, &val, &rm](AVLNodeOwner* working_tree) -> AVLNodeOwner {
+         [this, &val, &rm](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
             *working_tree = std::move(_remove(val, working_tree, rm));
             return std::move(_rebalance(working_tree));
          });
@@ -1787,7 +1821,8 @@ private:
          (*subtree)->parent = parent;
    }
 
-   AVLNodeOwner& _remove(const T& val, AVLNodeOwner* tree, AVLNodeOwner* rm) {
+   AVLNodeOwner<T>& _remove(
+      const T& val, AVLNodeOwner<T>* tree, AVLNodeOwner<T>* rm) {
       if (!*tree) {
          *rm = nullptr;
          return *tree;
@@ -1811,38 +1846,38 @@ private:
       return *tree;
    }
 
-   bool _is_dq_all_nulls(const NodeDQ& dq) const {
+   bool _is_dq_all_nulls(const NodeDQ<T>& dq) const {
       auto it = find_if(
-         dq.begin(), dq.end(), [](AVLNode* n) -> bool { return n; });
+         dq.begin(), dq.end(), [](AVLNode<T>* n) -> bool { return n; });
       return it == dq.end();
    }
 
-   void _on_max_nodes_per_line(NodeDQ* dq, const VoidFunc& func) const {
+   void _on_max_nodes_per_line(NodeDQ<T>* dq, const VoidFunc& func) const {
       func();
       if (_is_dq_all_nulls(*dq))
          dq->clear();
    }
 
    void _on_valid_node(
-      NodeDQ* dq, AVLNode* n, const NodeListener& func) const {
+      NodeDQ<T>* dq, AVLNode<T>* n, const NodeListener<T>& func) const {
       func(n);
       dq->push_back(n->left_raw());
       dq->push_back(n->right_raw());
    }
 
-   void _on_null_node(NodeDQ* dq, const NodeListener& func) const {
+   void _on_null_node(NodeDQ<T>* dq, const NodeListener<T>& func) const {
       func(nullptr);
       dq->push_back(nullptr);
       dq->push_back(nullptr);
    }
 
-   void _gather_bfs(NodeDQ* dq, size_t* curr_depth,
-      size_t* node_cnt, const NodeListener& func) const {
+   void _gather_bfs(NodeDQ<T>* dq, size_t* curr_depth,
+      size_t* node_cnt, const NodeListener<T>& func) const {
 
       if (dq->empty()) 
          return;
 
-      AVLNode* n = dq->front();
+      AVLNode<T>* n = dq->front();
       dq->pop_front();
 
       if (n) 
@@ -1860,7 +1895,7 @@ private:
    }
 
    NodeList _gather_bfs_list() const {
-      NodeDQ dq;
+      NodeDQ<T> dq;
       NodeList nl;
       size_t curr_depth = 1;
       size_t node_cnt = 0;
@@ -1869,7 +1904,7 @@ private:
          dq.push_back(_head_raw());
 
       _gather_bfs(&dq, &curr_depth, &node_cnt,
-         [&nl](AVLNode* n) { nl.push_back(n); });
+         [&nl](AVLNode<T>* n) { nl.push_back(n); });
       return nl;
    }
 
@@ -1882,7 +1917,7 @@ private:
       int curr_depth = 1;
 
       for (auto nit = nl.begin(); nit != nl.end(); ++nit) {
-         AVLNode* n = *nit;
+         AVLNode<T>* n = *nit;
          bool last_node = ++node_cnt == _nodes_at_lv(curr_depth);
          ss << (n ? _node_str(*n) : "(null)") << (last_node ? "" : " ");
 
@@ -1919,7 +1954,7 @@ public:
    ConstResult<T&> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T&>>();
-      AVLNode* n = _insert(val);
+      AVLNode<T>* n = _insert(val);
       ++_size;
       _insertion_list.emplace_back(n);
       _index[_get_member(n->data)] = n;
@@ -1932,7 +1967,7 @@ public:
    }
 
    Result<T> remove(const T& val) noexcept {
-      AVLNodeOwner rm;
+      AVLNodeOwner<T> rm;
       _remove_and_rebalance(val, &_head, nullptr, &rm);
       _update_depths_if_rebalanced();
 
