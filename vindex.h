@@ -92,7 +92,7 @@ namespace _IterTracker {
 
    template <typename T, typename KeyTy>
    using NodeListRevIter = 
-      typename Vindex<KeyTy, T>::NodeList::reverse_iterator;
+      typename Vindex<KeyTy, T>::template NodeList<T>::reverse_iterator;
 
    template <typename NodeDataTy, typename KeyTy>
    class IterTracker<
@@ -475,6 +475,8 @@ private:
    typedef std::function<void()> VoidFunc;
    typedef std::function<KeyTy(const T&)> Extractor;
    typedef std::map<OrderType, std::string> OrderTypeToStr;
+   typedef typename _Heads<T>::Comparator Comparator;
+   typedef typename _Heads<T>::NodeRefOwner NodeRefOwner;
 
    template <typename U>
    using AVLNode = _AVLState<_Node<U>>;
@@ -503,7 +505,9 @@ private:
 public:
    class const_iterator;
    class const_reverse_iterator;
-   typedef std::list<AVLNode<T>*> NodeList;
+
+   template <typename U>
+   using NodeList = std::list<AVLNode<U>*>;
 
 private:
    class OrderTypeToStrSingleton : 
@@ -518,10 +522,14 @@ private:
       }
    }; 
 
-   class AVLNodeDefaultSingleton :
+   struct AVLNodeDefaultSingleton :
       public _Singleton<AVLNode<T>, AVLNodeDefaultSingleton> {
-   public:
       static void init(AVLNode<T>*) {}
+   };
+
+   struct DefaultComparatorSingleton:
+      public _Singleton<DefaultComparator<T>, DefaultComparatorSingleton> {
+      static void init(DefaultComparator<T>* dc) {}
    };
 
    template <bool reverse>
@@ -537,11 +545,11 @@ private:
       using AVLNodeOwner = Vindex::AVLNodeOwner<U>;
 
       typedef 
-         typename Vindex<KeyTy, T>::NodeList::iterator 
+         typename Vindex<KeyTy, T>::template NodeList<T>::iterator 
          NodeListIter;
 
       typedef 
-         typename Vindex<KeyTy, T>::NodeList::reverse_iterator 
+         typename Vindex<KeyTy, T>::template NodeList<T>::reverse_iterator 
          NodeListRevIter;
 
       typedef 
@@ -1216,11 +1224,12 @@ private:
    OrderType _order_ty;
    const_iterator _cend;
    const_reverse_iterator _crend;
-   NodeList _rebalanced_trees;
-   NodeList _insertion_list;
+   NodeList<T> _rebalanced_trees;
+   NodeList<T> _insertion_list;
    Index<T> _index;
    Extractor _get_member;
    size_t _size;
+   _Heads<T> _heads;
 
 public:
    class const_iterator: public _const_iterator<false> {
@@ -1309,6 +1318,10 @@ private:
       return &AVLNodeDefaultSingleton().get();
    }
 
+   static DefaultComparator<T>& default_comparator() {
+      return DefaultComparatorSingleton().get();
+   }
+
    static int dtoi(double val) {
       std::stringstream ss;
       ss << val;
@@ -1328,8 +1341,7 @@ private:
    }
 
    static std::string _node_data_str(AVLNode<T>* n) {
-      using namespace std;
-      stringstream ss;
+      std::stringstream ss;
       if (n)
          ss << n->data;
       else
@@ -1338,8 +1350,7 @@ private:
    }
 
    static std::string _node_str(const AVLNode<T>& n) {
-      using namespace std;
-      stringstream ss;
+      std::stringstream ss;
       ss << "(" 
          << "data: " << n.data 
          << ", height: " << n.height 
@@ -1894,9 +1905,9 @@ private:
       _gather_bfs(dq, curr_depth, node_cnt, func);
    }
 
-   NodeList _gather_bfs_list() const {
+   NodeList<T> _gather_bfs_list() const {
       NodeDQ<T> dq;
-      NodeList nl;
+      NodeList<T> nl;
       size_t curr_depth = 1;
       size_t node_cnt = 0;
 
@@ -1910,7 +1921,7 @@ private:
 
    std::string _gather_bfs_str(const std::string& delim="|") const {
       using namespace std;
-      NodeList nl = _gather_bfs_list();
+      NodeList<T> nl = _gather_bfs_list();
 
       stringstream ss;
       int node_cnt = 0;
