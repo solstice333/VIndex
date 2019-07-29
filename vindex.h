@@ -1222,7 +1222,10 @@ private:
       }
    };
 
+   // TODO delete `_head` eventually
    AVLNodeOwner<T> _head;
+   _Heads<T> _heads;
+
    OrderType _order_ty;
    const_iterator _cend;
    const_reverse_iterator _crend;
@@ -1231,7 +1234,6 @@ private:
    Index<T> _index;
    Extractor _get_member;
    size_t _size;
-   _Heads<T> _heads;
 
 public:
    class const_iterator: public _const_iterator<false> {
@@ -1320,7 +1322,7 @@ private:
       return &AVLNodeDefaultSingleton().get();
    }
 
-   static DefaultComparator<T>& default_comparator() {
+   static DefaultComparator<T>& _default_comparator() {
       return DefaultComparatorSingleton().get();
    }
 
@@ -1639,25 +1641,27 @@ private:
       return *balanced_tree;
    }
 
-   AVLNodeOwner<T>& _child_insertion_side(
-      AVLNodeOwner<T>* n, AVLNodeOwner<T>* subtree) {
+   template <typename DATA_TY>
+   AVLNodeOwner<DATA_TY>& _child_insertion_side(
+      AVLNodeOwner<DATA_TY>* n, AVLNodeOwner<DATA_TY>* subtree) {
       return **n < **subtree ? (*subtree)->left : (*subtree)->right;
    }
 
-   AVLNodeOwner<T>& _insert_recurs(
-      AVLNodeOwner<T>* n, AVLNodeOwner<T>* subtree, 
-      AVLNode<T>** result, AVLNodeOwner<T>* parent = nullptr) {
+   template <typename DATA_TY>
+   AVLNodeOwner<DATA_TY>& _insert_recurs(
+      AVLNodeOwner<DATA_TY>* n, 
+      AVLNodeOwner<DATA_TY>* subtree, 
+      AVLNode<DATA_TY>** result) {
 
       (*n)->parent = subtree->get();
 
-      AVLNodeOwner<T>& child_tree = _child_insertion_side(n, subtree);
+      AVLNodeOwner<DATA_TY>& child_tree = _child_insertion_side(n, subtree);
 
       if (child_tree) {
          _modify_proxy_tree(&child_tree,
             [this, n, subtree, result](
-               AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
-               return std::move(
-                  _insert_recurs(n, working_tree, result, subtree));
+               AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<T> {
+               return std::move(_insert_recurs(n, working_tree, result));
             });
          child_tree->parent = subtree->get();
       }
@@ -1670,26 +1674,42 @@ private:
 
       return _modify_proxy_tree(
          subtree,
-         [this](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
+         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
             return std::move(_rebalance(working_tree));
          });
    }
 
-   // TODO change every instead of `_head` so that `_heads` is mutated instead
-   AVLNode<T>*  _insert(const T& val) {
-      AVLNodeOwner<T> n = std::make_unique<AVLNode<T>>(val);
-      ++n->height;
+   template <typename DATA_TY>
+   AVLNode<DATA_TY>*  _insert(
+      AVLNodeOwner<DATA_TY>* n, 
+      AVLNodeOwner<DATA_TY>* head, 
+      const Comparator& cmp) {
 
-      if (!_head) {
-         _head = std::move(n);
-         ++_head->height;
-         return _head.get();
+      ++(*n)->height;
+
+      if (!*head) {
+         *head = std::move(*n);
+         ++(*head)->height;
+         return head->get();
       }
 
       AVLNode<T>* result;
-      _head = std::move(_insert_recurs(&n, &_head, &result));
-      _head->parent = nullptr;
+      *head = std::move(_insert_recurs(n, head, &result));
+      (*head)->parent = nullptr;
       return result;
+   }
+
+   // TODO change every instead of `_head` so that `_heads` is mutated instead.
+   // For now, let's just replace `_head` with 
+   // `_heads.get<head_type::node_data>(_default_comparator())->second` then
+   // worry about expanding that later
+   AVLNode<T>* _insert_each_head(const T& val) {
+      AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
+      T& data = real_n->data;
+      auto real_head = _heads.template
+         get<head_type::node_data>(_default_comparator());
+      assert(real_head, "InvalidHeadError");
+      return _insert(&real_n, &real_head->second, real_head->first);
    }
 
    AVLNodeOwner<T> _on_removal_leaf(
@@ -1917,9 +1937,17 @@ private:
       return ss.str();
    }
 
+   _Heads<T> _init_heads() {
+      _Heads<T> heads;
+      heads.push(_default_comparator());
+      heads.push(_default_comparator());
+      return heads;
+   }
+
 public:
    Vindex(const Extractor& get_member) noexcept: 
       _head(nullptr), 
+      _heads(_init_heads()),
       _order_ty(OrderType::INORDER), 
       _get_member(get_member),
       _size(0)
@@ -1928,7 +1956,7 @@ public:
    ConstResult<T&> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T&>>();
-      AVLNode<T>* n = _insert(val);
+      AVLNode<T>* n = _insert_each_head(val);
       ++_size;
       _insertion_list.emplace_back(n);
       _index[_get_member(n->data)] = n;
@@ -1940,6 +1968,7 @@ public:
       insert(T(std::forward<Args>(args)...));
    }
 
+   // TODO deal with `_head` WRT `remove()`
    Result<T> remove(const T& val) noexcept {
       AVLNodeOwner<T> rm;
       _remove_and_rebalance(val, &_head, nullptr, &rm);
@@ -1960,6 +1989,7 @@ public:
       return _order_ty;
    }
 
+   // TODO deal with `_head` WRT `const_iterator`
    const_iterator cbegin() noexcept {
       const_iterator it(this, _order_ty);
       _cend = it.end();
@@ -1970,6 +2000,7 @@ public:
       return _cend;
    }
 
+   // TODO deal with `_head` WRT `const_reverse_iterator`
    const_reverse_iterator crbegin() noexcept {
       const_reverse_iterator it(this, _order_ty);
       _crend = it.end();
@@ -1995,6 +2026,7 @@ public:
       return _size;
    }
 
+   // TODO deal with `_head` WRT `clear()`
    void clear() noexcept {
       _insertion_list.clear();
       _index.clear();
