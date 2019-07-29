@@ -17,8 +17,6 @@
 #include <unordered_map>
 #include <vector>
 
-#define DEPTH_DATA_ENABLED 0
-
 #ifdef NDEBUG
 #define assert(condition, message) 0
 #else
@@ -248,7 +246,6 @@ struct _AVLState: public T {
    typedef std::unique_ptr<_AVLState> AVLStateOwner;
 
    size_t height;
-   size_t depth;
    AVLStateOwner left;
    AVLStateOwner right;
    _AVLState* parent;
@@ -262,11 +259,11 @@ struct _AVLState: public T {
    }
 
    _AVLState(): 
-      T(BASE_TY()), height(0), depth(0),
+      T(BASE_TY()), height(0),
       left(nullptr), right(nullptr), parent(nullptr) {}
 
    _AVLState(const BASE_TY& data): 
-      T(data), height(0), depth(0), 
+      T(data), height(0), 
       left(nullptr), right(nullptr), parent(nullptr) {}
 };
 
@@ -1082,6 +1079,9 @@ private:
          _curr_lv(0), 
          _prev_lv(0) {}
 
+      // TODO deal with `_head_raw()`. Probably initialize `_curr` outside
+      // of the ctor in another method. Need to use function templates to
+      // specify comparator
       _const_iterator(Vindex* vin, OrderType order_ty): 
          _prev(nullptr),
          _prev_incr(reverse ? false : true), 
@@ -1092,6 +1092,8 @@ private:
 
          _tracker(vin) {
 
+         // TODO I think it will seg fault if an attempt to get an
+         // iterator on an empty vindex occurs. Confirm this
          if (_order_ty == OrderType::INORDER)
             _curr = reverse ? 
                _get_rightest_node(vin->_head_raw()) : 
@@ -1354,11 +1356,6 @@ private:
       ss << "(" 
          << "data: " << n.data 
          << ", height: " << n.height 
-
-#if DEPTH_DATA_ENABLED
-         << ", depth: " << n.depth 
-#endif
-
          << ", left: " << _node_data_str(n.left_raw()) 
          << ", right: " << _node_data_str(n.right_raw())
          << ", parent: " << _node_data_str(n.parent)
@@ -1435,13 +1432,6 @@ private:
    // TODO function to get highest rebalanced tree
    AVLNode<T>* _get_highest_rebalanced_tree() {
       assert(false, "NotYetImplementedError");
-   }
-
-   void _update_depths_if_rebalanced() {
-      if (!_rebalanced_trees.empty()) {
-         _update_depths(_get_highest_rebalanced_tree());
-         _rebalanced_trees.clear();
-      }
    }
 
    int _height(AVLNode<T>* tree) {
@@ -1642,10 +1632,6 @@ private:
                   assert(false, "InvalidHeavyStateError");
             }
          );
-
-#if DEPTH_DATA_ENABLED
-         _rebalanced_trees.emplace_back(subtree->get());
-#endif
       }
       else
          balanced_tree = subtree;
@@ -1663,7 +1649,6 @@ private:
       AVLNode<T>** result, AVLNodeOwner<T>* parent = nullptr) {
 
       (*n)->parent = subtree->get();
-      ++(*n)->depth;
 
       AVLNodeOwner<T>& child_tree = _child_insertion_side(n, subtree);
 
@@ -1690,10 +1675,10 @@ private:
          });
    }
 
+   // TODO change every instead of `_head` so that `_heads` is mutated instead
    AVLNode<T>*  _insert(const T& val) {
       AVLNodeOwner<T> n = std::make_unique<AVLNode<T>>(val);
       ++n->height;
-      ++n->depth;
 
       if (!_head) {
          _head = std::move(n);
@@ -1704,11 +1689,6 @@ private:
       AVLNode<T>* result;
       _head = std::move(_insert_recurs(&n, &_head, &result));
       _head->parent = nullptr;
-
-#if DEPTH_DATA_ENABLED
-      _update_depths_if_rebalanced();
-#endif
-
       return result;
    }
 
@@ -1720,22 +1700,6 @@ private:
       if (rm)
          *rm = std::move(*n);
       return AVLNodeOwner<T>();
-   }
-
-   void _update_depths(AVLNode<T>* n, size_t depth) {
-      if (!n)
-         return;
-      n->depth = depth;
-      if (n->left)
-         _update_depths(n->left_raw(), depth + 1);
-      if (n->right)
-         _update_depths(n->right_raw(), depth + 1);
-   }
-
-   void _update_depths(AVLNode<T>* n) {
-      assert(n, "NullPointerError");
-      size_t start_depth = n->parent ? n->parent->depth + 1 : 1;
-      _update_depths(n, start_depth);
    }
 
    AVLNodeOwner<T>& _on_removal_one_child(
@@ -1770,7 +1734,6 @@ private:
       (*next)->right = std::move((*temp)->right);
       (*next)->parent = (*temp)->parent;
       (*next)->height = (*temp)->height;   
-      (*next)->depth = (*temp)->depth;
 
       if ((*next)->left)
          (*next)->left->parent = next->get();
@@ -1980,7 +1943,6 @@ public:
    Result<T> remove(const T& val) noexcept {
       AVLNodeOwner<T> rm;
       _remove_and_rebalance(val, &_head, nullptr, &rm);
-      _update_depths_if_rebalanced();
 
       if (rm) {
          _insertion_list.remove(rm.get());
