@@ -1510,8 +1510,8 @@ int main () {
    TestIntVindex vin;
 
    vin.test_insert_left_left();
-   // vin.test_insert_left_left_right_right();
-   // vin.test_insert_left_right_right_left();
+   vin.test_insert_left_left_right_right();
+   vin.test_insert_left_right_right_left();
    // vin.test_dne_removal();
    // vin.test_leaf_removal();
    // vin.test_one_child_removal();

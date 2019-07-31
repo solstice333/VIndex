@@ -1643,25 +1643,31 @@ private:
 
    template <typename DATA_TY>
    AVLNodeOwner<DATA_TY>& _child_insertion_side(
-      AVLNodeOwner<DATA_TY>* n, AVLNodeOwner<DATA_TY>* subtree) {
-      return **n < **subtree ? (*subtree)->left : (*subtree)->right;
+      AVLNodeOwner<DATA_TY>* n, 
+      AVLNodeOwner<DATA_TY>* subtree, 
+      const Comparator& cmp) {
+
+      return cmp.lt((*n)->data, (*subtree)->data) ?
+         (*subtree)->left : (*subtree)->right;
    }
 
    template <typename DATA_TY>
    AVLNodeOwner<DATA_TY>& _insert_recurs(
       AVLNodeOwner<DATA_TY>* n, 
       AVLNodeOwner<DATA_TY>* subtree, 
-      AVLNode<DATA_TY>** result) {
+      AVLNode<DATA_TY>** result,
+      const Comparator& cmp) {
 
       (*n)->parent = subtree->get();
 
-      AVLNodeOwner<DATA_TY>& child_tree = _child_insertion_side(n, subtree);
+      AVLNodeOwner<DATA_TY>& child_tree = 
+         _child_insertion_side(n, subtree, cmp);
 
       if (child_tree) {
          _modify_proxy_tree(&child_tree,
-            [this, n, subtree, result](
+            [this, &n, &subtree, &result, &cmp](
                AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<T> {
-               return std::move(_insert_recurs(n, working_tree, result));
+               return std::move(_insert_recurs(n, working_tree, result, cmp));
             });
          child_tree->parent = subtree->get();
       }
@@ -1694,7 +1700,7 @@ private:
       }
 
       AVLNode<T>* result;
-      *head = std::move(_insert_recurs(n, head, &result));
+      *head = std::move(_insert_recurs(n, head, &result, cmp));
       (*head)->parent = nullptr;
       return result;
    }
@@ -1706,10 +1712,10 @@ private:
    AVLNode<T>* _insert_each_head(const T& val) {
       AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
       T& data = real_n->data;
-      auto real_head = _heads.template
+      auto head = _heads.template
          get<head_type::node_data>(_default_comparator());
-      assert(real_head, "InvalidHeadError");
-      return _insert(&real_n, &real_head->second, real_head->first);
+      assert(head, "InvalidHeadError");
+      return _insert(&real_n, &head->second, head->first);
    }
 
    AVLNodeOwner<T> _on_removal_leaf(
@@ -1893,9 +1899,11 @@ private:
       NodeList<T> nl;
       size_t curr_depth = 1;
       size_t node_cnt = 0;
+      auto head = _heads.template 
+         get<head_type::node_data>(_default_comparator());
 
-      if (_head_raw())
-         dq.push_back(_head_raw());
+      if (head->second.get())
+         dq.push_back(head->second.get());
 
       _gather_bfs(&dq, &curr_depth, &node_cnt,
          [&nl](AVLNode<T>* n) { nl.push_back(n); });
@@ -1903,10 +1911,8 @@ private:
    }
 
    std::string _gather_bfs_str(const std::string& delim="|") const {
-      using namespace std;
       NodeList<T> nl = _gather_bfs_list();
-
-      stringstream ss;
+      std::stringstream ss;
       int node_cnt = 0;
       int curr_depth = 1;
 
@@ -1937,9 +1943,10 @@ private:
       return ss.str();
    }
 
+   // TODO add a second push of `_default_comparator()` to 
+   // initialize `secondary_heads`
    _Heads<T> _init_heads() {
       _Heads<T> heads;
-      heads.push(_default_comparator());
       heads.push(_default_comparator());
       return heads;
    }
@@ -2030,7 +2037,9 @@ public:
    void clear() noexcept {
       _insertion_list.clear();
       _index.clear();
-      _head = nullptr;
+      auto head = _heads.template
+         get<head_type::node_data>(_default_comparator());
+      head->second = nullptr;
       _size = 0;
    }
 };
