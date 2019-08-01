@@ -1978,7 +1978,9 @@ public:
    // TODO deal with `_head` WRT `remove()`
    Result<T> remove(const T& val) noexcept {
       AVLNodeOwner<T> rm;
-      _remove_and_rebalance(val, &_head, nullptr, &rm);
+      auto head = _heads.template
+         get<head_type::node_data>(_default_comparator());
+      _remove_and_rebalance(val, &head->second, nullptr, &rm);
 
       if (rm) {
          _insertion_list.remove(rm.get());
