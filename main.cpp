@@ -1517,18 +1517,18 @@ int main () {
    vin.test_one_child_removal();
    vin.test_two_children_removal();
 
-   // vin.test_in_order_iter();
-   // vin.test_in_order_iter_arrow_data();
-   // vin.test_pre_order_iter();
-   // vin.test_post_order_iter();
-   // vin.test_breadth_first_order_iter();
-   // vin.test_insertion_order_iter();
+   vin.test_in_order_iter();
+   vin.test_in_order_iter_arrow_data();
+   vin.test_pre_order_iter();
+   vin.test_post_order_iter();
+   vin.test_breadth_first_order_iter();
+   vin.test_insertion_order_iter();
 
-   // vin.test_in_order_rev_iter();
-   // vin.test_pre_order_rev_iter();
-   // vin.test_post_order_rev_iter();
-   // vin.test_breadth_first_order_rev_iter();
-   // vin.test_insertion_order_rev_iter();
+   vin.test_in_order_rev_iter();
+   vin.test_pre_order_rev_iter();
+   vin.test_post_order_rev_iter();
+   vin.test_breadth_first_order_rev_iter();
+   vin.test_insertion_order_rev_iter();
 
    // vin.test_emplace();
    // vin.test_find();

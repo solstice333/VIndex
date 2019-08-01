@@ -534,6 +534,7 @@ private:
       public std::iterator<std::bidirectional_iterator_tag, T> {
    private:
       typedef Vindex::Direction Direction;
+      typedef typename _Heads<T>::Comparator Comparator;
 
       template <typename U>
       using AVLNode = Vindex::AVLNode<U>;
@@ -560,6 +561,7 @@ private:
       AVLNode<T>* _prev;
       bool _prev_incr;
       OrderType _order_ty;
+      Comparator* _cmp; 
 
       int _curr_lv;
       int _prev_lv;
@@ -633,7 +635,8 @@ private:
          while (child) {
             if (child == _prev)
                return true;
-            child = *_prev < *child ? child->left_raw() : child->right_raw();
+            child = _cmp->lt(_prev->data, child->data) ? 
+               child->left_raw() : child->right_raw();
          }
          return false;
       }
@@ -1075,9 +1078,11 @@ private:
          _prev(nullptr), 
          _prev_incr(true), 
          _order_ty(OrderType::INORDER),
+         _cmp(nullptr),
 
          _curr_lv(0), 
-         _prev_lv(0) {}
+         _prev_lv(0) 
+         {}
 
       // TODO deal with `_head_raw()`. Probably initialize `_curr` outside
       // of the ctor in another method. Need to use function templates to
@@ -1086,30 +1091,37 @@ private:
          _prev(nullptr),
          _prev_incr(reverse ? false : true), 
          _order_ty(order_ty),
+         _cmp(nullptr),
 
          _curr_lv(0), 
          _prev_lv(0),
 
          _tracker(vin) {
 
+         auto head = vin->_heads.template
+            get<head_type::node_data>(Vindex<KeyTy, T>::_default_comparator());
+         AVLNode<T>* raw_head = head->second.get();
+         _cmp = &head->first;
+         assert(_cmp, "NullPointerError");
+
          // TODO I think it will seg fault if an attempt to get an
          // iterator on an empty vindex occurs. Confirm this
          if (_order_ty == OrderType::INORDER)
             _curr = reverse ? 
-               _get_rightest_node(vin->_head_raw()) : 
-               _get_leftest_node(vin->_head_raw());
+               _get_rightest_node(raw_head) : 
+               _get_leftest_node(raw_head);
          else if (_order_ty == OrderType::PREORDER)
             _curr = reverse ?
-               _get_rightest_node(vin->_head_raw()) :
-               _get_root_node(vin->_head_raw());
+               _get_rightest_node(raw_head) :
+               _get_root_node(raw_head);
          else if (_order_ty == OrderType::POSTORDER)
             _curr = reverse ?
-               _get_root_node(vin->_head_raw()) :
-               _get_leftest_node(vin->_head_raw());
+               _get_root_node(raw_head) :
+               _get_leftest_node(raw_head);
          else if (_order_ty == OrderType::BREADTHFIRST) {
             _curr = reverse ?
-               _get_deepest_right_node(vin->_head_raw(), &_curr_lv) :
-               _get_root_node(vin->_head_raw()); 
+               _get_deepest_right_node(raw_head, &_curr_lv) :
+               _get_root_node(raw_head); 
 
             _curr_lv = reverse ? _curr_lv : 1;
          }
@@ -1124,17 +1136,20 @@ private:
          _prev(other._prev), 
          _prev_incr(other._prev_incr), 
          _order_ty(other._order_ty), 
+         _cmp(other._cmp),
 
          _curr_lv(other._curr_lv),
          _prev_lv(other._prev_lv),
 
-         _tracker(other._tracker) {}
+         _tracker(other._tracker) 
+         {}
 
       _const_iterator& operator=(const _const_iterator& other) {
          _curr = other._curr;
          _prev = other._prev;
          _prev_incr = other._prev_incr;
          _order_ty = other._order_ty;
+         _cmp = other._cmp;
 
          _curr_lv = other._curr_lv;
          _prev_lv = other._prev_lv;
@@ -1377,9 +1392,13 @@ private:
       if (!subtree)
          return nullptr;
 
-      if (val == subtree->data)
+      auto head = _heads.template
+         get<head_type::node_data>(_default_comparator());
+      Comparator& cmp = head->first;
+
+      if (cmp.eq(val, subtree->data))
          return subtree;
-      else if (val < subtree->data)
+      else if (cmp.lt(val, subtree->data))
          return _find(subtree->left_raw(), val);
       else
          return _find(subtree->right_raw(), val);
@@ -1828,9 +1847,13 @@ private:
          return *tree;
       }
 
-      if (val < (*tree)->data)
+      auto head = _heads.template
+         get<head_type::node_data>(_default_comparator());
+      Comparator& cmp = head->first;
+
+      if (cmp.lt(val, (*tree)->data))
          _remove_and_rebalance(val, &(*tree)->left, tree->get(), rm);
-      else if (val > (*tree)->data)
+      else if (cmp.gt(val, (*tree)->data))
          _remove_and_rebalance(val, &(*tree)->right, tree->get(), rm);
       else {
          if (_num_children(tree->get()) == 1)
