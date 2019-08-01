@@ -1448,11 +1448,6 @@ private:
       return _num_children(n) > 0;
    }
 
-   // TODO function to get highest rebalanced tree
-   AVLNode<T>* _get_highest_rebalanced_tree() {
-      assert(false, "NotYetImplementedError");
-   }
-
    int _height(AVLNode<T>* tree) {
       if (!tree)
          return 0;
