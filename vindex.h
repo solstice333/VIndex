@@ -1069,6 +1069,39 @@ private:
          return ss.str();
       }
 
+      AVLNode<T>* _init_curr(const AVLNodeOwner<T>& head) {
+         AVLNode<T>* raw_head = head.get();
+         AVLNode<T>* curr = nullptr;
+
+         if (raw_head) {
+            if (_order_ty == OrderType::INORDER)
+               curr = reverse ? 
+                  _get_rightest_node(raw_head) : 
+                  _get_leftest_node(raw_head);
+            else if (_order_ty == OrderType::PREORDER)
+               curr = reverse ?
+                  _get_rightest_node(raw_head) :
+                  _get_root_node(raw_head);
+            else if (_order_ty == OrderType::POSTORDER)
+               curr = reverse ?
+                  _get_root_node(raw_head) :
+                  _get_leftest_node(raw_head);
+            else if (_order_ty == OrderType::BREADTHFIRST) {
+               curr = reverse ?
+                  _get_deepest_right_node(raw_head, &_curr_lv) :
+                  _get_root_node(raw_head); 
+
+               _curr_lv = reverse ? _curr_lv : 1;
+            }
+            else if (_order_ty == OrderType::INSERTION)
+               curr = *_tracker.curr();
+            else
+               assert(false, "NotYetImplementedError");
+         }
+
+         return curr;
+      }
+
    protected:
       _const_iterator(): 
          _curr(nullptr), 
@@ -1085,6 +1118,7 @@ private:
       // of the ctor in another method. Need to use function templates to
       // specify comparator
       _const_iterator(Vindex* vin, OrderType order_ty): 
+         _curr(nullptr), 
          _prev(nullptr),
          _prev_incr(reverse ? false : true), 
          _order_ty(order_ty),
@@ -1097,35 +1131,9 @@ private:
 
          auto head = vin->_heads.template
             get<head_type::node_data>(Vindex<KeyTy, T>::_default_comparator());
-         AVLNode<T>* raw_head = head->second.get();
          _cmp = &head->first;
          assert(_cmp, "NullPointerError");
-
-         // TODO I think it will seg fault if an attempt to get an
-         // iterator on an empty vindex occurs. Confirm this
-         if (_order_ty == OrderType::INORDER)
-            _curr = reverse ? 
-               _get_rightest_node(raw_head) : 
-               _get_leftest_node(raw_head);
-         else if (_order_ty == OrderType::PREORDER)
-            _curr = reverse ?
-               _get_rightest_node(raw_head) :
-               _get_root_node(raw_head);
-         else if (_order_ty == OrderType::POSTORDER)
-            _curr = reverse ?
-               _get_root_node(raw_head) :
-               _get_leftest_node(raw_head);
-         else if (_order_ty == OrderType::BREADTHFIRST) {
-            _curr = reverse ?
-               _get_deepest_right_node(raw_head, &_curr_lv) :
-               _get_root_node(raw_head); 
-
-            _curr_lv = reverse ? _curr_lv : 1;
-         }
-         else if (_order_ty == OrderType::INSERTION)
-            _curr = *_tracker.curr();
-         else
-            assert(false, "NotYetImplementedError");
+         _curr = _init_curr(head->second);
       }
 
       _const_iterator(const _const_iterator& other): 

@@ -1499,6 +1499,12 @@ public:
       assert(_vin.size() == 8);
    }
 
+   void test_iter_on_empty_vin() {
+      _vin.clear();
+      auto it = _vin.cbegin();
+      assert(it == _vin.cend());
+   }
+
    void test_ctor_multiple_comparators() {
       // Vindex<int, BasicInt> vin_cmp([])
    }
@@ -1516,6 +1522,8 @@ int main () {
    vin.test_leaf_removal();
    vin.test_one_child_removal();
    vin.test_two_children_removal();
+
+   vin.test_iter_on_empty_vin();
 
    vin.test_in_order_iter();
    vin.test_in_order_iter_arrow_data();
