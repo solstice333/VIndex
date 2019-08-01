@@ -1114,9 +1114,7 @@ private:
          _prev_lv(0) 
          {}
 
-      // TODO probably initialize `_curr` outside
-      // of the ctor in another method. Need to use function templates to
-      // specify comparator
+      // TODO specify comparator with function templates
       _const_iterator(Vindex* vin, OrderType order_ty): 
          _curr(nullptr), 
          _prev(nullptr),
@@ -1717,7 +1715,7 @@ private:
       return result;
    }
 
-   // TODO iterate through all of `_heads`
+   // TODO iterate through all `_heads`
    AVLNode<T>* _insert_each_head(const T& val) {
       AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
       T& data = real_n->data;
@@ -1987,7 +1985,7 @@ public:
       insert(T(std::forward<Args>(args)...));
    }
 
-   // TODO remove from _heads
+   // TODO remove from all `_heads`
    Result<T> remove(const T& val) noexcept {
       AVLNodeOwner<T> rm;
       auto head = _heads.template
