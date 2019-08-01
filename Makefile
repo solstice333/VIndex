@@ -1,9 +1,9 @@
-all: a.exe
+all: a
 
-a.exe: main.cpp vindex.h
-	g++ main.cpp
+a: main.cpp vindex.h
+	g++ main.cpp -o $@
 
 .PHONY: clean
-	
+
 clean:
 	rm -f *.exe* *.out
