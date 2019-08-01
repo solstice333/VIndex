@@ -6,4 +6,4 @@ a: main.cpp vindex.h
 .PHONY: clean
 
 clean:
-	rm -f *.exe* *.out
+	rm -f *.exe* *.out a
