@@ -1954,10 +1954,9 @@ private:
       return ss.str();
    }
 
-   // TODO add a second push of `_default_comparator()` to 
-   // initialize `secondary_heads`
    _Heads<T> _init_heads() {
       _Heads<T> heads;
+      heads.push(_default_comparator());
       heads.push(_default_comparator());
       return heads;
    }
