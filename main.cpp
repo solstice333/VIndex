@@ -1530,12 +1530,12 @@ int main () {
    vin.test_breadth_first_order_rev_iter();
    vin.test_insertion_order_rev_iter();
 
-   // vin.test_emplace();
-   // vin.test_find();
-   // vin.test_index_insert_removal();
-   // vin.test_insert_return();
-   // vin.test_make_vindex();
-   // vin.test_size();
+   vin.test_emplace();
+   vin.test_find();
+   vin.test_index_insert_removal();
+   vin.test_insert_return();
+   vin.test_make_vindex();
+   vin.test_size();
 
    // vin.test_ctor_multiple_comparators();
 }

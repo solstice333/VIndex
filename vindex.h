@@ -236,9 +236,6 @@ struct _Node {
    T data;
    _Node() {}
    _Node(const T& data): data(data) {}
-
-   // TODO delete later
-   bool operator<(const _Node& other) { return data < other.data; }
 };
 
 template <typename T, typename BASE_TY = decltype(T::data)>
@@ -1084,7 +1081,7 @@ private:
          _prev_lv(0) 
          {}
 
-      // TODO deal with `_head_raw()`. Probably initialize `_curr` outside
+      // TODO probably initialize `_curr` outside
       // of the ctor in another method. Need to use function templates to
       // specify comparator
       _const_iterator(Vindex* vin, OrderType order_ty): 
@@ -1237,10 +1234,7 @@ private:
       }
    };
 
-   // TODO delete `_head` eventually
-   AVLNodeOwner<T> _head;
    _Heads<T> _heads;
-
    OrderType _order_ty;
    const_iterator _cend;
    const_reverse_iterator _crend;
@@ -1378,10 +1372,6 @@ private:
          << ", parent: " << _node_data_str(n.parent)
          << ")";
       return ss.str();
-   }
-
-   AVLNode<T>* _head_raw() const {
-      return _head.get();
    }
 
    static size_t _nodes_at_lv(size_t lv) {
@@ -1724,10 +1714,7 @@ private:
       return result;
    }
 
-   // TODO change every instead of `_head` so that `_heads` is mutated instead.
-   // For now, let's just replace `_head` with 
-   // `_heads.get<head_type::node_data>(_default_comparator())->second` then
-   // worry about expanding that later
+   // TODO iterate through all of `_heads`
    AVLNode<T>* _insert_each_head(const T& val) {
       AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
       T& data = real_n->data;
@@ -1976,7 +1963,6 @@ private:
 
 public:
    Vindex(const Extractor& get_member) noexcept: 
-      _head(nullptr), 
       _heads(_init_heads()),
       _order_ty(OrderType::INORDER), 
       _get_member(get_member),
@@ -1998,7 +1984,7 @@ public:
       insert(T(std::forward<Args>(args)...));
    }
 
-   // TODO deal with `_head` WRT `remove()`
+   // TODO remove from _heads
    Result<T> remove(const T& val) noexcept {
       AVLNodeOwner<T> rm;
       auto head = _heads.template
@@ -2021,7 +2007,6 @@ public:
       return _order_ty;
    }
 
-   // TODO deal with `_head` WRT `const_iterator`
    const_iterator cbegin() noexcept {
       const_iterator it(this, _order_ty);
       _cend = it.end();
@@ -2032,7 +2017,6 @@ public:
       return _cend;
    }
 
-   // TODO deal with `_head` WRT `const_reverse_iterator`
    const_reverse_iterator crbegin() noexcept {
       const_reverse_iterator it(this, _order_ty);
       _crend = it.end();
@@ -2058,7 +2042,6 @@ public:
       return _size;
    }
 
-   // TODO deal with `_head` WRT `clear()`
    void clear() noexcept {
       _insertion_list.clear();
       _index.clear();
