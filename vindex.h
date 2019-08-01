@@ -46,7 +46,11 @@ namespace hash_helpers {
    }
 }
 
-namespace head_type {
+namespace OrderType {
+   enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
+}
+
+namespace _head_type {
    struct node_ref {};
    struct node_data {};
 }
@@ -106,10 +110,6 @@ namespace _IterTracker {
             vin->_insertion_list.rbegin(),
             vin->_insertion_list.rend()) {}
    };
-}
-
-namespace OrderType {
-   enum OrderType { INORDER, PREORDER, POSTORDER, BREADTHFIRST, INSERTION };
 }
 
 template <typename T>
@@ -366,7 +366,7 @@ private:
 
    template <typename ComparatorTy>
    std::unique_ptr<std::pair<Comparator&, NodeRefOwner&>> 
-      _get(const ComparatorTy& cmp, head_type::node_ref) {
+      _get(const ComparatorTy& cmp, _head_type::node_ref) {
 
       auto it = _secondary_heads.find(std::make_unique<ComparatorTy>(cmp));
       if (it != _secondary_heads.end())
@@ -377,7 +377,7 @@ private:
 
    template <typename ComparatorTy>
    std::unique_ptr<std::pair<Comparator&, const NodeRefOwner&>> 
-      _get(const ComparatorTy& cmp, head_type::node_ref) const {
+      _get(const ComparatorTy& cmp, _head_type::node_ref) const {
 
       auto it = _secondary_heads.find(std::make_unique<ComparatorTy>(cmp));
       if (it != _secondary_heads.end())
@@ -388,7 +388,7 @@ private:
 
    template <typename ComparatorTy>
    std::unique_ptr<std::pair<Comparator&, NodeDataOwner&>> 
-      _get(const ComparatorTy& cmp, head_type::node_data) {
+      _get(const ComparatorTy& cmp, _head_type::node_data) {
 
       if (_primary_head.first && cmp == *_primary_head.first)
          return std::make_unique<std::pair<Comparator&, NodeDataOwner&>>(
@@ -398,7 +398,7 @@ private:
 
    template <typename ComparatorTy>
    std::unique_ptr<std::pair<Comparator&, const NodeDataOwner&>> 
-      _get(const ComparatorTy& cmp, head_type::node_data) const {
+      _get(const ComparatorTy& cmp, _head_type::node_data) const {
 
       if (_primary_head.first && cmp == *_primary_head.first)
          return std::make_unique<std::pair<Comparator&, const NodeDataOwner&>>(
@@ -423,7 +423,7 @@ public:
       std::pair<
          Comparator&, 
          typename std::conditional<
-            std::is_same<HeadTy, head_type::node_ref>::value, 
+            std::is_same<HeadTy, _head_type::node_ref>::value, 
             const NodeRefOwner&, 
             const NodeDataOwner&
          >::type
@@ -437,7 +437,7 @@ public:
       std::pair<
          Comparator&, 
          typename std::conditional<
-            std::is_same<HeadTy, head_type::node_ref>::value, 
+            std::is_same<HeadTy, _head_type::node_ref>::value, 
             NodeRefOwner&, 
             NodeDataOwner&
          >::type
@@ -1128,7 +1128,7 @@ private:
          _tracker(vin) {
 
          auto head = vin->_heads.template
-            get<head_type::node_data>(Vindex<KeyTy, T>::_default_comparator());
+            get<_head_type::node_data>(Vindex<KeyTy, T>::_default_comparator());
          _cmp = &head->first;
          assert(_cmp, "NullPointerError");
          _curr = _init_curr(head->second);
@@ -1389,7 +1389,7 @@ private:
          return nullptr;
 
       auto head = _heads.template
-         get<head_type::node_data>(_default_comparator());
+         get<_head_type::node_data>(_default_comparator());
       Comparator& cmp = head->first;
 
       if (cmp.eq(val, subtree->data))
@@ -1720,7 +1720,7 @@ private:
       AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
       T& data = real_n->data;
       auto head = _heads.template
-         get<head_type::node_data>(_default_comparator());
+         get<_head_type::node_data>(_default_comparator());
       assert(head, "InvalidHeadError");
       return _insert(&real_n, &head->second, head->first);
    }
@@ -1836,7 +1836,7 @@ private:
       }
 
       auto head = _heads.template
-         get<head_type::node_data>(_default_comparator());
+         get<_head_type::node_data>(_default_comparator());
       Comparator& cmp = head->first;
 
       if (cmp.lt(val, (*tree)->data))
@@ -1911,7 +1911,7 @@ private:
       size_t curr_depth = 1;
       size_t node_cnt = 0;
       auto head = _heads.template 
-         get<head_type::node_data>(_default_comparator());
+         get<_head_type::node_data>(_default_comparator());
 
       if (head->second.get())
          dq.push_back(head->second.get());
@@ -1989,7 +1989,7 @@ public:
    Result<T> remove(const T& val) noexcept {
       AVLNodeOwner<T> rm;
       auto head = _heads.template
-         get<head_type::node_data>(_default_comparator());
+         get<_head_type::node_data>(_default_comparator());
       _remove_and_rebalance(val, &head->second, nullptr, &rm);
 
       if (rm) {
@@ -2047,7 +2047,7 @@ public:
       _insertion_list.clear();
       _index.clear();
       auto head = _heads.template
-         get<head_type::node_data>(_default_comparator());
+         get<_head_type::node_data>(_default_comparator());
       head->second = nullptr;
       _size = 0;
    }
