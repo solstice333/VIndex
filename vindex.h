@@ -526,6 +526,7 @@ private:
       static void init(DefaultComparator<T>* dc) {}
    };
 
+   // TODO T needs to be T& eventually
    template <bool reverse>
    class _const_iterator : 
       public std::iterator<std::bidirectional_iterator_tag, T> {
