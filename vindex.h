@@ -1447,8 +1447,8 @@ private:
       return _num_children(n) > 0;
    }
 
-   template <typename DATA_TY>
-   int _height(AVLNode<DATA_TY>* tree) {
+   template <typename U>
+   int _height(AVLNode<U>* tree) {
       if (!tree)
          return 0;
       return max(_height(tree->left_raw()), _height(tree->right_raw())) + 1;
@@ -1474,29 +1474,29 @@ private:
       return bf > 0;
    }
 
-   template <typename DATA_TY>
-   int _balance_factor(AVLNode<DATA_TY>* subtree) {
+   template <typename U>
+   int _balance_factor(AVLNode<U>* subtree) {
       return subtree ? 
          _height(subtree->right_raw()) - _height(subtree->left_raw()) : 0;
    }
 
-   template <typename DATA_TY>
-   bool _is_left_left(AVLNode<DATA_TY>* subtree) {
+   template <typename U>
+   bool _is_left_left(AVLNode<U>* subtree) {
       return _is_left_heavy(_balance_factor(subtree->left_raw()));
    }
 
-   template <typename DATA_TY>
-   bool _is_left_right(AVLNode<DATA_TY>* subtree) {
+   template <typename U>
+   bool _is_left_right(AVLNode<U>* subtree) {
       return _is_right_heavy(_balance_factor(subtree->left_raw()));
    }
 
-   template <typename DATA_TY>
-   bool _is_right_right(AVLNode<DATA_TY>* subtree) {
+   template <typename U>
+   bool _is_right_right(AVLNode<U>* subtree) {
       return _is_right_heavy(_balance_factor(subtree->right_raw()));
    }
 
-   template <typename DATA_TY>
-   bool _is_right_left(AVLNode<DATA_TY>* subtree) {
+   template <typename U>
+   bool _is_right_left(AVLNode<U>* subtree) {
       return _is_left_heavy(_balance_factor(subtree->right_raw()));
    }
 
@@ -1522,11 +1522,11 @@ private:
       return ychild;
    }
 
-   template <typename DATA_TY>
+   template <typename U>
    void _single_rotation_parts(
-      const AVLNodeOwner<DATA_TY>& x,
-      AVLNodeOwner<DATA_TY>* y, AVLNodeOwner<DATA_TY>* t2, 
-      AVLNodeOwner<DATA_TY>** x_owner, AVLNodeOwner<DATA_TY>** t2_owner,
+      const AVLNodeOwner<U>& x,
+      AVLNodeOwner<U>* y, AVLNodeOwner<U>* t2, 
+      AVLNodeOwner<U>** x_owner, AVLNodeOwner<U>** t2_owner,
       Direction y_dxn) {
 
       if (y_dxn == Direction::LEFT) {
@@ -1545,34 +1545,34 @@ private:
          assert(false, "InvalidDirectionError");
    }
 
-   template <typename DATA_TY>
+   template <typename U>
    void _single_rotation_metadata_update(
-      AVLNodeOwner<DATA_TY>* parent, AVLNodeOwner<DATA_TY>** child) {
+      AVLNodeOwner<U>* parent, AVLNodeOwner<U>** child) {
       if (**child)
          (**child)->parent = parent->get();
       (*parent)->height = _height(parent->get());
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _modify_proxy_tree(
-      AVLNodeOwner<DATA_TY>* tree, const TreeEditAction<DATA_TY>& edit) {
+   template <typename U>
+   AVLNodeOwner<U>& _modify_proxy_tree(
+      AVLNodeOwner<U>* tree, const TreeEditAction<U>& edit) {
 
-      AVLNodeOwner<DATA_TY> working_tree = std::move(*tree);
+      AVLNodeOwner<U> working_tree = std::move(*tree);
       *tree = edit(&working_tree);
       return *tree;
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _single_rotation(
-      AVLNodeOwner<DATA_TY>* tree, Direction y_dxn) {
-      return _modify_proxy_tree<DATA_TY>(
+   template <typename U>
+   AVLNodeOwner<U>& _single_rotation(
+      AVLNodeOwner<U>* tree, Direction y_dxn) {
+      return _modify_proxy_tree<U>(
          tree, 
-         [&y_dxn, this](AVLNodeOwner<DATA_TY>* x) -> AVLNodeOwner<DATA_TY> {
+         [&y_dxn, this](AVLNodeOwner<U>* x) -> AVLNodeOwner<U> {
 
-         AVLNodeOwner<DATA_TY> y;
-         AVLNodeOwner<DATA_TY> t2;
-         AVLNodeOwner<DATA_TY>* x_owner = nullptr;
-         AVLNodeOwner<DATA_TY>* t2_owner = nullptr;
+         AVLNodeOwner<U> y;
+         AVLNodeOwner<U> t2;
+         AVLNodeOwner<U>* x_owner = nullptr;
+         AVLNodeOwner<U>* t2_owner = nullptr;
 
          _single_rotation_parts(*x, &y, &t2, &x_owner, &t2_owner, y_dxn);
          *t2_owner = std::move(t2);
@@ -1584,64 +1584,64 @@ private:
       });
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _right_rotation(AVLNodeOwner<DATA_TY>* subtree) {
-      return _modify_proxy_tree<DATA_TY>(
+   template <typename U>
+   AVLNodeOwner<U>& _right_rotation(AVLNodeOwner<U>* subtree) {
+      return _modify_proxy_tree<U>(
          subtree, 
-         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+         [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             return std::move(_single_rotation(working_tree, Direction::LEFT));
          });
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _left_rotation(AVLNodeOwner<DATA_TY>* subtree) {
-      return _modify_proxy_tree<DATA_TY>(
+   template <typename U>
+   AVLNodeOwner<U>& _left_rotation(AVLNodeOwner<U>* subtree) {
+      return _modify_proxy_tree<U>(
          subtree, 
-         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+         [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             return std::move(_single_rotation(working_tree, Direction::RIGHT));
          });
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _left_right_double_rotation(
-      AVLNodeOwner<DATA_TY>* subtree) {
-      _modify_proxy_tree<DATA_TY>(
+   template <typename U>
+   AVLNodeOwner<U>& _left_right_double_rotation(
+      AVLNodeOwner<U>* subtree) {
+      _modify_proxy_tree<U>(
          &(*subtree)->left,
-         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+         [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             return std::move(_left_rotation(working_tree));
          });
-      return _modify_proxy_tree<DATA_TY>(
+      return _modify_proxy_tree<U>(
          subtree,
-         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+         [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             return std::move(_right_rotation(working_tree));
          });
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _right_left_double_rotation(
-      AVLNodeOwner<DATA_TY>* subtree) {
-       _modify_proxy_tree<DATA_TY>(
+   template <typename U>
+   AVLNodeOwner<U>& _right_left_double_rotation(
+      AVLNodeOwner<U>* subtree) {
+       _modify_proxy_tree<U>(
          &(*subtree)->right,
-         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+         [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             return std::move(_right_rotation(working_tree));
          });
-      return _modify_proxy_tree<DATA_TY>(
+      return _modify_proxy_tree<U>(
          subtree,
-         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+         [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             return std::move(_left_rotation(working_tree));
          });
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _rebalance(AVLNodeOwner<DATA_TY>* subtree) {
+   template <typename U>
+   AVLNodeOwner<U>& _rebalance(AVLNodeOwner<U>* subtree) {
       int bf = _balance_factor(subtree->get());
-      AVLNodeOwner<DATA_TY>* balanced_tree = nullptr;
+      AVLNodeOwner<U>* balanced_tree = nullptr;
 
       if (_is_too_heavy(bf)) {
-         balanced_tree = &_modify_proxy_tree<DATA_TY>(
+         balanced_tree = &_modify_proxy_tree<U>(
             subtree,
             [this, &bf](
-               AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+               AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
                if (_is_too_left_heavy(bf)) {
                   if (_is_left_left(working_tree->get()))
                      return std::move(_right_rotation(working_tree));
@@ -1671,32 +1671,32 @@ private:
       return *balanced_tree;
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _child_insertion_side(
-      AVLNodeOwner<DATA_TY>* n, 
-      AVLNodeOwner<DATA_TY>* subtree, 
+   template <typename U>
+   AVLNodeOwner<U>& _child_insertion_side(
+      AVLNodeOwner<U>* n, 
+      AVLNodeOwner<U>* subtree, 
       const Comparator& cmp) {
 
       return cmp.lt((*n)->data, (*subtree)->data) ?
          (*subtree)->left : (*subtree)->right;
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _insert_recurs(
-      AVLNodeOwner<DATA_TY>* n, 
-      AVLNodeOwner<DATA_TY>* subtree, 
-      AVLNode<DATA_TY>** result,
+   template <typename U>
+   AVLNodeOwner<U>& _insert_recurs(
+      AVLNodeOwner<U>* n, 
+      AVLNodeOwner<U>* subtree, 
+      AVLNode<U>** result,
       const Comparator& cmp) {
 
       (*n)->parent = subtree->get();
 
-      AVLNodeOwner<DATA_TY>& child_tree = 
+      AVLNodeOwner<U>& child_tree = 
          _child_insertion_side(n, subtree, cmp);
 
       if (child_tree) {
-         _modify_proxy_tree<DATA_TY>(&child_tree,
+         _modify_proxy_tree<U>(&child_tree,
             [this, &n, &subtree, &result, &cmp](
-               AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+               AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
                return std::move(
                   _insert_recurs(n, working_tree, result, cmp));
             });
@@ -1709,17 +1709,17 @@ private:
 
       (*subtree)->height = _height(subtree->get());
 
-      return _modify_proxy_tree<DATA_TY>(
+      return _modify_proxy_tree<U>(
          subtree,
-         [this](AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+         [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             return std::move(_rebalance(working_tree));
          });
    }
 
-   template <typename DATA_TY>
-   AVLNode<DATA_TY>*  _insert(
-      AVLNodeOwner<DATA_TY>* n, 
-      AVLNodeOwner<DATA_TY>* head, 
+   template <typename U>
+   AVLNode<U>*  _insert(
+      AVLNodeOwner<U>* n, 
+      AVLNodeOwner<U>* head, 
       const Comparator& cmp) {
 
       ++(*n)->height;
@@ -1730,7 +1730,7 @@ private:
          return head->get();
       }
 
-      AVLNode<DATA_TY>* result;
+      AVLNode<U>* result;
       *head = std::move(_insert_recurs(n, head, &result, cmp));
       (*head)->parent = nullptr;
       return result;
@@ -1763,19 +1763,19 @@ private:
       return AVLNodeOwner<T>();
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _on_removal_one_child(
-      AVLNodeOwner<DATA_TY>* n, AVLNodeOwner<DATA_TY>* rm = nullptr) {
+   template <typename U>
+   AVLNodeOwner<U>& _on_removal_one_child(
+      AVLNodeOwner<U>* n, AVLNodeOwner<U>* rm = nullptr) {
       assert(*n, "NullPointerError");
       assert(_num_children(n->get()) == 1, "MustHaveExactlyOneChildError");
 
-      return _modify_proxy_tree<DATA_TY>(n,
+      return _modify_proxy_tree<U>(n,
          [this, &rm](
-            AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
-            AVLNodeOwner<DATA_TY> child = 
+            AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
+            AVLNodeOwner<U> child = 
                std::move(_first_child(working_tree->get()));
 
-            AVLNodeOwner<DATA_TY> tmp;
+            AVLNodeOwner<U> tmp;
             if (!rm)
                rm = &tmp;
 
@@ -1804,13 +1804,13 @@ private:
          (*next)->right->parent = next->get();
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY> _rm_next_in_order(
-      AVLNodeOwner<DATA_TY>* tree, AVLNodeOwner<DATA_TY>* next) {
+   template <typename U>
+   AVLNodeOwner<U> _rm_next_in_order(
+      AVLNodeOwner<U>* tree, AVLNodeOwner<U>* next) {
       if ((*tree)->left) {
-         return std::move(_modify_proxy_tree<DATA_TY>(&(*tree)->left,
+         return std::move(_modify_proxy_tree<U>(&(*tree)->left,
             [this, &next](
-               AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
+               AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
                *working_tree = std::move(_rm_next_in_order(working_tree, next));
                (*working_tree)->height = _height(working_tree->get());
                return std::move(*working_tree);
@@ -1825,16 +1825,16 @@ private:
       }
    }
 
-   template <typename DATA_TY>
-   AVLNodeOwner<DATA_TY>& _on_removal_two_children(
-      AVLNodeOwner<DATA_TY>* n, AVLNodeOwner<DATA_TY>* rm = nullptr) {
+   template <typename U>
+   AVLNodeOwner<U>& _on_removal_two_children(
+      AVLNodeOwner<U>* n, AVLNodeOwner<U>* rm = nullptr) {
       assert(n, "NullPointerError");
 
-      return  _modify_proxy_tree<DATA_TY>(n, 
+      return  _modify_proxy_tree<U>(n, 
          [this, &n, &rm](
-            AVLNodeOwner<DATA_TY>* working_tree) -> AVLNodeOwner<DATA_TY> {
-            AVLNodeOwner<DATA_TY> next;
-            AVLNodeOwner<DATA_TY> tmp;
+            AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
+            AVLNodeOwner<U> next;
+            AVLNodeOwner<U> tmp;
             if (!rm)
                rm = &tmp;
 
