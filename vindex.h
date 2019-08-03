@@ -1360,7 +1360,7 @@ private:
       return ss.str();
    }
 
-   static std::string _node_data_str(AVLNode<T>* n) {
+   static std::string _node_data_str(AVLNode<T&>* n) {
       std::stringstream ss;
       if (n)
          ss << n->data;
@@ -1369,7 +1369,7 @@ private:
       return ss.str();
    }
 
-   static std::string _node_str(const AVLNode<T>& n) {
+   static std::string _node_str(const AVLNode<T&>& n) {
       std::stringstream ss;
       ss << "(" 
          << "data: " << n.data 
@@ -1385,29 +1385,8 @@ private:
       return 1 << (lv - 1);
    }
 
-   AVLNode<T>* _find(AVLNode<T>* subtree, const T& val) {
-      if (!subtree)
-         return nullptr;
-
-      auto head = _heads.template
-         get<_head_type::node_data>(_default_comparator());
-      Comparator& cmp = head->first;
-
-      if (cmp.eq(val, subtree->data))
-         return subtree;
-      else if (cmp.lt(val, subtree->data))
-         return _find(subtree->left_raw(), val);
-      else
-         return _find(subtree->right_raw(), val);
-   }
-
-   AVLNode<T>* _get_to_root_from(AVLNode<T>* node) {
-      while (node->parent)
-         node = node->parent;
-      return node;
-   }
-
-   AVLNodeOwner<T>& _first_child(AVLNode<T>* n) {
+   template <typename U>
+   AVLNodeOwner<U>& _first_child(AVLNode<U>* n) {
       assert(n, "NullPointerError");
       if (n->left)
          return n->left;
@@ -1417,21 +1396,8 @@ private:
          assert(false, "NoChildError");
    }
 
-   Direction _which_child(AVLNode<T>* n) {
-      assert(n, "NullPointerError");
-      AVLNode<T>* parent = n->parent;
-
-      if (!parent)
-         return Direction::ROOT;
-      else if (parent->left_raw() == n)
-         return Direction::LEFT;
-      else if (parent->right_raw() == n)
-         return Direction::RIGHT;
-      else
-         assert(false, "DetachedNodeError");
-   }
-
-   int _num_children(AVLNode<T>* n) {
+   template <typename U>
+   int _num_children(AVLNode<U>* n) {
       int cnt = 0;
 
       if (!n)
@@ -1441,10 +1407,6 @@ private:
       if (n->right)
          ++cnt;
       return cnt;
-   }
-
-   bool _has_children(AVLNode<T>* n) {
-      return _num_children(n) > 0;
    }
 
    template <typename U>
@@ -1498,28 +1460,6 @@ private:
    template <typename U>
    bool _is_right_left(AVLNode<U>* subtree) {
       return _is_left_heavy(_balance_factor(subtree->right_raw()));
-   }
-
-   AVLNodeOwner<T>* _xchild_by_rotation(AVLNode<T>* x, Direction rot_dxn) {
-      AVLNodeOwner<T>* xchild = nullptr;
-      if (rot_dxn == Direction::LEFT)
-         xchild = &x->left;
-      else if (rot_dxn == Direction::RIGHT)
-         xchild = &x->right;
-      else
-         assert(false, "InvalidDirectionError");
-      return xchild;
-   }
-
-   AVLNodeOwner<T>* _ychild_by_rotation(AVLNode<T>* y, Direction rot_dxn) {
-      AVLNodeOwner<T>* ychild = nullptr;
-      if (rot_dxn == Direction::LEFT)
-         ychild = &y->right;
-      else if (rot_dxn = Direction::RIGHT)
-         ychild = &y->left;
-      else
-         assert(false, "InvalidDirectionError");
-      return ychild;
    }
 
    template <typename U>
@@ -1736,7 +1676,6 @@ private:
       return result;
    }
 
-   // TODO iterate through all `_heads`
    AVLNode<T>* _insert_each_head(const T& val) {
       AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
       T& data = real_n->data;
@@ -1753,14 +1692,15 @@ private:
       return rtn;
    }
 
-   AVLNodeOwner<T> _on_removal_leaf(
-      AVLNodeOwner<T>* n, AVLNodeOwner<T>* rm = nullptr) {
+   template <typename U>
+   AVLNodeOwner<U> _on_removal_leaf(
+      AVLNodeOwner<U>* n, AVLNodeOwner<U>* rm = nullptr) {
       assert(n, "NullPointerError");
       assert(!(*n)->left && !(*n)->right, "NotLeafError");
 
       if (rm)
          *rm = std::move(*n);
-      return AVLNodeOwner<T>();
+      return AVLNodeOwner<U>();
    }
 
    template <typename U>
@@ -1792,7 +1732,8 @@ private:
       );
    }
 
-   void _transfer_to_next(AVLNodeOwner<T>* next, AVLNodeOwner<T>* temp) {
+   template <typename U>
+   void _transfer_to_next(AVLNodeOwner<U>* next, AVLNodeOwner<U>* temp) {
       (*next)->left = std::move((*temp)->left);
       (*next)->right = std::move((*temp)->right);
       (*next)->parent = (*temp)->parent;
@@ -1848,13 +1789,18 @@ private:
       );
    }
 
+   // TODO refactor to return `rm`
+   template <typename U>
    void _remove_and_rebalance(
-      const T& val, AVLNodeOwner<T>* subtree, 
-      AVLNode<T>* parent, AVLNodeOwner<T>* rm) {
+      const T& val, AVLNodeOwner<U>* subtree, 
+      AVLNode<U>* parent, const Comparator& cmp, AVLNodeOwner<U>* rm) {
 
-      _modify_proxy_tree<T>(subtree,
-         [this, &val, &rm](AVLNodeOwner<T>* working_tree) -> AVLNodeOwner<T> {
-            *working_tree = std::move(_remove(val, working_tree, rm));
+      _modify_proxy_tree<U>(subtree,
+         [this, &val, &cmp, &rm](
+            AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
+
+            *working_tree = 
+               std::move(_remove(val, working_tree, cmp, rm));
             return std::move(_rebalance(working_tree));
          });
 
@@ -1862,21 +1808,19 @@ private:
          (*subtree)->parent = parent;
    }
 
-   AVLNodeOwner<T>& _remove(
-      const T& val, AVLNodeOwner<T>* tree, AVLNodeOwner<T>* rm) {
+   template <typename U>
+   AVLNodeOwner<U>& _remove(
+      const T& val, AVLNodeOwner<U>* tree, 
+      const Comparator& cmp, AVLNodeOwner<U>* rm) {
       if (!*tree) {
          *rm = nullptr;
          return *tree;
       }
 
-      auto head = _heads.template
-         get<_head_type::node_data>(_default_comparator());
-      Comparator& cmp = head->first;
-
       if (cmp.lt(val, (*tree)->data))
-         _remove_and_rebalance(val, &(*tree)->left, tree->get(), rm);
+         _remove_and_rebalance(val, &(*tree)->left, tree->get(), cmp, rm);
       else if (cmp.gt(val, (*tree)->data))
-         _remove_and_rebalance(val, &(*tree)->right, tree->get(), rm);
+         _remove_and_rebalance(val, &(*tree)->right, tree->get(), cmp, rm);
       else {
          if (_num_children(tree->get()) == 1)
             *tree = std::move(_on_removal_one_child(tree, rm));
@@ -1891,38 +1835,38 @@ private:
       return *tree;
    }
 
-   bool _is_dq_all_nulls(const NodeDQ<T>& dq) const {
+   bool _is_dq_all_nulls(const NodeDQ<T&>& dq) const {
       auto it = find_if(
-         dq.begin(), dq.end(), [](AVLNode<T>* n) -> bool { return n; });
+         dq.begin(), dq.end(), [](AVLNode<T&>* n) -> bool { return n; });
       return it == dq.end();
    }
 
-   void _on_max_nodes_per_line(NodeDQ<T>* dq, const VoidFunc& func) const {
+   void _on_max_nodes_per_line(NodeDQ<T&>* dq, const VoidFunc& func) const {
       func();
       if (_is_dq_all_nulls(*dq))
          dq->clear();
    }
 
    void _on_valid_node(
-      NodeDQ<T>* dq, AVLNode<T>* n, const NodeListener<T>& func) const {
+      NodeDQ<T&>* dq, AVLNode<T&>* n, const NodeListener<T&>& func) const {
       func(n);
       dq->push_back(n->left_raw());
       dq->push_back(n->right_raw());
    }
 
-   void _on_null_node(NodeDQ<T>* dq, const NodeListener<T>& func) const {
+   void _on_null_node(NodeDQ<T&>* dq, const NodeListener<T&>& func) const {
       func(nullptr);
       dq->push_back(nullptr);
       dq->push_back(nullptr);
    }
 
-   void _gather_bfs(NodeDQ<T>* dq, size_t* curr_depth,
-      size_t* node_cnt, const NodeListener<T>& func) const {
+   void _gather_bfs(NodeDQ<T&>* dq, size_t* curr_depth,
+      size_t* node_cnt, const NodeListener<T&>& func) const {
 
       if (dq->empty()) 
          return;
 
-      AVLNode<T>* n = dq->front();
+      AVLNode<T&>* n = dq->front();
       dq->pop_front();
 
       if (n) 
@@ -1939,30 +1883,32 @@ private:
       _gather_bfs(dq, curr_depth, node_cnt, func);
    }
 
-   NodeList<T> _gather_bfs_list() const {
-      NodeDQ<T> dq;
-      NodeList<T> nl;
+   template <typename CmpTy>
+   NodeList<T&> _gather_bfs_list(const CmpTy& cmp) const {
+      NodeDQ<T&> dq;
+      NodeList<T&> nl;
       size_t curr_depth = 1;
       size_t node_cnt = 0;
-      auto head = _heads.template 
-         get<_head_type::node_data>(_default_comparator());
+      auto head = _heads.template get<_head_type::node_ref>(cmp);
 
-      if (head->second.get())
+      if (head->second)
          dq.push_back(head->second.get());
 
       _gather_bfs(&dq, &curr_depth, &node_cnt,
-         [&nl](AVLNode<T>* n) { nl.push_back(n); });
+         [&nl](AVLNode<T&>* n) { nl.push_back(n); });
       return nl;
    }
 
-   std::string _gather_bfs_str(const std::string& delim="|") const {
-      NodeList<T> nl = _gather_bfs_list();
+   template <typename CmpTy>
+   std::string _gather_bfs_str(
+      const std::string& delim, const CmpTy& cmp) const {
+      NodeList<T&> nl = _gather_bfs_list(cmp);
       std::stringstream ss;
       int node_cnt = 0;
       int curr_depth = 1;
 
       for (auto nit = nl.begin(); nit != nl.end(); ++nit) {
-         AVLNode<T>* n = *nit;
+         AVLNode<T&>* n = *nit;
          bool last_node = ++node_cnt == _nodes_at_lv(curr_depth);
          ss << (n ? _node_str(*n) : "(null)") << (last_node ? "" : " ");
 
@@ -1976,9 +1922,11 @@ private:
       return ss.str();
    }
 
-   // TODO: support for supplying a comparator
-   std::string _bfs_str(const std::string& delim = "|") const {
-      return _gather_bfs_str(delim);
+   template <typename CmpTy=DefaultComparator<T>>
+   std::string _bfs_str(
+      const std::string& delim = "|",
+      const CmpTy& cmp=_default_comparator()) const {
+      return _gather_bfs_str(delim, cmp);
    }
 
    std::string _index_str(const std::string& delim = "|") const {
@@ -2019,12 +1967,17 @@ public:
       insert(T(std::forward<Args>(args)...));
    }
 
-   // TODO remove from all `_heads`
    Result<T> remove(const T& val) noexcept {
+      for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it) {
+         AVLNodeOwner<T&> ignore;
+         _remove_and_rebalance<T&>(
+            val, &head_it->second, nullptr, head_it->first, &ignore);
+      }
+
       AVLNodeOwner<T> rm;
       auto head = _heads.template
          get<_head_type::node_data>(_default_comparator());
-      _remove_and_rebalance(val, &head->second, nullptr, &rm);
+      _remove_and_rebalance<T>(val, &head->second, nullptr, head->first, &rm);
 
       if (rm) {
          _insertion_list.remove(rm.get());
