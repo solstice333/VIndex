@@ -1976,6 +1976,7 @@ private:
       return ss.str();
    }
 
+   // TODO: support for supplying a comparator
    std::string _bfs_str(const std::string& delim = "|") const {
       return _gather_bfs_str(delim);
    }
@@ -2081,6 +2082,8 @@ public:
       _index.clear();
       auto head = _heads.template
          get<_head_type::node_data>(_default_comparator());
+      for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it)
+         head_it->second = nullptr;
       head->second = nullptr;
       _size = 0;
    }
