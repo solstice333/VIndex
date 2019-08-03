@@ -291,8 +291,6 @@ public:
       typename decltype(_secondary_heads)::value_type
    > {
    private:
-      friend class _Heads<T>;
-
       typedef decltype(_Heads::_secondary_heads) HeadMap;
       typedef typename HeadMap::iterator MapIter;
       typedef typename HeadMap::value_type MapEntry;
@@ -460,8 +458,10 @@ public:
 template <typename KeyTy, typename T>
 class Vindex {
 private:
+   // TODO get rid of this friend and pass in `_insertion_list` instead
    template <typename NodeDataTy, typename IterTy>
    friend class _IterTracker::IterTracker;
+
    friend class TestIntVindex;
 
    typedef _Direction::Direction Direction;
