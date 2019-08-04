@@ -1109,7 +1109,8 @@ private:
          _prev_lv(0) 
          {}
 
-      // TODO specify comparator with function templates
+      // TODO specify comparator with function templates and get 
+      // `_head_type::node_ref`
       _const_iterator(Vindex* vin, OrderType order_ty): 
          _curr(nullptr), 
          _prev(nullptr),
