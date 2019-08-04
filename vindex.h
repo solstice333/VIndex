@@ -1784,23 +1784,26 @@ private:
       );
    }
 
-   // TODO refactor to return `rm`
    template <typename U>
-   void _remove_and_rebalance(
+   AVLNodeOwner<U> _remove_and_rebalance(
       const T& val, AVLNodeOwner<U>* subtree, 
-      AVLNode<U>* parent, const Comparator& cmp, AVLNodeOwner<U>* rm) {
+      AVLNode<U>* parent, const Comparator& cmp) {
+
+      AVLNodeOwner<U> rm;
 
       _modify_proxy_tree<U>(subtree,
          [this, &val, &cmp, &rm](
             AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
 
             *working_tree = 
-               std::move(_remove(val, working_tree, cmp, rm));
+               std::move(_remove(val, working_tree, cmp, &rm));
             return std::move(_rebalance(working_tree));
          });
 
       if (*subtree)
          (*subtree)->parent = parent;
+
+      return rm;
    }
 
    template <typename U>
@@ -1813,9 +1816,9 @@ private:
       }
 
       if (cmp.lt(val, (*tree)->data))
-         _remove_and_rebalance(val, &(*tree)->left, tree->get(), cmp, rm);
+         *rm = _remove_and_rebalance(val, &(*tree)->left, tree->get(), cmp);
       else if (cmp.gt(val, (*tree)->data))
-         _remove_and_rebalance(val, &(*tree)->right, tree->get(), cmp, rm);
+         *rm = _remove_and_rebalance(val, &(*tree)->right, tree->get(), cmp);
       else {
          if (_num_children(tree->get()) == 1)
             *tree = std::move(_on_removal_one_child(tree, rm));
@@ -1964,15 +1967,14 @@ public:
 
    Result<T> remove(const T& val) noexcept {
       for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it) {
-         AVLNodeOwner<T&> ignore;
          _remove_and_rebalance<T&>(
-            val, &head_it->second, nullptr, head_it->first, &ignore);
+            val, &head_it->second, nullptr, head_it->first);
       }
 
-      AVLNodeOwner<T> rm;
       auto head = _heads.template
          get<_head_type::node_data>(_default_comparator());
-      _remove_and_rebalance<T>(val, &head->second, nullptr, head->first, &rm);
+      AVLNodeOwner<T> rm =
+         _remove_and_rebalance<T>(val, &head->second, nullptr, head->first);
 
       if (rm) {
          _insertion_list.remove(rm.get());
