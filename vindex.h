@@ -85,11 +85,9 @@ namespace _IterTracker {
    public:
       IterTracker(): IterTrackerBase<IterTy>() {}
 
-      IterTracker(Vindex<KeyTy, NodeDataTy>* vin): 
-         IterTrackerBase<IterTy>(
-            vin->_insertion_list.begin(),
-            vin->_insertion_list.end()) {
-      }
+      IterTracker(
+         typename Vindex<KeyTy, NodeDataTy>::template NodeList<NodeDataTy>& l):
+         IterTrackerBase<IterTy>(l.begin(), l.end()) {}
    };
 
    template <typename T, typename KeyTy>
@@ -105,10 +103,10 @@ namespace _IterTracker {
    public:
       IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>() {}
 
-      IterTracker(Vindex<KeyTy, NodeDataTy>* vin):
+      IterTracker(
+         typename Vindex<KeyTy, NodeDataTy>::template NodeList<NodeDataTy>& l):
          IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>(
-            vin->_insertion_list.rbegin(),
-            vin->_insertion_list.rend()) {}
+            l.rbegin(), l.rend()) {}
    };
 }
 
@@ -458,10 +456,6 @@ public:
 template <typename KeyTy, typename T>
 class Vindex {
 private:
-   // TODO get rid of this friend and pass in `_insertion_list` instead
-   template <typename NodeDataTy, typename IterTy>
-   friend class _IterTracker::IterTracker;
-
    friend class TestIntVindex;
 
    typedef _Direction::Direction Direction;
@@ -1126,7 +1120,7 @@ private:
          _curr_lv(0), 
          _prev_lv(0),
 
-         _tracker(vin) {
+         _tracker(vin->_insertion_list) {
 
          auto head = vin->_heads.template
             get<_head_type::node_data>(Vindex<KeyTy, T>::_default_comparator());
