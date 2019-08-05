@@ -1950,6 +1950,8 @@ public:
       _size(0)
       {}
 
+   // TODO add push_comparator()
+
    ConstResult<T&> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T&>>();
