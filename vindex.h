@@ -522,7 +522,6 @@ private:
       static void init(DefaultComparator<T>* dc) {}
    };
 
-   // TODO T needs to be T& eventually
    template <bool reverse>
    class _const_iterator : 
       public std::iterator<std::bidirectional_iterator_tag, T> {
@@ -1111,8 +1110,7 @@ private:
          _prev_lv(0) 
          {}
 
-      // TODO specify comparator with function templates and get 
-      // `_head_type::node_ref`
+      // TODO specify comparator with function templates
       _const_iterator(Vindex* vin, OrderType order_ty): 
          _curr(nullptr), 
          _prev(nullptr),
