@@ -1977,7 +1977,7 @@ public:
       {}
 
    template <typename ComparatorTy>
-   void push_comparator(const ComparatorTy& cmp) {
+   void push_comparator(const ComparatorTy& cmp) noexcept {
       _heads.push(cmp);
       auto head = _heads.template get<_head_type::node_ref>(cmp);
       assert(head, "NullPointerError");
