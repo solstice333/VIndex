@@ -76,6 +76,15 @@ ostream& operator<<(ostream& os, const Point& p) {
    return os << p.str();
 }
 
+template <typename T>
+ostream& operator<<(ostream& os, const vector<T>& v) {
+   os << "[";
+   for (auto it = v.begin(); it != v.end(); ++it)
+      os << *it << (it == v.end() - 1 ? "" : ", ");
+   os << "]";
+   return os;
+}
+
 template<>
 struct std::hash<Point> {
    size_t operator()(const Point& p) {
@@ -1567,6 +1576,41 @@ public:
 
       assert(vin._bfs_str("|", ycmp) == "(data: (3,3), height: 3, left: (4,2), right: (2,4), parent: null)|(data: (4,2), height: 1, left: null, right: null, parent: (3,3)) (data: (2,4), height: 2, left: null, right: (1,5), parent: (3,3))|(null) (null) (null) (data: (1,5), height: 1, left: null, right: null, parent: (2,4))");
    }
+
+   void test_multi_comparators_iter() {
+      Vindex<int, Point> vin(make_extractor(Point, x));
+      vin.emplace(3, 3);
+      vin.emplace(2, 4);
+      vin.emplace(4, 2);
+      vin.emplace(1, 5);
+
+      auto ycmp = YCmp();
+
+      vector<string> v;
+      for (auto it = vin.cbegin(); it != vin.cend(); ++it) {
+         stringstream ss;
+         ss << *it;
+         v.emplace_back(ss.str());
+      }
+
+      stringstream ss;
+      ss << v;
+      assert(ss.str() == "[(1,5), (2,4), (3,3), (4,2)]");
+
+      v.clear();
+      ss.str("");
+      ss.clear();
+
+      vin.push_comparator(ycmp);
+      for (auto it = vin.cbegin(ycmp); it != vin.cend(); ++it) {
+         stringstream ss;
+         ss << *it;
+         v.emplace_back(ss.str());
+      }
+
+      ss << v;
+      assert(ss.str() == "[(4,2), (3,3), (2,4), (1,5)]");
+   }
 };
 
 int main () {
@@ -1603,4 +1647,5 @@ int main () {
    vin.test_size();
 
    vin.test_multi_comparators();
+   vin.test_multi_comparators_iter();
 }

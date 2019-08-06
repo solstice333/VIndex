@@ -16,6 +16,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+#include <typeinfo>
 
 #pragma push_macro("assert")
 #ifdef assert
@@ -1161,8 +1162,9 @@ private:
       template <typename CmpTy>
       void _init_curr_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
          auto head = heads.template get<_head_type::node_ref>(cmp);
+         assert(head, 
+            "CmpHead" << typeid(cmp).name() << "EntryDoesNotExistError");
          _cmp = &head->first;
-         assert(_cmp, "NullPointerError");
          _curr = _init_curr(head->second);
       }
 
@@ -2034,9 +2036,10 @@ public:
       return _order_ty;
    }
 
-   const_iterator cbegin() noexcept {
+   template <typename CmpTy=DefaultComparator<T>> 
+   const_iterator cbegin(const CmpTy& cmp=_default_comparator()) noexcept {
       const_iterator it(_insertion_list, _order_ty);
-      it.init_from_cmp(_heads, _default_comparator());
+      it.init_from_cmp(_heads, cmp);
       _cend = it.end();
       return it;
    }
@@ -2045,9 +2048,11 @@ public:
       return _cend;
    }
 
-   const_reverse_iterator crbegin() noexcept {
+   template <typename CmpTy=DefaultComparator<T>>
+   const_reverse_iterator crbegin(
+      const CmpTy& cmp=_default_comparator()) noexcept {
       const_reverse_iterator it(_insertion_list, _order_ty);
-      it.init_from_cmp(_heads, _default_comparator());
+      it.init_from_cmp(_heads, cmp);
       _crend = it.end();
       return it;
    }
