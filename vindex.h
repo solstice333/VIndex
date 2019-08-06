@@ -17,6 +17,11 @@
 #include <unordered_map>
 #include <vector>
 
+#pragma push_macro("assert")
+#ifdef assert
+#undef assert
+#endif
+
 #ifdef NDEBUG
 #define assert(condition, message) 0
 #else
@@ -2047,8 +2052,6 @@ public:
    }
 };
 
-#ifdef assert
-#undef assert
-#endif
+#pragma pop_macro("assert")
 
 #endif

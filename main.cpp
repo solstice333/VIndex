@@ -1,8 +1,8 @@
-#include "vindex.h"
 #include <string>
 #include <sstream>
 #include <iostream>
 #include <cassert>
+#include "vindex.h"
 
 using namespace std;
 
