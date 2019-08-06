@@ -367,32 +367,31 @@ private:
       return *c1 == *c2;
    }
 
-   // TODO rename ComparatorTy to CmpTy
-   template <typename ComparatorTy>
+   template <typename CmpTy>
    std::unique_ptr<std::pair<Comparator&, NodeRefOwner&>> 
-      _get(const ComparatorTy& cmp, _head_type::node_ref) {
+      _get(const CmpTy& cmp, _head_type::node_ref) {
 
-      auto it = _secondary_heads.find(std::make_unique<ComparatorTy>(cmp));
+      auto it = _secondary_heads.find(std::make_unique<CmpTy>(cmp));
       if (it != _secondary_heads.end())
          return std::make_unique<std::pair<Comparator&, NodeRefOwner&>>(
             *it->first, it->second);
       return std::unique_ptr<std::pair<Comparator&, NodeRefOwner&>>();
    }
 
-   template <typename ComparatorTy>
+   template <typename CmpTy>
    std::unique_ptr<std::pair<Comparator&, const NodeRefOwner&>> 
-      _get(const ComparatorTy& cmp, _head_type::node_ref) const {
+      _get(const CmpTy& cmp, _head_type::node_ref) const {
 
-      auto it = _secondary_heads.find(std::make_unique<ComparatorTy>(cmp));
+      auto it = _secondary_heads.find(std::make_unique<CmpTy>(cmp));
       if (it != _secondary_heads.end())
          return std::make_unique<std::pair<Comparator&, const NodeRefOwner&>>(
             *it->first, it->second);
       return std::unique_ptr<std::pair<Comparator&, const NodeRefOwner&>>();
    }
 
-   template <typename ComparatorTy>
+   template <typename CmpTy>
    std::unique_ptr<std::pair<Comparator&, NodeDataOwner&>> 
-      _get(const ComparatorTy& cmp, _head_type::node_data) {
+      _get(const CmpTy& cmp, _head_type::node_data) {
 
       if (_primary_head.first && cmp == *_primary_head.first)
          return std::make_unique<std::pair<Comparator&, NodeDataOwner&>>(
@@ -400,9 +399,9 @@ private:
       return std::unique_ptr<std::pair<Comparator&, NodeDataOwner&>>();
    }
 
-   template <typename ComparatorTy>
+   template <typename CmpTy>
    std::unique_ptr<std::pair<Comparator&, const NodeDataOwner&>> 
-      _get(const ComparatorTy& cmp, _head_type::node_data) const {
+      _get(const CmpTy& cmp, _head_type::node_data) const {
 
       if (_primary_head.first && cmp == *_primary_head.first)
          return std::make_unique<std::pair<Comparator&, const NodeDataOwner&>>(
@@ -413,16 +412,16 @@ private:
 public:
    _Heads(): _secondary_heads(0, hash_comparator, is_equal_comparator) {}
 
-   template <typename ComparatorTy>
-   void push(const ComparatorTy& cmp) { 
-      ComparatorOwner new_cmp = std::make_unique<ComparatorTy>(cmp);
+   template <typename CmpTy>
+   void push(const CmpTy& cmp) { 
+      ComparatorOwner new_cmp = std::make_unique<CmpTy>(cmp);
       if (!_primary_head.first)
          _primary_head.first = std::move(new_cmp);
       else if (_secondary_heads.find(new_cmp) == _secondary_heads.end())
          _secondary_heads[std::move(new_cmp)];
    }
 
-   template <typename HeadTy, typename ComparatorTy>
+   template <typename HeadTy, typename CmpTy>
    std::unique_ptr<
       std::pair<
          Comparator&, 
@@ -432,11 +431,11 @@ public:
             const NodeDataOwner&
          >::type
       >
-   > get(const ComparatorTy& cmp) const {
+   > get(const CmpTy& cmp) const {
       return _get(cmp, HeadTy());
    }
 
-   template <typename HeadTy, typename ComparatorTy>
+   template <typename HeadTy, typename CmpTy>
    std::unique_ptr<
       std::pair<
          Comparator&, 
@@ -446,7 +445,7 @@ public:
             NodeDataOwner&
          >::type
       >
-   > get(const ComparatorTy& cmp) {
+   > get(const CmpTy& cmp) {
       return _get(cmp, HeadTy());
    }
 
