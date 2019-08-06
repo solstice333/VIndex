@@ -91,14 +91,14 @@ namespace _IterTracker {
       IterTracker(): IterTrackerBase<IterTy>() {}
 
       IterTracker(
-         typename 
+         const typename 
          Vindex<KeyTy, NodeDataTy>::template NodeList<NodeDataTy&>& l):
          IterTrackerBase<IterTy>(l.begin(), l.end()) {}
    };
 
    template <typename T, typename KeyTy>
    using NodeListRevIter = 
-      typename Vindex<KeyTy, T>::template NodeList<T&>::reverse_iterator;
+      typename Vindex<KeyTy, T>::template NodeList<T&>::const_reverse_iterator;
 
    template <typename NodeDataTy, typename KeyTy>
    class IterTracker<
@@ -110,7 +110,7 @@ namespace _IterTracker {
       IterTracker(): IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>() {}
 
       IterTracker(
-         typename 
+         const typename 
          Vindex<KeyTy, NodeDataTy>::template NodeList<NodeDataTy&>& l):
          IterTrackerBase<NodeListRevIter<NodeDataTy, KeyTy>>(
             l.rbegin(), l.rend()) {}
@@ -367,6 +367,7 @@ private:
       return *c1 == *c2;
    }
 
+   // TODO rename ComparatorTy to CmpTy
    template <typename ComparatorTy>
    std::unique_ptr<std::pair<Comparator&, NodeRefOwner&>> 
       _get(const ComparatorTy& cmp, _head_type::node_ref) {
@@ -541,11 +542,13 @@ private:
       using AVLNodeOwner = Vindex::AVLNodeOwner<U>;
 
       typedef 
-         typename Vindex<KeyTy, T>::template NodeList<T&>::iterator 
+         typename 
+         Vindex<KeyTy, T>::template NodeList<T&>::const_iterator 
          NodeListIter;
 
       typedef 
-         typename Vindex<KeyTy, T>::template NodeList<T&>::reverse_iterator 
+         typename 
+         Vindex<KeyTy, T>::template NodeList<T&>::const_reverse_iterator 
          NodeListRevIter;
 
       typedef 
@@ -1112,11 +1115,11 @@ private:
          _cmp(nullptr),
 
          _curr_lv(0), 
-         _prev_lv(0) 
+         _prev_lv(0)
          {}
 
       // TODO specify comparator with function templates
-      _const_iterator(Vindex* vin, OrderType order_ty): 
+      _const_iterator(const NodeList<T&>& insertion_list, OrderType order_ty):
          _curr(nullptr), 
          _prev(nullptr),
          _prev_incr(reverse ? false : true), 
@@ -1126,14 +1129,8 @@ private:
          _curr_lv(0), 
          _prev_lv(0),
 
-         _tracker(vin->_insertion_list) {
-
-         auto head = vin->_heads.template
-            get<_head_type::node_ref>(Vindex<KeyTy, T>::_default_comparator());
-         _cmp = &head->first;
-         assert(_cmp, "NullPointerError");
-         _curr = _init_curr(head->second);
-      }
+         _tracker(insertion_list) 
+         {}
 
       _const_iterator(const _const_iterator& other): 
          _curr(other._curr), 
@@ -1161,6 +1158,14 @@ private:
          _tracker = other._tracker;
 
          return *this;
+      }
+
+      template <typename CmpTy>
+      void _init_curr_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
+         auto head = heads.template get<_head_type::node_ref>(cmp);
+         _cmp = &head->first;
+         assert(_cmp, "NullPointerError");
+         _curr = _init_curr(head->second);
       }
 
    public:
@@ -1255,11 +1260,18 @@ public:
    public:
       const_iterator() noexcept {}
 
-      const_iterator(Vindex* vin, OrderType order_ty) noexcept: 
-         _const_iterator<false>(vin, order_ty) {}
+      const_iterator(
+         const NodeList<T&>& insertion_list, OrderType order_ty) noexcept: 
+         _const_iterator<false>(insertion_list, order_ty) {}
 
       const_iterator(const const_iterator& other) noexcept :
          _const_iterator<false>(other) {}
+
+
+      template <typename CmpTy>
+      void init_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
+         _const_iterator<false>::_init_curr_from_cmp(heads, cmp);   
+      }
 
       const_iterator& operator=(const const_iterator& other) noexcept {
          _const_iterator<false>::operator=(other);   
@@ -1295,11 +1307,17 @@ public:
    public:
       const_reverse_iterator() noexcept {}
 
-      const_reverse_iterator(Vindex* vin, OrderType order_ty) noexcept: 
-         _const_iterator<true>(vin, order_ty) {}
+      const_reverse_iterator(
+         const NodeList<T&>& insertion_list, OrderType order_ty) noexcept: 
+         _const_iterator<true>(insertion_list, order_ty) {}
 
       const_reverse_iterator(const const_reverse_iterator& other) noexcept:
          _const_iterator<true>(other) {}
+
+      template <typename CmpTy>
+      void init_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
+         _const_iterator<true>::_init_curr_from_cmp(heads, cmp);   
+      }
 
       const_reverse_iterator& operator=(const const_reverse_iterator& other) 
          noexcept {
@@ -2006,7 +2024,8 @@ public:
    }
 
    const_iterator cbegin() noexcept {
-      const_iterator it(this, _order_ty);
+      const_iterator it(_insertion_list, _order_ty);
+      it.init_from_cmp(_heads, _default_comparator());
       _cend = it.end();
       return it;
    }
@@ -2016,7 +2035,8 @@ public:
    }
 
    const_reverse_iterator crbegin() noexcept {
-      const_reverse_iterator it(this, _order_ty);
+      const_reverse_iterator it(_insertion_list, _order_ty);
+      it.init_from_cmp(_heads, _default_comparator());
       _crend = it.end();
       return it;
    }
