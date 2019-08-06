@@ -25,34 +25,77 @@ struct BasicInt {
       return ss.str();
    }
 
-   bool operator<(const BasicInt &other) const { 
+   bool operator<(const BasicInt& other) const { 
       return this->val < other.val; 
    }
 
-   bool operator>(const BasicInt &other) const { 
+   bool operator>(const BasicInt& other) const { 
       return this->val > other.val; 
    }
 
-   bool operator<=(const BasicInt &other) const { 
+   bool operator<=(const BasicInt& other) const { 
       return this->val <= other.val; 
    }
 
-   bool operator>=(const BasicInt &other) const { 
+   bool operator>=(const BasicInt& other) const { 
       return this->val >= other.val; 
    }
 
-   bool operator==(const BasicInt &other) const { 
+   bool operator==(const BasicInt& other) const { 
       return this->val == other.val; 
    }
 
-   bool operator!=(const BasicInt &other) const { 
+   bool operator!=(const BasicInt& other) const { 
       return this->val != other.val; 
    }
 };
 
-ostream& operator<<(ostream &os, const BasicInt &i) {
+struct Point {
+   int x, y;
+
+   Point(): x(0), y(0) {}
+
+   Point(int x, int y): x(x), y(y) {}
+
+   string str() const {
+      stringstream ss;
+      ss << "(" << x << "," << y << ")";
+      return ss.str();
+   }
+
+   bool operator<(const Point& other) const { 
+      return x < other.x; 
+   }
+};
+
+ostream& operator<<(ostream& os, const BasicInt& i) {
    return os << i.str();
 }
+
+ostream& operator<<(ostream& os, const Point& p) {
+   return os << p.str();
+}
+
+template<>
+struct std::hash<Point> {
+   size_t operator()(const Point& p) {
+      std::hash<int> int_hasher;
+      std::vector<size_t> v;
+      v.emplace_back(int_hasher(p.x));
+      v.emplace_back(int_hasher(p.y));
+      return hash_helpers::combine(v);
+   }
+};
+
+struct YCmp: public IComparator<Point> {
+   bool operator==(const IComparator<Point>& other) const override {
+      return dynamic_cast<const YCmp*>(&other);
+   }
+
+   bool lt(const Point& a, const Point& b) const override {
+      return a.y < b.y;
+   }
+};
 
 struct Int {
    int val;
@@ -67,20 +110,20 @@ struct Int {
       return ss.str();
    }
 
-   bool operator<(const Int &other) const { return this->val < other.val; }
+   bool operator<(const Int& other) const { return this->val < other.val; }
 
-   bool operator>(const Int &other) const { return this->val > other.val; }
+   bool operator>(const Int& other) const { return this->val > other.val; }
 
-   bool operator<=(const Int &other) const { return this->val <= other.val; }
+   bool operator<=(const Int& other) const { return this->val <= other.val; }
 
-   bool operator>=(const Int &other) const { return this->val >= other.val; }
+   bool operator>=(const Int& other) const { return this->val >= other.val; }
 
-   bool operator==(const Int &other) const { return this->val == other.val; }
+   bool operator==(const Int& other) const { return this->val == other.val; }
 
-   bool operator!=(const Int &other) const { return this->val != other.val; }
+   bool operator!=(const Int& other) const { return this->val != other.val; }
 };
 
-ostream& operator<<(ostream &os, const Int &i) {
+ostream& operator<<(ostream& os, const Int& i) {
    return os << i.str();
 }
 
@@ -90,17 +133,17 @@ struct Foo {
 
    Foo(int key, int val): key(key), val(val) {};
 
-   bool operator<(const Int &other) const { return this->val < other.val; }
+   bool operator<(const Int& other) const { return this->val < other.val; }
 
-   bool operator>(const Int &other) const { return this->val > other.val; }
+   bool operator>(const Int& other) const { return this->val > other.val; }
 
-   bool operator<=(const Int &other) const { return this->val <= other.val; }
+   bool operator<=(const Int& other) const { return this->val <= other.val; }
 
-   bool operator>=(const Int &other) const { return this->val >= other.val; }
+   bool operator>=(const Int& other) const { return this->val >= other.val; }
 
-   bool operator==(const Int &other) const { return this->val == other.val; }
+   bool operator==(const Int& other) const { return this->val == other.val; }
 
-   bool operator!=(const Int &other) const { return this->val != other.val; }  
+   bool operator!=(const Int& other) const { return this->val != other.val; }  
 };
 
 class TestIntVindex {
@@ -1410,7 +1453,7 @@ public:
       int cnt = 0;
 
       auto assert_successful_results = 
-         [&cnt](ConstResult<BasicInt&> &r, int exp) {
+         [&cnt](ConstResult<BasicInt&>& r, int exp) {
             if (auto res = 
                dynamic_cast<ConstResultSuccess<BasicInt&> *>(r.get())) {
                assert(res->data() == exp);
@@ -1423,7 +1466,7 @@ public:
          };
 
       auto assert_failing_results = 
-         [&cnt](ConstResult<BasicInt&> &r, int exp) {
+         [&cnt](ConstResult<BasicInt&>& r, int exp) {
             if (auto res = 
                dynamic_cast<ConstResultFailure<BasicInt&> *>(r.get())) {
                ++cnt;
@@ -1505,11 +1548,25 @@ public:
       assert(it == _vin.cend());
    }
 
-   void test_ctor_multiple_comparators() {
-      // Vindex<int, BasicInt> vin_cmp([])
+   void test_multi_comparators() {
+      Vindex<int, Point> vin(make_extractor(Point, x));
+      vin.emplace(3, 3);
+      vin.emplace(2, 4);
+      vin.emplace(4, 2);
+
+      assert(vin._bfs_str() == "(data: (3,3), height: 2, left: (2,4), right: (4,2), parent: null)|(data: (2,4), height: 1, left: null, right: null, parent: (3,3)) (data: (4,2), height: 1, left: null, right: null, parent: (3,3))");
+
+      auto ycmp = YCmp();
+      vin.push_comparator(ycmp);
+
+      assert(vin._bfs_str("|", ycmp) == "(data: (3,3), height: 2, left: (4,2), right: (2,4), parent: null)|(data: (4,2), height: 1, left: null, right: null, parent: (3,3)) (data: (2,4), height: 1, left: null, right: null, parent: (3,3))");
+
+      vin.emplace(1, 5);
+
+      assert(vin._bfs_str() == "(data: (3,3), height: 3, left: (2,4), right: (4,2), parent: null)|(data: (2,4), height: 2, left: (1,5), right: null, parent: (3,3)) (data: (4,2), height: 1, left: null, right: null, parent: (3,3))|(data: (1,5), height: 1, left: null, right: null, parent: (2,4)) (null) (null) (null)");
+
+      assert(vin._bfs_str("|", ycmp) == "(data: (3,3), height: 3, left: (4,2), right: (2,4), parent: null)|(data: (4,2), height: 1, left: null, right: null, parent: (3,3)) (data: (2,4), height: 2, left: null, right: (1,5), parent: (3,3))|(null) (null) (null) (data: (1,5), height: 1, left: null, right: null, parent: (2,4))");
    }
-   
-   // TODO add tests where the key type needs std::hash() specialized
 };
 
 int main () {
@@ -1545,5 +1602,5 @@ int main () {
    vin.test_make_vindex();
    vin.test_size();
 
-   // vin.test_ctor_multiple_comparators();
+   vin.test_multi_comparators();
 }

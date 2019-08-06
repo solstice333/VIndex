@@ -1977,7 +1977,20 @@ public:
       _size(0)
       {}
 
-   // TODO add push_comparator()
+   template <typename ComparatorTy>
+   void push_comparator(const ComparatorTy& cmp) {
+      _heads.push(cmp);
+      auto head = _heads.template get<_head_type::node_ref>(cmp);
+      assert(head, "NullPointerError");
+
+      for (
+         auto it = _insertion_list.begin(); 
+         it != _insertion_list.end(); 
+         ++it) {
+         AVLNodeOwner<T&> n = std::make_unique<AVLNode<T&>>((*it)->data);
+         _insert(&n, &head->second, head->first);
+      }
+   }
 
    ConstResult<T&> insert(const T& val) noexcept {
       if (_index.find(_get_member(val)) != _index.end())
