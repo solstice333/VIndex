@@ -1117,7 +1117,6 @@ private:
          _prev_lv(0)
          {}
 
-      // TODO specify comparator with function templates
       _const_iterator(const NodeList<T&>& insertion_list, OrderType order_ty):
          _curr(nullptr), 
          _prev(nullptr),
