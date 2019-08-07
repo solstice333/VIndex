@@ -1578,6 +1578,15 @@ public:
    }
 
    void test_multi_comparators_iter() {
+      auto reset = 
+         [](vector<string>& v, stringstream& ss) {
+         v.clear();
+         ss.str("");
+         ss.clear();
+      };
+
+      stringstream ss;
+
       Vindex<int, Point> vin(make_extractor(Point, x));
       vin.emplace(3, 3);
       vin.emplace(2, 4);
@@ -1593,13 +1602,9 @@ public:
          v.emplace_back(ss.str());
       }
 
-      stringstream ss;
       ss << v;
       assert(ss.str() == "[(1,5), (2,4), (3,3), (4,2)]");
-
-      v.clear();
-      ss.str("");
-      ss.clear();
+      reset(v, ss);
 
       vin.push_comparator(ycmp);
       for (auto it = vin.cbegin(ycmp); it != vin.cend(); ++it) {
@@ -1610,6 +1615,30 @@ public:
 
       ss << v;
       assert(ss.str() == "[(4,2), (3,3), (2,4), (1,5)]");
+      reset(v, ss);
+
+      vin.order(OrderType::INSERTION);
+      for (auto it = vin.crbegin(ycmp); it != vin.crend(); ++it) {
+         stringstream ss;
+         ss << *it;
+         v.emplace_back(ss.str());
+      }
+
+      ss << v;
+      assert(ss.str() == "[(1,5), (4,2), (2,4), (3,3)]");
+      reset(v, ss);
+
+      vin.push_comparator(ycmp);
+      vin.order(OrderType::PREORDER);
+      for (auto it = vin.crbegin(ycmp); it != vin.crend(); ++it) {
+         stringstream ss;
+         ss << *it;
+         v.emplace_back(ss.str());
+      }
+
+      ss << v;
+      assert(ss.str() == "[(1,5), (2,4), (4,2), (3,3)]");
+      reset(v, ss);
    }
 };
 

@@ -459,6 +459,11 @@ public:
    iterator end() {
       return _end_iter;
    }
+
+   template <typename CmpTy>
+   bool exists(const CmpTy& cmp) const {
+      return static_cast<bool>(get<_head_type::node_ref>(cmp));
+   }
 };
 
 template <typename KeyTy, typename T>
@@ -1980,6 +1985,8 @@ public:
 
    template <typename ComparatorTy>
    void push_comparator(const ComparatorTy& cmp) noexcept {
+      if (_heads.exists(cmp))
+         return;
       _heads.push(cmp);
       auto head = _heads.template get<_head_type::node_ref>(cmp);
       assert(head, "NullPointerError");
