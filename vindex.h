@@ -35,7 +35,7 @@
       << std::endl << message << std::endl, abort(), 0) : 1
 #endif
 
-#if __cplusplus == 201103L
+#if __cplusplus <= 201103L || defined(_MSC_VER) && _MSC_VER < 1800
 namespace std {
    template <typename T, typename... Args>
    std::unique_ptr<T> make_unique(Args&&... args) {
