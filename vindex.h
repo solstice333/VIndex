@@ -303,15 +303,10 @@ private:
 public:
    class iterator: public std::iterator<
       std::forward_iterator_tag, 
-      typename decltype(_secondary_heads)::value_type
+      std::pair<Comparator&, NodeRefOwner&>
    > {
    private:
-      typedef decltype(_Heads::_secondary_heads) HeadMap;
-      typedef typename HeadMap::iterator MapIter;
-      typedef typename HeadMap::value_type MapEntry;
-      typedef typename HeadMap::mapped_type MapVal;
-
-      typedef std::pair<Comparator&, MapVal&> Entry;
+      typedef std::pair<Comparator&, NodeRefOwner&> Entry;
       typedef std::vector<Entry> EntryArray;
       typedef typename EntryArray::iterator EntryArrayIter;
 
@@ -321,11 +316,12 @@ public:
    public:
       iterator() {}
 
-      iterator(HeadMap& heads): _heads(std::make_shared<EntryArray>()) {
+      iterator(decltype(_Heads::_secondary_heads)& heads): 
+         _heads(std::make_shared<EntryArray>()) {
          for (auto it = heads.begin(); it != heads.end(); ++it) {
             _heads->emplace_back(std::make_pair<
                std::reference_wrapper<Comparator>, 
-               std::reference_wrapper<MapVal>
+               std::reference_wrapper<NodeRefOwner>
             >(*it->first, it->second));
          }
          _iter = _heads->begin();
