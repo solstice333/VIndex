@@ -2009,7 +2009,7 @@ public:
       _size(0)
       {}
 
-   Vindex(Vindex&& other): 
+   Vindex(Vindex&& other) NOEXCEPT: 
       _order_ty(std::move(other._order_ty)), 
       _get_member(std::move(other._get_member)),
       _heads(std::move(other._heads)),
@@ -2020,7 +2020,7 @@ public:
       _crend(std::move(other._crend)) 
       {}
 
-   Vindex& operator=(Vindex&& other) {
+   Vindex& operator=(Vindex&& other) NOEXCEPT {
       _order_ty = std::move(other._order_ty);
       _get_member = std::move(other._get_member);
       _heads = std::move(other._heads);
