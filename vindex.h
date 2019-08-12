@@ -45,7 +45,8 @@ namespace std {
 }
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
+#if defined(_MSC_VER) && _MSC_VER >= 1900 || \
+   !defined(_MSC_VER) && __cplusplus >= 201103L
 #define NOEXCEPT noexcept
 #else
 #define NOEXCEPT throw()
