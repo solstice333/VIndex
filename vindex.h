@@ -35,13 +35,20 @@
       << std::endl << message << std::endl, abort(), 0) : 1
 #endif
 
-#if __cplusplus <= 201103L || defined(_MSC_VER) && _MSC_VER < 1800
+#if defined(_MSC_VER) && _MSC_VER < 1800 || \
+   !defined(_MSC_VER) && __cplusplus <= 201103L 
 namespace std {
    template <typename T, typename... Args>
    std::unique_ptr<T> make_unique(Args&&... args) {
       return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
    }
 }
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+#define NOEXCEPT noexcept
+#else
+#define NOEXCEPT throw()
 #endif
 
 #define make_extractor(CLS, MEM)\
@@ -137,6 +144,7 @@ template <typename T>
 class ConstResultSuccess: public _IConstResult<T> {
 private:
    T _data;
+   ConstResultSuccess& operator=(const ConstResultSuccess&) = delete;
 
 public:
    ConstResultSuccess(const T& data): _data(data) {}
@@ -238,7 +246,7 @@ struct std::hash<IComparator<T>> {
 template <typename T>
 struct DefaultComparator: public IComparator<T> {
    bool operator==(const IComparator<T>& other) const override { 
-      return dynamic_cast<const DefaultComparator *>(&other); 
+      return dynamic_cast<const DefaultComparator *>(&other) != nullptr; 
    }
 
    bool lt(const T& a, const T& b) const override { 
@@ -248,12 +256,16 @@ struct DefaultComparator: public IComparator<T> {
 
 template <typename T>
 struct _Node {
+   typedef T DataTy;
    T data;
    _Node() {}
    _Node(const T& data): data(data) {}
+
+private:
+   _Node& operator=(const _Node&) = delete;
 };
 
-template <typename T, typename BASE_TY = decltype(T::data)>
+template <typename T, typename BASE_TY=typename T::DataTy>
 struct _AVLState: public T {
    typedef std::unique_ptr<_AVLState> AVLStateOwner;
 
@@ -306,6 +318,7 @@ public:
       std::pair<Comparator&, NodeRefOwner&>
    > {
    private:
+      typedef decltype(_Heads<T>::_secondary_heads) HeadTy;
       typedef std::pair<Comparator&, NodeRefOwner&> Entry;
       typedef std::vector<Entry> EntryArray;
       typedef typename EntryArray::iterator EntryArrayIter;
@@ -316,7 +329,7 @@ public:
    public:
       iterator() {}
 
-      iterator(decltype(_Heads::_secondary_heads)& heads): 
+      iterator(HeadTy& heads): 
          _heads(std::make_shared<EntryArray>()) {
          for (auto it = heads.begin(); it != heads.end(); ++it) {
             _heads->emplace_back(std::make_pair<
@@ -417,6 +430,11 @@ private:
 
 public:
    _Heads(): _secondary_heads(0, hash_comparator, is_equal_comparator) {}
+
+   _Heads(_Heads&& other) {
+      _primary_head = std::move(other._primary_head);
+      _secondary_heads = std::move(other._secondary_heads);
+   };
 
    template <typename CmpTy>
    void push(const CmpTy& cmp) { 
@@ -535,14 +553,14 @@ private:
 
    struct DefaultComparatorSingleton:
       public _Singleton<DefaultComparator<T>, DefaultComparatorSingleton> {
-      static void init(DefaultComparator<T>* dc) {}
+      static void init(DefaultComparator<T>*) {}
    };
 
    template <bool reverse>
    class _const_iterator : 
       public std::iterator<std::bidirectional_iterator_tag, T> {
    private:
-      typedef Vindex::Direction Direction;
+      typedef typename Vindex<KeyTy, T>::Direction Direction;
       typedef typename _Heads<T>::Comparator Comparator;
 
       template <typename U>
@@ -944,7 +962,8 @@ private:
 
          do {
             prev = n;
-         } while (n = _get_next_sibling(n, depth, dir));
+            n = _get_next_sibling(n, depth, dir);
+         } while (n);
          return prev;
       }
 
@@ -961,7 +980,8 @@ private:
                return first;
             else if (second)
                return second;
-         } while (n = _get_next_sibling(n, _curr_lv - 1, Direction::RIGHT));
+            n = _get_next_sibling(n, _curr_lv - 1, Direction::RIGHT);
+         } while (n);
 
          --_curr_lv;
          return nullptr;
@@ -1256,6 +1276,102 @@ private:
       }
    };
 
+public:
+   class const_iterator: public _const_iterator<false> {
+   public:
+      const_iterator() NOEXCEPT {}
+
+      const_iterator(
+         const NodeList<T&>& insertion_list, OrderType order_ty) NOEXCEPT: 
+         _const_iterator<false>(insertion_list, order_ty) {}
+
+      const_iterator(const const_iterator& other) NOEXCEPT :
+         _const_iterator<false>(other) {}
+
+
+      template <typename CmpTy>
+      void init_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
+         _const_iterator<false>::_init_curr_from_cmp(heads, cmp);   
+      }
+
+      const_iterator& operator=(const const_iterator& other) NOEXCEPT {
+         _const_iterator<false>::operator=(other);   
+         return *this;
+      }
+
+      const_iterator operator++() NOEXCEPT {
+         _const_iterator<false>::operator++();
+         return *this;
+      } 
+
+      const_iterator operator++(int val) NOEXCEPT {
+         _const_iterator<false>::operator++(val);
+         return *this;
+      }
+
+      const_iterator operator--() NOEXCEPT {
+         _const_iterator<false>::operator--();
+         return *this;
+      } 
+
+      const_iterator operator--(int val) NOEXCEPT {
+         _const_iterator<false>::operator--(val);
+         return *this;
+      }
+
+      const_iterator end() const NOEXCEPT {
+         return const_iterator();
+      }
+   };
+
+   class const_reverse_iterator: public _const_iterator<true> {
+   public:
+      const_reverse_iterator() NOEXCEPT {}
+
+      const_reverse_iterator(
+         const NodeList<T&>& insertion_list, OrderType order_ty) NOEXCEPT: 
+         _const_iterator<true>(insertion_list, order_ty) {}
+
+      const_reverse_iterator(const const_reverse_iterator& other) NOEXCEPT:
+         _const_iterator<true>(other) {}
+
+      template <typename CmpTy>
+      void init_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
+         _const_iterator<true>::_init_curr_from_cmp(heads, cmp);   
+      }
+
+      const_reverse_iterator& operator=(const const_reverse_iterator& other) 
+         NOEXCEPT {
+         _const_iterator<true>::operator=(other);   
+         return *this;
+      }
+
+      const_reverse_iterator operator++() NOEXCEPT {
+         _const_iterator<true>::operator--();
+         return *this;
+      } 
+
+      const_reverse_iterator operator++(int val) NOEXCEPT {
+         _const_iterator<true>::operator--(val);
+         return *this;
+      }
+
+      const_reverse_iterator operator--() NOEXCEPT {
+         _const_iterator<true>::operator++();
+         return *this;
+      } 
+
+      const_reverse_iterator operator--(int val) NOEXCEPT {
+         _const_iterator<true>::operator++(val);
+         return *this;
+      }
+
+      const_reverse_iterator end() const NOEXCEPT {
+         return const_reverse_iterator();
+      }
+   }; 
+
+private:
    _Heads<T> _heads;
    OrderType _order_ty;
    const_iterator _cend;
@@ -1265,102 +1381,6 @@ private:
    Extractor _get_member;
    size_t _size;
 
-public:
-   class const_iterator: public _const_iterator<false> {
-   public:
-      const_iterator() noexcept {}
-
-      const_iterator(
-         const NodeList<T&>& insertion_list, OrderType order_ty) noexcept: 
-         _const_iterator<false>(insertion_list, order_ty) {}
-
-      const_iterator(const const_iterator& other) noexcept :
-         _const_iterator<false>(other) {}
-
-
-      template <typename CmpTy>
-      void init_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
-         _const_iterator<false>::_init_curr_from_cmp(heads, cmp);   
-      }
-
-      const_iterator& operator=(const const_iterator& other) noexcept {
-         _const_iterator<false>::operator=(other);   
-         return *this;
-      }
-
-      const_iterator operator++() noexcept {
-         _const_iterator<false>::operator++();
-         return *this;
-      } 
-
-      const_iterator operator++(int val) noexcept {
-         _const_iterator<false>::operator++(val);
-         return *this;
-      }
-
-      const_iterator operator--() noexcept {
-         _const_iterator<false>::operator--();
-         return *this;
-      } 
-
-      const_iterator operator--(int val) noexcept {
-         _const_iterator<false>::operator--(val);
-         return *this;
-      }
-
-      const_iterator end() const noexcept {
-         return const_iterator();
-      }
-   };
-
-   class const_reverse_iterator: public _const_iterator<true> {
-   public:
-      const_reverse_iterator() noexcept {}
-
-      const_reverse_iterator(
-         const NodeList<T&>& insertion_list, OrderType order_ty) noexcept: 
-         _const_iterator<true>(insertion_list, order_ty) {}
-
-      const_reverse_iterator(const const_reverse_iterator& other) noexcept:
-         _const_iterator<true>(other) {}
-
-      template <typename CmpTy>
-      void init_from_cmp(const _Heads<T>& heads, const CmpTy& cmp) {
-         _const_iterator<true>::_init_curr_from_cmp(heads, cmp);   
-      }
-
-      const_reverse_iterator& operator=(const const_reverse_iterator& other) 
-         noexcept {
-         _const_iterator<true>::operator=(other);   
-         return *this;
-      }
-
-      const_reverse_iterator operator++() noexcept {
-         _const_iterator<true>::operator--();
-         return *this;
-      } 
-
-      const_reverse_iterator operator++(int val) noexcept {
-         _const_iterator<true>::operator--(val);
-         return *this;
-      }
-
-      const_reverse_iterator operator--() noexcept {
-         _const_iterator<true>::operator++();
-         return *this;
-      } 
-
-      const_reverse_iterator operator--(int val) noexcept {
-         _const_iterator<true>::operator++(val);
-         return *this;
-      }
-
-      const_reverse_iterator end() const noexcept {
-         return const_reverse_iterator();
-      }
-   }; 
-
-private:
    static AVLNode<T>* _default() {
       return &AVLNodeDefaultSingleton().get();
    }
@@ -1409,7 +1429,7 @@ private:
    }
 
    static size_t _nodes_at_lv(size_t lv) {
-      return 1 << (lv - 1);
+      return 1ULL << (lv - 1);
    }
 
    template <typename U>
@@ -1873,7 +1893,7 @@ private:
 
    bool _is_dq_all_nulls(const NodeDQ<T&>& dq) const {
       auto it = find_if(
-         dq.begin(), dq.end(), [](AVLNode<T&>* n) -> bool { return n; });
+         dq.begin(), dq.end(), [](AVLNode<T&>* n) -> bool { return n != nullptr; });
       return it == dq.end();
    }
 
@@ -1981,15 +2001,37 @@ private:
    }
 
 public:
-   Vindex(const Extractor& get_member) noexcept: 
+   Vindex(const Extractor& get_member) NOEXCEPT: 
       _heads(_init_heads()),
       _order_ty(OrderType::INORDER), 
       _get_member(get_member),
       _size(0)
       {}
 
+   Vindex(Vindex&& other): 
+      _order_ty(std::move(other._order_ty)), 
+      _get_member(std::move(other._get_member)),
+      _heads(std::move(other._heads)),
+      _insertion_list(std::move(other._insertion_list)),
+      _index(std::move(other._index)),
+      _size(std::move(other._size)), 
+      _cend(std::move(other._cend)),
+      _crend(std::move(other._crend)) 
+      {}
+
+   Vindex& operator=(Vindex&& other) {
+      _order_ty = std::move(other._order_ty);
+      _get_member = std::move(other._get_member);
+      _heads = std::move(other._heads);
+      _insertion_list = std::move(other._insertion_list);
+      _index = std::move(other._index);
+      _size = std::move(other._size);
+      _cend = std::move(other._cend);
+      _crend = std::move(other._crend);
+   }
+
    template <typename ComparatorTy>
-   void push_comparator(const ComparatorTy& cmp) noexcept {
+   void push_comparator(const ComparatorTy& cmp) NOEXCEPT {
       if (_heads.exists(cmp))
          return;
       _heads.push(cmp);
@@ -2005,7 +2047,7 @@ public:
       }
    }
 
-   ConstResult<T&> insert(const T& val) noexcept {
+   ConstResult<T&> insert(const T& val) NOEXCEPT {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T&>>();
       AVLNode<T&>* n = _insert_each_head(val);
@@ -2016,11 +2058,11 @@ public:
    }
 
    template <typename... Args>
-   void emplace(Args&&... args) noexcept {
+   void emplace(Args&&... args) NOEXCEPT {
       insert(T(std::forward<Args>(args)...));
    }
 
-   Result<T> remove(const T& val) noexcept {
+   Result<T> remove(const T& val) NOEXCEPT {
       for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it) {
          AVLNodeOwner<T&> n = _remove_and_rebalance<T&>(
             val, &head_it->second, nullptr, head_it->first);
@@ -2040,40 +2082,40 @@ public:
       return std::make_unique<ResultFailure<T>>();
    }
 
-   void order(OrderType order_ty) noexcept {
+   void order(OrderType order_ty) NOEXCEPT {
       _order_ty = order_ty;
    }
 
-   OrderType order() const noexcept {
+   OrderType order() const NOEXCEPT {
       return _order_ty;
    }
 
    template <typename CmpTy=DefaultComparator<T>> 
-   const_iterator cbegin(const CmpTy& cmp=_default_comparator()) noexcept {
+   const_iterator cbegin(const CmpTy& cmp=_default_comparator()) NOEXCEPT {
       const_iterator it(_insertion_list, _order_ty);
       it.init_from_cmp(_heads, cmp);
       _cend = it.end();
       return it;
    }
 
-   const_iterator cend() noexcept {
+   const_iterator cend() NOEXCEPT {
       return _cend;
    }
 
    template <typename CmpTy=DefaultComparator<T>>
    const_reverse_iterator crbegin(
-      const CmpTy& cmp=_default_comparator()) noexcept {
+      const CmpTy& cmp=_default_comparator()) NOEXCEPT {
       const_reverse_iterator it(_insertion_list, _order_ty);
       it.init_from_cmp(_heads, cmp);
       _crend = it.end();
       return it;
    }
 
-   const_reverse_iterator crend() noexcept {
+   const_reverse_iterator crend() NOEXCEPT {
       return _crend;
    }
 
-   const_iterator find(const KeyTy& key) noexcept {
+   const_iterator find(const KeyTy& key) NOEXCEPT {
       auto it = cbegin();
       return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
          return key == _get_member(elem);
@@ -2084,11 +2126,11 @@ public:
       return _index.at(key)->data;
    }
 
-   size_t size() noexcept {
+   size_t size() NOEXCEPT {
       return _size;
    }
 
-   void clear() noexcept {
+   void clear() NOEXCEPT {
       _insertion_list.clear();
       _index.clear();
       auto head = _heads.template

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cassert>
 #include "vindex.h"
+#include <utility>
 
 using namespace std;
 
@@ -98,7 +99,7 @@ struct std::hash<Point> {
 
 struct YCmp: public IComparator<Point> {
    bool operator==(const IComparator<Point>& other) const override {
-      return dynamic_cast<const YCmp*>(&other);
+      return dynamic_cast<const YCmp*>(&other) != nullptr;
    }
 
    bool lt(const Point& a, const Point& b) const override {
@@ -1475,7 +1476,7 @@ public:
          };
 
       auto assert_failing_results = 
-         [&cnt](ConstResult<BasicInt&>& r, int exp) {
+         [&cnt](ConstResult<BasicInt&>& r) {
             if (auto res = 
                dynamic_cast<ConstResultFailure<BasicInt&> *>(r.get())) {
                ++cnt;
@@ -1504,7 +1505,7 @@ public:
       assert_successful_results(r, 33);
 
       r = _vin.insert(15);     
-      assert_failing_results(r, 0);
+      assert_failing_results(r);
       assert(cnt == 9);
    }
 
@@ -1536,6 +1537,9 @@ public:
       myvin2.insert(16);
 
       assert(myvin2._bfs_str() == "(data: i35, height: 4, left: i20, right: i40, parent: null)|(data: i20, height: 3, left: i18, right: i25, parent: i35) (data: i40, height: 2, left: null, right: i42, parent: i35)|(data: i18, height: 2, left: i16, right: null, parent: i20) (data: i25, height: 2, left: i22, right: i30, parent: i20) (null) (data: i42, height: 1, left: null, right: null, parent: i40)|(data: i16, height: 1, left: null, right: null, parent: i18) (null) (data: i22, height: 1, left: null, right: null, parent: i25) (data: i30, height: 1, left: null, right: null, parent: i25) (null) (null) (null) (null)");
+
+      auto myvin3 = std::move(myvin2);
+      assert(myvin3._bfs_str() == "(data: i35, height: 4, left: i20, right: i40, parent: null)|(data: i20, height: 3, left: i18, right: i25, parent: i35) (data: i40, height: 2, left: null, right: i42, parent: i35)|(data: i18, height: 2, left: i16, right: null, parent: i20) (data: i25, height: 2, left: i22, right: i30, parent: i20) (null) (data: i42, height: 1, left: null, right: null, parent: i40)|(data: i16, height: 1, left: null, right: null, parent: i18) (null) (data: i22, height: 1, left: null, right: null, parent: i25) (data: i30, height: 1, left: null, right: null, parent: i25) (null) (null) (null) (null)");
    }
 
    void test_size() {
