@@ -24,6 +24,10 @@
 #endif
 
 #ifdef NDEBUG
+#undef NDEBUG
+#endif
+
+#ifdef NDEBUG
 #define assert(condition, message) 0
 #else
 #define assert(condition, message)\
@@ -61,7 +65,7 @@ namespace std {
 template <typename T, typename KeyTy> class Vindex;
 
 namespace hash_helpers {
-   size_t combine(const std::vector<size_t>& hashes) {
+   inline size_t combine(const std::vector<size_t>& hashes) {
       size_t res = 17;
       for (auto it = hashes.begin(); it != hashes.end(); ++it)
          res = res*31 + *it;
