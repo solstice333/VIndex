@@ -330,9 +330,9 @@ public:
    public:
       iterator() {}
 
-      iterator(HeadTy& heads): 
+      iterator(HeadTy* heads): 
          _heads(std::make_shared<EntryArray>()) {
-         for (auto it = heads.begin(); it != heads.end(); ++it) {
+         for (auto it = heads->begin(); it != heads->end(); ++it) {
             _heads->emplace_back(std::make_pair<
                std::reference_wrapper<Comparator>, 
                std::reference_wrapper<NodeRefOwner>
@@ -349,7 +349,7 @@ public:
          return _iter != other._iter;
       }
 
-      iterator& operator++() {
+      const iterator& operator++() {
          ++_iter;
          return *this;   
       }
@@ -360,7 +360,7 @@ public:
          return tmp;
       }
 
-      Entry& operator*() {
+      const Entry& operator*() {
          return *_iter;
       }
 
@@ -475,7 +475,7 @@ public:
    }
 
    iterator begin() {
-      iterator it(_secondary_heads);
+      iterator it(&_secondary_heads);
       _end_iter = it.end();
       return it;
    }
