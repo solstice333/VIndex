@@ -349,7 +349,7 @@ public:
          return _iter != other._iter;
       }
 
-      const iterator& operator++() {
+      iterator& operator++() {
          ++_iter;
          return *this;   
       }
@@ -360,7 +360,7 @@ public:
          return tmp;
       }
 
-      const Entry& operator*() {
+      Entry& operator*() {
          return *_iter;
       }
 
