@@ -2105,6 +2105,9 @@ public:
 
    template <typename CmpTy=DefaultComparator<T>> 
    const_iterator cbegin(const CmpTy& cmp=_default_comparator()) NOEXCEPT {
+      if (!_heads.exists(cmp))
+         push_comparator(cmp);
+
       const_iterator it(_insertion_list, _order_ty);
       it.init_from_cmp(_heads, cmp);
       _cend = it.end();
@@ -2118,6 +2121,9 @@ public:
    template <typename CmpTy=DefaultComparator<T>>
    const_reverse_iterator crbegin(
       const CmpTy& cmp=_default_comparator()) NOEXCEPT {
+      if (!_heads.exists(cmp))
+         push_comparator(cmp);
+
       const_reverse_iterator it(_insertion_list, _order_ty);
       it.init_from_cmp(_heads, cmp);
       _crend = it.end();

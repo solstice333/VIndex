@@ -1619,7 +1619,6 @@ public:
       assert(ss.str() == "[(1,5), (2,4), (3,3), (4,2)]");
       reset(v, ss);
 
-      vin.push_comparator(ycmp);
       for (auto it = vin.cbegin(ycmp); it != vin.cend(); ++it) {
          stringstream ss;
          ss << *it;
