@@ -1282,7 +1282,7 @@ private:
    };
 
 public:
-   class const_iterator: public _const_iterator<false> {
+  class const_iterator: public _const_iterator<false> {
    public:
       const_iterator() NOEXCEPT {}
 
@@ -1309,9 +1309,10 @@ public:
          return *this;
       } 
 
-      const_iterator operator++(int val) NOEXCEPT {
-         _const_iterator<false>::operator++(val);
-         return *this;
+      const_iterator operator++(int) NOEXCEPT {
+         const_iterator tmp(*this);
+         operator++();
+         return tmp;
       }
 
       const_iterator operator--() NOEXCEPT {
@@ -1319,9 +1320,10 @@ public:
          return *this;
       } 
 
-      const_iterator operator--(int val) NOEXCEPT {
-         _const_iterator<false>::operator--(val);
-         return *this;
+      const_iterator operator--(int) NOEXCEPT {
+         const_iterator tmp(*this);
+         operator--();
+         return tmp;
       }
 
       const_iterator end() const NOEXCEPT {
@@ -1356,9 +1358,10 @@ public:
          return *this;
       } 
 
-      const_reverse_iterator operator++(int val) NOEXCEPT {
-         _const_iterator<true>::operator--(val);
-         return *this;
+      const_reverse_iterator operator++(int) NOEXCEPT {
+         const_reverse_iterator tmp(*this);
+         operator++();
+         return tmp;
       }
 
       const_reverse_iterator operator--() NOEXCEPT {
@@ -1366,9 +1369,10 @@ public:
          return *this;
       } 
 
-      const_reverse_iterator operator--(int val) NOEXCEPT {
-         _const_iterator<true>::operator++(val);
-         return *this;
+      const_reverse_iterator operator--(int) NOEXCEPT {
+         const_reverse_iterator tmp(*this);
+         operator--();
+         return tmp;
       }
 
       const_reverse_iterator end() const NOEXCEPT {

@@ -1,9 +1,14 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <cassert>
 #include "vindex.h"
 #include <utility>
+
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
+#include <cassert>
 
 using namespace std;
 
@@ -502,7 +507,9 @@ public:
       ss2 << *++it2;
       ss2 << *++it2;
       ss2 << *--it2;
-      assert(ss2.str() == "15162016");
+      ss2 << *it2--;
+      ss2 << *it++;
+      assert(ss2.str() == "151620161615");
 
       const IntVindex::const_iterator const_it = _vin.cbegin();
       const IntVindex::const_iterator const_end = _vin.cend();
@@ -985,7 +992,9 @@ public:
       ss2 << *++it2;
       ss2 << *++it2;
       ss2 << *--it2;
-      assert(ss2.str() == "40353335");
+      ss2 << *it2--;
+      ss2 << *it2++;
+      assert(ss2.str() == "403533353540");
 
       const IntVindex::const_reverse_iterator const_it = _vin.crbegin();
       const IntVindex::const_reverse_iterator const_end = _vin.crend();
@@ -1682,3 +1691,4 @@ int main () {
    vin.test_multi_comparators();
    vin.test_multi_comparators_iter();
 }
+
