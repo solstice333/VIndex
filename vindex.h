@@ -496,6 +496,8 @@ public:
 
 template <typename KeyTy, typename T>
 class Vindex {
+   static_assert(!std::is_lvalue_reference<T>::value, 
+      "T cannot be an lvalue reference");
 private:
    friend class TestIntVindex;
 
@@ -2041,6 +2043,8 @@ public:
 
    template <typename ComparatorTy>
    void push_comparator(const ComparatorTy& cmp) NOEXCEPT {
+      static_assert(std::is_base_of<IComparator<T>, ComparatorTy>::value, 
+         "ComparatorTy must be derived from IComparator<T>");
       if (_heads.exists(cmp))
          return;
       _heads.push(cmp);
@@ -2067,8 +2071,8 @@ public:
    }
 
    template <typename... Args>
-   void emplace(Args&&... args) NOEXCEPT {
-      insert(T(std::forward<Args>(args)...));
+   ConstResult<T&> emplace(Args&&... args) NOEXCEPT {
+      return insert(T(std::forward<Args>(args)...));
    }
 
    Result<T> remove(const T& val) NOEXCEPT {
