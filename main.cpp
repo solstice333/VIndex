@@ -91,24 +91,25 @@ ostream& operator<<(ostream& os, const vector<T>& v) {
    return os;
 }
 
-template<>
-struct std::hash<Point> {
-   size_t operator()(const Point& p) {
-      std::hash<int> int_hasher;
-      std::vector<size_t> v;
-      v.emplace_back(int_hasher(p.x));
-      v.emplace_back(int_hasher(p.y));
-      return hash_helpers::combine(v);
-   }
-};
-
 struct YCmp: public IComparator<Point> {
+   int foo, bar;
+
+   YCmp(int foo = 0, int bar = 0) : foo(foo), bar(bar) {}
+
    bool operator==(const IComparator<Point>& other) const override {
       return dynamic_cast<const YCmp*>(&other) != nullptr;
    }
 
    bool lt(const Point& a, const Point& b) const override {
       return a.y < b.y;
+   }
+};
+
+template<>
+struct std::hash<YCmp> {
+   size_t operator()(const YCmp& ycmp) {
+      std::hash<int> h;
+      return hash_helpers::combine({ h(ycmp.foo), h(ycmp.bar) });
    }
 };
 
@@ -1578,7 +1579,7 @@ public:
 
       assert(vin._bfs_str() == "(data: (3,3), height: 2, left: (2,4), right: (4,2), parent: null)|(data: (2,4), height: 1, left: null, right: null, parent: (3,3)) (data: (4,2), height: 1, left: null, right: null, parent: (3,3))");
 
-      auto ycmp = YCmp();
+      auto ycmp = YCmp(12, 14);
       vin.push_comparator(ycmp);
 
       assert(vin._bfs_str("|", ycmp) == "(data: (3,3), height: 2, left: (4,2), right: (2,4), parent: null)|(data: (4,2), height: 1, left: null, right: null, parent: (3,3)) (data: (2,4), height: 1, left: null, right: null, parent: (3,3))");
@@ -1606,7 +1607,7 @@ public:
       vin.emplace(4, 2);
       vin.emplace(1, 5);
 
-      auto ycmp = YCmp();
+      auto ycmp = YCmp(30);
 
       vector<string> v;
       for (auto it = vin.cbegin(); it != vin.cend(); ++it) {
