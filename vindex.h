@@ -23,6 +23,7 @@
 #undef assert
 #endif
 
+#pragma push_macro("NDEBUG")
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
@@ -65,7 +66,7 @@ namespace std {
 template <typename T, typename KeyTy> class Vindex;
 
 namespace hash_helpers {
-   inline size_t combine(const std::vector<size_t>& hashes) {
+   inline size_t combine(const std::vector<size_t>& hashes) NOEXCEPT {
       size_t res = 17;
       for (auto it = hashes.begin(); it != hashes.end(); ++it)
          res = res*31 + *it;
@@ -1284,7 +1285,7 @@ private:
    };
 
 public:
-  class const_iterator: public _const_iterator<false> {
+   class const_iterator: public _const_iterator<false> {
    public:
       const_iterator() NOEXCEPT {}
 
@@ -2039,11 +2040,12 @@ public:
       _size = std::move(other._size);
       _cend = std::move(other._cend);
       _crend = std::move(other._crend);
+      return *this;
    }
 
    template <typename ComparatorTy>
    void push_comparator(const ComparatorTy& cmp) NOEXCEPT {
-      static_assert(std::is_base_of<IComparator<T>, ComparatorTy>::value, 
+      static_assert(std::is_base_of<IComparator<T>, ComparatorTy>::value,
          "ComparatorTy must be derived from IComparator<T>");
       if (_heads.exists(cmp))
          return;
@@ -2161,6 +2163,7 @@ public:
    }
 };
 
+#pragma pop_macro("NDEBUG")
 #pragma pop_macro("assert")
 
 #endif
