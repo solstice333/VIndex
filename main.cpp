@@ -97,7 +97,8 @@ struct YCmp: public IComparator<Point> {
    YCmp(int foo = 0, int bar = 0) : foo(foo), bar(bar) {}
 
    bool operator==(const IComparator<Point>& other) const override {
-      return dynamic_cast<const YCmp*>(&other) != nullptr;
+      auto ycmp = dynamic_cast<const YCmp*>(&other);
+      return ycmp && foo == ycmp->foo && bar == ycmp->bar;
    }
 
    bool lt(const Point& a, const Point& b) const override {
@@ -160,6 +161,21 @@ struct Foo {
    bool operator==(const Int& other) const { return this->val == other.val; }
 
    bool operator!=(const Int& other) const { return this->val != other.val; }  
+};
+
+struct Terran {
+   std::string name;
+   std::string occupation;
+   int hp;
+
+   Terran() {}
+
+   Terran(std::string name, std::string occupation, int hp):
+      name(name), occupation(occupation), hp(hp) {}
+
+   bool operator<(const Terran& other) const {
+      return name < other.name;
+   }
 };
 
 class TestIntVindex {
@@ -1653,6 +1669,29 @@ public:
       assert(ss.str() == "[(1,5), (2,4), (4,2), (3,3)]");
       reset(v, ss);
    }
+
+   void doc_example() {
+      // Vindex<std::string, Terran> vin(
+      //    [](const Terran& t) -> std::string { return t.name; });
+      // Vindex<std::string, Terran> vin(make_extractor(Terran, name));
+      auto vin = make_vindex(Terran, name);
+      vin.emplace("Jim Raynor", "Marine", 100);
+      vin.insert(Terran("Matt Horner", "Battlecruiser", 500));
+      vin.emplace("Tychus Findlay", "Marine", 100);
+      vin.insert(Terran("Rory Swann", "Marauder", 100));
+      vin.emplace("Gabriel Tosh", "Ghost", 90);
+      vin.emplace("Lily Preston", "Medic", 75);
+
+      vin.order(OrderType::INORDER);
+      for (auto it = vin.cbegin(); it != vin.cend(); ++it)
+         std::cout << it->name << std::endl;
+
+      std::cout << std::endl;
+
+      vin.order(OrderType::INSERTION);
+      for (auto it = vin.cbegin(); it != vin.cend(); ++it)
+         std::cout << it->name << std::endl;
+   }
 };
 
 int main () {
@@ -1690,5 +1729,6 @@ int main () {
 
    vin.test_multi_comparators();
    vin.test_multi_comparators_iter();
+   vin.doc_example();
 }
 
