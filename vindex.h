@@ -1725,7 +1725,6 @@ private:
 
       if (!*head) {
          *head = std::move(*n);
-         ++(*head)->height;
          return head->get();
       }
 
@@ -2092,6 +2091,19 @@ public:
       if (rm)
          return std::make_unique<ResultSuccess<T>>(rm->data);
       return std::make_unique<ResultFailure<T>>();
+   }
+
+   Result<T> remove(const KeyTy& key) NOEXCEPT {
+      try {
+         const T& val = at(key);
+         Result<T> res = remove(val);
+         assert(dynamic_cast<ResultSuccess<T>*>(res.get()) != nullptr, 
+            "NullPointerError");
+         return std::move(res);
+      }
+      catch (std::out_of_range&) {
+         return std::make_unique<ResultFailure<T>>();
+      }
    }
 
    template <typename CmpTy=DefaultComparator<T>> 

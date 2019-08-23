@@ -290,9 +290,14 @@ public:
       assert(_vin._bfs_str() == "");
 
       _vin.insert(30);
+      assert(_vin._bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
+
       res = _vin.remove(40);
+      assert(_vin._bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
+
       resf = dynamic_cast<ResultFailure<BasicInt> *>(res.get());
       assert(resf);
+
       assert(_vin._bfs_str() == "(data: 30, height: 1, left: null, right: null, parent: null)");
    }
 
@@ -490,6 +495,39 @@ public:
       _vin.insert(27);
       _vin.remove(35);
       assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 30, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 30, height: 2, left: 27, right: 40, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 27, height: 1, left: null, right: null, parent: 30) (data: 40, height: 1, left: null, right: null, parent: 30)");
+   }
+
+   void test_removal_by_key() {
+      auto vin = make_vindex(Point, x);
+
+      vin.emplace(1, 2);
+      assert(vin._bfs_str() == "(data: (1,2), height: 1, left: null, right: null, parent: null)");
+
+      vin.emplace(10, 12);
+      assert(vin._bfs_str() == "(data: (1,2), height: 2, left: null, right: (10,12), parent: null)|(null) (data: (10,12), height: 1, left: null, right: null, parent: (1,2))");
+
+      vin.emplace(14, 4);
+      assert(vin._bfs_str() == "(data: (10,12), height: 2, left: (1,2), right: (14,4), parent: null)|(data: (1,2), height: 1, left: null, right: null, parent: (10,12)) (data: (14,4), height: 1, left: null, right: null, parent: (10,12))");
+
+      vin.remove(1);
+      assert(vin._bfs_str() == "(data: (10,12), height: 2, left: null, right: (14,4), parent: null)|(null) (data: (14,4), height: 1, left: null, right: null, parent: (10,12))");
+
+      vin.remove(Point(14, 4));
+      assert(vin._bfs_str() == "(data: (10,12), height: 1, left: null, right: null, parent: null)");
+
+      Result<Point> rm_res = vin.remove(12);
+      assert(vin._bfs_str() == "(data: (10,12), height: 1, left: null, right: null, parent: null)");
+      bool rm_failed = false;
+      if (dynamic_cast<ResultFailure<Point>*>(rm_res.get()))
+         rm_failed = true;
+      assert(rm_failed);
+
+      rm_res = vin.remove(10);
+      assert(vin._bfs_str() == "");
+      if (auto p = dynamic_cast<ResultSuccess<Point>*>(rm_res.get()))
+         assert(p->data().str() == "(10,12)");
+      else
+         assert(0);
    }
 
    void test_in_order_iter() {
@@ -1690,6 +1728,13 @@ public:
       vin.emplace("Gabriel Tosh", "Ghost", 90);
       vin.emplace("Lily Preston", "Medic", 75);
 
+      auto jim_raynor = vin.at("Jim Raynor");
+
+      std::cout << jim_raynor.name << ", " << jim_raynor.occupation
+         << ", " << jim_raynor.hp << std::endl;
+         
+      std::cout << std::endl;
+
       for (auto it = vin.cbegin(OrderType::INORDER); it != vin.cend(); ++it)
          std::cout << it->name << std::endl;
 
@@ -1700,9 +1745,19 @@ public:
 
       std::cout << std::endl;
 
-      for (auto it = vin.cbegin(OrderType::INORDER, OccupationCmp()); 
-         it != vin.cend(); ++it)
+      for (
+         auto it = vin.cbegin(OrderType::INORDER, OccupationCmp()); 
+         it != vin.cend(); 
+         ++it)
          std::cout << it->occupation << ", " << it->name << std::endl;
+
+      std::cout << std::endl;
+
+      for (
+         auto it = vin.cbegin(OrderType::INORDER, HpCmp()); 
+         it != vin.cend(); 
+         ++it)
+         std::cout << it->hp << ", " << it->name << std::endl;
    }
 };
 
@@ -1716,6 +1771,7 @@ int main () {
    vin.test_leaf_removal();
    vin.test_one_child_removal();
    vin.test_two_children_removal();
+   vin.test_removal_by_key();
 
    vin.test_iter_on_empty_vin();
 
