@@ -497,7 +497,8 @@ public:
 
 template <typename KeyTy, typename T>
 class Vindex {
-   static_assert(!std::is_lvalue_reference<T>::value, 
+   static_assert(
+      !std::is_lvalue_reference<T>::value && !std::is_pointer<T>::value, 
       "T cannot be an lvalue reference");
 private:
    friend class TestIntVindex;
