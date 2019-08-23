@@ -178,6 +178,26 @@ struct Terran {
    }
 };
 
+struct OccupationCmp: public IComparator<Terran> {
+   bool operator==(const IComparator& other) const override {
+      return dynamic_cast<const OccupationCmp*>(&other) != nullptr;
+   }
+
+   bool lt(const Terran& a, const Terran& b) const override {
+      return a.occupation < b.occupation;
+   } 
+};
+
+struct HpCmp: public IComparator<Terran> {
+   bool operator==(const IComparator& other) const override {
+      return dynamic_cast<const HpCmp*>(&other) != nullptr;
+   }
+
+   bool lt(const Terran& a, const Terran& b) const override {
+      return a.hp < b.hp;
+   } 
+};
+
 class TestIntVindex {
 private:
    IntVindex _vin;
@@ -483,11 +503,9 @@ public:
       _vin.insert(16);
       _vin.insert(33);
 
-      _vin.order(OrderType::INORDER);
-
       stringstream ss;
       IntVindex::const_iterator it;
-      for (it = _vin.cbegin(); it != _vin.cend(); ++it) {
+      for (it = _vin.cbegin(OrderType::INORDER); it != _vin.cend(); ++it) {
          ss << *it;
       }
 
@@ -504,7 +522,7 @@ public:
 
       ss.str("");
       ss.clear();
-      for (it = prev(it); it != _vin.cbegin(); it--)
+      for (it = prev(it); it != _vin.cbegin(OrderType::INORDER); it--)
          ss << *it;
       ss << *it;
 
@@ -519,7 +537,7 @@ public:
       assert(*it == 15);
 
       stringstream ss2;
-      auto it2 = _vin.cbegin();
+      auto it2 = _vin.cbegin(OrderType::INORDER);
       ss2 << *it2;
       ss2 << *++it2;
       ss2 << *++it2;
@@ -528,8 +546,10 @@ public:
       ss2 << *it++;
       assert(ss2.str() == "151620161615");
 
-      const IntVindex::const_iterator const_it = _vin.cbegin();
-      const IntVindex::const_iterator const_end = _vin.cend();
+      const IntVindex::const_iterator const_it = 
+         _vin.cbegin(OrderType::INORDER);
+      const IntVindex::const_iterator const_end = 
+         _vin.cend();
       assert(*const_it == 15);
       assert(const_it->val == 15);
       assert(const_end == const_end);
@@ -546,11 +566,9 @@ public:
       _vin2.insert(Int(40));
       _vin2.insert(Int(33));
 
-      _vin2.order(OrderType::INORDER);
-
       stringstream ss;
       stringstream ss2;
-      for (IntVindex2::const_iterator it = _vin2.cbegin();
+      for (IntVindex2::const_iterator it = _vin2.cbegin(OrderType::INORDER);
          it != _vin2.cend(); ++it) {
          ss << it->val;
          ss2 << *it;
@@ -572,9 +590,7 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::PREORDER);
-
-      IntVindex::const_iterator it = _vin.cbegin();
+      IntVindex::const_iterator it = _vin.cbegin(OrderType::PREORDER);
       assert(*it == 25);
       assert(it != _vin.cend());
       advance(it, 1);
@@ -609,7 +625,8 @@ public:
       assert(it == _vin.cend());
 
       stringstream ss;
-      for (auto it2 = _vin.cbegin(); it2 != _vin.cend(); ++it2)
+      for (auto it2 = _vin.cbegin(OrderType::PREORDER); 
+         it2 != _vin.cend(); ++it2)
          ss << *it2;
 
       assert(ss.str() == "251615203530263340");
@@ -658,9 +675,7 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::POSTORDER);
-
-      IntVindex::const_iterator it = _vin.cbegin();     
+      IntVindex::const_iterator it = _vin.cbegin(OrderType::POSTORDER);
       assert(*it == 15);
       assert(it != _vin.cend());
       advance(it, 1);
@@ -695,7 +710,8 @@ public:
       assert(it == _vin.cend());
 
       stringstream ss;
-      for (auto it2 = _vin.cbegin(); it2 != _vin.cend(); ++it2)
+      for (auto it2 = _vin.cbegin(OrderType::POSTORDER); 
+         it2 != _vin.cend(); ++it2)
          ss << *it2;
 
       assert(ss.str() == "152016263330403525");
@@ -757,9 +773,7 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::BREADTHFIRST);     
-
-      IntVindex::const_iterator it = _vin.cbegin();     
+      IntVindex::const_iterator it = _vin.cbegin(OrderType::BREADTHFIRST);
       assert(*it == 25);
       assert(it != _vin.cend());
       assert(it.curr_level() == 1);
@@ -820,7 +834,7 @@ public:
       assert(it.curr_level() == 2);
       assert(*--it == 25);
       assert(it != _vin.cend());
-      assert(it == _vin.cbegin());
+      assert(it == _vin.cbegin(OrderType::BREADTHFIRST));
       assert(it.curr_level() == 1);
       assert(*--it == 0);
       assert(it == _vin.cend());
@@ -861,11 +875,9 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::INSERTION);
-
-      IntVindex::const_iterator it = _vin.cbegin();
+      IntVindex::const_iterator it = _vin.cbegin(OrderType::INSERTION);
       assert(*it == 25);
-      assert(it == _vin.cbegin());
+      assert(it == _vin.cbegin(OrderType::INSERTION));
       assert(it != _vin.cend());
       assert(*++it == 20);
       assert(it != _vin.cend());
@@ -905,7 +917,7 @@ public:
       assert(*--it == 20);
       assert(it != _vin.cend());
       assert(*--it == 25);
-      assert(it == _vin.cbegin());
+      assert(it == _vin.cbegin(OrderType::INSERTION));
       assert(it != _vin.cend());
       assert(*--it == 0);
       assert(it == _vin.cend());
@@ -913,17 +925,17 @@ public:
       assert(it == _vin.cend());
 
       assert(*++it == 25);
-      assert(it == _vin.cbegin());
+      assert(it == _vin.cbegin(OrderType::INSERTION));
       assert(it != _vin.cend());
       assert(*++it == 20);
       assert(it != _vin.cend());
 
       _vin.remove(15);
 
-      it = _vin.cbegin();
+      it = _vin.cbegin(OrderType::INSERTION);
 
       assert(*it == 25);
-      assert(it == _vin.cbegin());
+      assert(it == _vin.cbegin(OrderType::INSERTION));
       assert(it != _vin.cend());
       assert(*++it == 20);
       assert(it != _vin.cend());
@@ -968,11 +980,9 @@ public:
       _vin.insert(16);
       _vin.insert(33);
 
-      _vin.order(OrderType::INORDER);
-
       stringstream ss;
       IntVindex::const_reverse_iterator it;
-      for (it = _vin.crbegin(); it != _vin.crend(); ++it) {
+      for (it = _vin.crbegin(OrderType::INORDER); it != _vin.crend(); ++it) {
          ss << *it;
       }
 
@@ -989,7 +999,7 @@ public:
 
       ss.str("");
       ss.clear();
-      for (it = prev(it); it != _vin.crbegin(); it--)
+      for (it = prev(it); it != _vin.crbegin(OrderType::INORDER); it--)
          ss << *it;
       ss << *it;
 
@@ -1004,7 +1014,7 @@ public:
       assert(*it == 40);
 
       stringstream ss2;
-      auto it2 = _vin.crbegin();
+      auto it2 = _vin.crbegin(OrderType::INORDER);
       ss2 << *it2;
       ss2 << *++it2;
       ss2 << *++it2;
@@ -1013,8 +1023,10 @@ public:
       ss2 << *it2++;
       assert(ss2.str() == "403533353540");
 
-      const IntVindex::const_reverse_iterator const_it = _vin.crbegin();
-      const IntVindex::const_reverse_iterator const_end = _vin.crend();
+      const IntVindex::const_reverse_iterator const_it = 
+         _vin.crbegin(OrderType::INORDER);
+      const IntVindex::const_reverse_iterator const_end = 
+         _vin.crend();
       assert(*const_it == 40);
    }
 
@@ -1030,9 +1042,7 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::PREORDER);
-
-      IntVindex::const_reverse_iterator it = _vin.crbegin();
+      IntVindex::const_reverse_iterator it = _vin.crbegin(OrderType::PREORDER);
       assert(*it == 40);
       assert(it != _vin.crend());
       advance(it, 1);
@@ -1067,7 +1077,8 @@ public:
       assert(it == _vin.crend());
 
       stringstream ss;
-      for (auto it2 = _vin.crbegin(); it2 != _vin.crend(); ++it2)
+      for (auto it2 = _vin.crbegin(OrderType::PREORDER); 
+         it2 != _vin.crend(); ++it2)
          ss << *it2;
 
       assert(ss.str() == "403326303520151625");
@@ -1116,9 +1127,8 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::POSTORDER);
-
-      IntVindex::const_reverse_iterator it = _vin.crbegin();     
+      IntVindex::const_reverse_iterator it = 
+         _vin.crbegin(OrderType::POSTORDER);     
       assert(*it == 25);
       assert(it != _vin.crend());
       advance(it, 1);
@@ -1153,7 +1163,8 @@ public:
       assert(it == _vin.crend());
 
       stringstream ss;
-      for (auto it2 = _vin.crbegin(); it2 != _vin.crend(); ++it2)
+      for (auto it2 = _vin.crbegin(OrderType::POSTORDER); 
+         it2 != _vin.crend(); ++it2)
          ss << *it2;
 
       assert(ss.str() == "253540303326162015");
@@ -1215,9 +1226,8 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::BREADTHFIRST);
-
-      IntVindex::const_reverse_iterator it = _vin.crbegin();     
+      IntVindex::const_reverse_iterator it = 
+         _vin.crbegin(OrderType::BREADTHFIRST);
       assert(*it == 33);
       assert(it != _vin.crend());
       assert(it.curr_level() == 4);
@@ -1278,7 +1288,7 @@ public:
       assert(it.curr_level() == 4);
       assert(*--it == 33);
       assert(it != _vin.crend());
-      assert(it == _vin.crbegin());
+      assert(it == _vin.crbegin(OrderType::BREADTHFIRST));
       assert(it.curr_level() == 4);
       assert(*--it == 0);
       assert(it == _vin.crend());
@@ -1319,11 +1329,10 @@ public:
       _vin.insert(26);
       _vin.insert(33);
 
-      _vin.order(OrderType::INSERTION);
-
-      IntVindex::const_reverse_iterator it = _vin.crbegin();
+      IntVindex::const_reverse_iterator it = 
+         _vin.crbegin(OrderType::INSERTION);
       assert(*it == 33);
-      assert(it == _vin.crbegin());
+      assert(it == _vin.crbegin(OrderType::INSERTION));
       assert(it != _vin.crend());
       assert(*++it == 26);
       assert(it != _vin.crend());
@@ -1363,7 +1372,7 @@ public:
       assert(*--it == 26);
       assert(it != _vin.crend());
       assert(*--it == 33);
-      assert(it == _vin.crbegin());
+      assert(it == _vin.crbegin(OrderType::INSERTION));
       assert(it != _vin.crend());
       assert(*--it == 0);
       assert(it == _vin.crend());
@@ -1371,17 +1380,17 @@ public:
       assert(it == _vin.crend());
 
       assert(*++it == 33);
-      assert(it == _vin.crbegin());
+      assert(it == _vin.crbegin(OrderType::INSERTION));
       assert(it != _vin.crend());
       assert(*++it == 26);
       assert(it != _vin.crend());
 
       _vin.remove(15);
 
-      it = _vin.crbegin();
+      it = _vin.crbegin(OrderType::INSERTION);
 
       assert(*it == 33);
-      assert(it == _vin.crbegin());
+      assert(it == _vin.crbegin(OrderType::INSERTION));
       assert(it != _vin.crend());
       assert(*++it == 26);
       assert(it != _vin.crend());
@@ -1430,13 +1439,11 @@ public:
       _vin.insert(16);
       _vin.insert(33);
 
-      _vin.order(OrderType::INORDER);
-
-      auto it = _vin.find(16);
+      auto it = _vin.find(OrderType::INORDER, 16);
       assert(*it == 16);
       assert(*++it == 20);
 
-      it = _vin.find(100);
+      it = _vin.find(OrderType::INORDER, 100);
       assert(it == _vin.cend());
       assert(*it == 0);
    }
@@ -1583,7 +1590,7 @@ public:
 
    void test_iter_on_empty_vin() {
       _vin.clear();
-      auto it = _vin.cbegin();
+      auto it = _vin.cbegin(OrderType::INORDER);
       assert(it == _vin.cend());
    }
 
@@ -1626,7 +1633,7 @@ public:
       auto ycmp = YCmp(30);
 
       vector<string> v;
-      for (auto it = vin.cbegin(); it != vin.cend(); ++it) {
+      for (auto it = vin.cbegin(OrderType::INORDER); it != vin.cend(); ++it) {
          stringstream ss;
          ss << *it;
          v.emplace_back(ss.str());
@@ -1636,7 +1643,8 @@ public:
       assert(ss.str() == "[(1,5), (2,4), (3,3), (4,2)]");
       reset(v, ss);
 
-      for (auto it = vin.cbegin(ycmp); it != vin.cend(); ++it) {
+      for (auto it = vin.cbegin(OrderType::INORDER, ycmp); 
+         it != vin.cend(); ++it) {
          stringstream ss;
          ss << *it;
          v.emplace_back(ss.str());
@@ -1646,8 +1654,8 @@ public:
       assert(ss.str() == "[(4,2), (3,3), (2,4), (1,5)]");
       reset(v, ss);
 
-      vin.order(OrderType::INSERTION);
-      for (auto it = vin.crbegin(ycmp); it != vin.crend(); ++it) {
+      for (auto it = vin.crbegin(OrderType::INSERTION, ycmp); 
+         it != vin.crend(); ++it) {
          stringstream ss;
          ss << *it;
          v.emplace_back(ss.str());
@@ -1658,8 +1666,8 @@ public:
       reset(v, ss);
 
       vin.push_comparator(ycmp);
-      vin.order(OrderType::PREORDER);
-      for (auto it = vin.crbegin(ycmp); it != vin.crend(); ++it) {
+      for (auto it = vin.crbegin(OrderType::PREORDER, ycmp); 
+         it != vin.crend(); ++it) {
          stringstream ss;
          ss << *it;
          v.emplace_back(ss.str());
@@ -1682,15 +1690,19 @@ public:
       vin.emplace("Gabriel Tosh", "Ghost", 90);
       vin.emplace("Lily Preston", "Medic", 75);
 
-      vin.order(OrderType::INORDER);
-      for (auto it = vin.cbegin(); it != vin.cend(); ++it)
+      for (auto it = vin.cbegin(OrderType::INORDER); it != vin.cend(); ++it)
          std::cout << it->name << std::endl;
 
       std::cout << std::endl;
 
-      vin.order(OrderType::INSERTION);
-      for (auto it = vin.cbegin(); it != vin.cend(); ++it)
+      for (auto it = vin.cbegin(OrderType::INSERTION); it != vin.cend(); ++it)
          std::cout << it->name << std::endl;
+
+      std::cout << std::endl;
+
+      for (auto it = vin.cbegin(OrderType::INORDER, OccupationCmp()); 
+         it != vin.cend(); ++it)
+         std::cout << it->occupation << ", " << it->name << std::endl;
    }
 };
 

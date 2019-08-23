@@ -1386,7 +1386,6 @@ public:
 
 private:
    _Heads<T> _heads;
-   OrderType _order_ty;
    const_iterator _cend;
    const_reverse_iterator _crend;
    NodeList<T&> _insertion_list;
@@ -2016,13 +2015,11 @@ private:
 public:
    Vindex(const Extractor& get_member) NOEXCEPT: 
       _heads(_init_heads()),
-      _order_ty(OrderType::INORDER), 
       _get_member(get_member),
       _size(0)
       {}
 
    Vindex(Vindex&& other) NOEXCEPT: 
-      _order_ty(std::move(other._order_ty)), 
       _get_member(std::move(other._get_member)),
       _heads(std::move(other._heads)),
       _insertion_list(std::move(other._insertion_list)),
@@ -2033,7 +2030,6 @@ public:
       {}
 
    Vindex& operator=(Vindex&& other) NOEXCEPT {
-      _order_ty = std::move(other._order_ty);
       _get_member = std::move(other._get_member);
       _heads = std::move(other._heads);
       _insertion_list = std::move(other._insertion_list);
@@ -2098,20 +2094,13 @@ public:
       return std::make_unique<ResultFailure<T>>();
    }
 
-   void order(OrderType order_ty) NOEXCEPT {
-      _order_ty = order_ty;
-   }
-
-   OrderType order() const NOEXCEPT {
-      return _order_ty;
-   }
-
    template <typename CmpTy=DefaultComparator<T>> 
-   const_iterator cbegin(const CmpTy& cmp=_default_comparator()) NOEXCEPT {
+   const_iterator cbegin(
+      OrderType order_ty, const CmpTy& cmp=_default_comparator()) NOEXCEPT {
       if (!_heads.exists(cmp))
          push_comparator(cmp);
 
-      const_iterator it(_insertion_list, _order_ty);
+      const_iterator it(_insertion_list, order_ty);
       it.init_from_cmp(_heads, cmp);
       _cend = it.end();
       return it;
@@ -2123,11 +2112,11 @@ public:
 
    template <typename CmpTy=DefaultComparator<T>>
    const_reverse_iterator crbegin(
-      const CmpTy& cmp=_default_comparator()) NOEXCEPT {
+      OrderType order_ty, const CmpTy& cmp=_default_comparator()) NOEXCEPT {
       if (!_heads.exists(cmp))
          push_comparator(cmp);
 
-      const_reverse_iterator it(_insertion_list, _order_ty);
+      const_reverse_iterator it(_insertion_list, order_ty);
       it.init_from_cmp(_heads, cmp);
       _crend = it.end();
       return it;
@@ -2137,8 +2126,8 @@ public:
       return _crend;
    }
 
-   const_iterator find(const KeyTy& key) NOEXCEPT {
-      auto it = cbegin();
+   const_iterator find(OrderType order_ty, const KeyTy& key) NOEXCEPT {
+      auto it = cbegin(order_ty);
       return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
          return key == _get_member(elem);
       });
