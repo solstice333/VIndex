@@ -1439,11 +1439,11 @@ public:
       _vin.insert(16);
       _vin.insert(33);
 
-      auto it = _vin.find(OrderType::INORDER, 16);
+      auto it = _vin.find(16, OrderType::INORDER);
       assert(*it == 16);
       assert(*++it == 20);
 
-      it = _vin.find(OrderType::INORDER, 100);
+      it = _vin.find(100, OrderType::INORDER);
       assert(it == _vin.cend());
       assert(*it == 0);
    }

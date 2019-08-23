@@ -2126,8 +2126,13 @@ public:
       return _crend;
    }
 
-   const_iterator find(OrderType order_ty, const KeyTy& key) NOEXCEPT {
-      auto it = cbegin(order_ty);
+   template <typename CmpTy=DefaultComparator<T>>
+   const_iterator find(
+      const KeyTy& key,
+      OrderType order_ty, 
+      const CmpTy& cmp=_default_comparator()) NOEXCEPT {
+
+      auto it = cbegin(order_ty, cmp);
       return std::find_if(it, cend(), [this, key](const T& elem) -> bool {
          return key == _get_member(elem);
       });
