@@ -512,10 +512,13 @@ public:
       vin.remove(1);
       assert(vin._bfs_str() == "(data: (10,12), height: 2, left: null, right: (14,4), parent: null)|(null) (data: (14,4), height: 1, left: null, right: null, parent: (10,12))");
 
-      vin.remove(Point(14, 4));
+      Result<Point> rm_res = vin.remove(Point(14, 4));
       assert(vin._bfs_str() == "(data: (10,12), height: 1, left: null, right: null, parent: null)");
+      auto rm = dynamic_cast<ResultSuccess<Point>*>(rm_res.get());
+      assert(rm);
+      assert(rm->data().str() == "(14,4)");
 
-      Result<Point> rm_res = vin.remove(12);
+      rm_res = vin.remove(12);
       assert(vin._bfs_str() == "(data: (10,12), height: 1, left: null, right: null, parent: null)");
       bool rm_failed = false;
       if (dynamic_cast<ResultFailure<Point>*>(rm_res.get()))
