@@ -176,6 +176,12 @@ struct Terran {
    bool operator<(const Terran& other) const {
       return name < other.name;
    }
+
+   std::string str() const {
+      std::stringstream ss;
+      ss << "(" << name << "," << occupation << "," << hp << ")";
+      return ss.str();
+   }
 };
 
 struct OccupationCmp: public IComparator<Terran> {
@@ -197,6 +203,10 @@ struct HpCmp: public IComparator<Terran> {
       return a.hp < b.hp;
    } 
 };
+
+ostream& operator<<(ostream& os, const Terran& t) {
+   return os << t.str();
+}
 
 class TestIntVindex {
 private:
@@ -1761,6 +1771,12 @@ public:
          it != vin.cend(); 
          ++it)
          std::cout << it->hp << ", " << it->name << std::endl;
+
+      // TODO the below is broken
+      // Result<Terran> res = vin.remove("Jim Raynor");
+      // auto success = dynamic_cast<ResultSuccess<Terran>*>(res.get());
+      // assert(success);
+      // assert(success->data().name == "Tychus Findlay");
    }
 };
 
