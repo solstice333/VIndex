@@ -2084,14 +2084,8 @@ public:
       return insert(T(std::forward<Args>(args)...));
    }
 
-   // TODO well, removal is broken for secondary AVL trees. 
-   // Here are some options:
-   //    1. try marking "removed" nodes as unused. This requires that
-   //       _index mapped type contains a list of AVLNode<T&>*. Related
-   //       problem is when user removes and inserts value with same key
-   //    2. User must only compare unique values within
-   //       comparator operator<()
-   //    3. disallow remove operation
+   // TODO fix removal on multiple AVL trees by accessing the associated
+   // node in each tree at O(1) and removing it iteratively
    Result<T> remove(const T& val) NOEXCEPT {
       for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it) {
          AVLNodeOwner<T&> n = _remove_and_rebalance<T&>(
