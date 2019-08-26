@@ -2084,8 +2084,6 @@ public:
       return insert(T(std::forward<Args>(args)...));
    }
 
-   // TODO decrement _size on remove
-   // 
    // TODO well, removal is broken for secondary AVL trees. 
    // Here are some options:
    //    1. try marking "removed" nodes as unused. This requires that
@@ -2109,8 +2107,10 @@ public:
       AVLNodeOwner<T> rm =
           _remove_and_rebalance<T>(val, &head->second, nullptr, head->first);
 
-      if (rm)
+      if (rm) {
+         --_size;
          return std::make_unique<ResultSuccess<T>>(rm->data);
+      }
       return std::make_unique<ResultFailure<T>>();
    }
 

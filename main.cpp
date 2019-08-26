@@ -1637,6 +1637,10 @@ public:
       _vin.insert(16);
       _vin.insert(33);
       assert(_vin.size() == 8);
+      _vin.remove(16);
+      assert(_vin.size() == 7);
+      _vin.clear();
+      assert(_vin.size() == 0);
    }
 
    void test_iter_on_empty_vin() {
