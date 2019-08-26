@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 #include <typeinfo>
+#include <tuple>
 
 #pragma push_macro("assert")
 #ifdef assert
@@ -533,7 +534,11 @@ private:
    using TreeEditAction = std::function<AVLNodeOwner<U>(AVLNodeOwner<U>*)>;
 
    template <typename U>
-   using NodeTracker = std::pair<AVLNode<U>*, const Comparator&>;
+   using NodeTracker = std::tuple<
+      AVLNode<U>*, 
+      const Comparator&, 
+      AVLNodeOwner<U>*
+   >;
 
    template <typename U>
    using Index = std::unordered_map<
@@ -1638,12 +1643,11 @@ private:
    }
 
    template <typename U>
-   AVLNodeOwner<U>& _rebalance(AVLNodeOwner<U>* subtree) {
+   AVLNodeOwner<U> _rebalance(AVLNodeOwner<U>* subtree) {
       int bf = _balance_factor(subtree->get());
-      AVLNodeOwner<U>* balanced_tree = nullptr;
 
       if (_is_too_heavy(bf)) {
-         balanced_tree = &_modify_proxy_tree<U>(
+         _modify_proxy_tree<U>(
             subtree,
             [this, &bf](
                AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
@@ -1670,10 +1674,8 @@ private:
             }
          );
       }
-      else
-         balanced_tree = subtree;
 
-      return *balanced_tree;
+      return std::move(*subtree);
    }
 
    template <typename U>
@@ -1717,12 +1719,12 @@ private:
       return _modify_proxy_tree<U>(
          subtree,
          [this](AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
-            return std::move(_rebalance(working_tree));
+            return _rebalance(working_tree);
          });
    }
 
    template <typename U>
-   AVLNode<U>*  _insert(
+   AVLNode<U>* _insert(
       AVLNodeOwner<U>* n, 
       AVLNodeOwner<U>* head, 
       const Comparator& cmp) {
@@ -1754,7 +1756,8 @@ private:
          AVLNodeOwner<T&> ref_n = std::make_unique<AVLNode<T&>>(data); 
          AVLNode<T&>* n = _insert(&ref_n, &head_it->second, head_it->first);
 
-         std::pair<AVLNode<T&>*, const Comparator&> p(n, head->first);
+         std::tuple<AVLNode<T&>*, const Comparator&, AVLNodeOwner<T&>*> p(
+            n, head_it->first, &head_it->second);
 
          head_it->first == _default_comparator() ?
             rtn.emplace_front(std::move(p)) :
@@ -1875,7 +1878,7 @@ private:
 
             *working_tree = 
                std::move(_remove(val, working_tree, cmp, &rm));
-            return std::move(_rebalance(working_tree));
+            return _rebalance(working_tree);
          });
 
       if (*subtree)
@@ -2020,6 +2023,45 @@ private:
       return heads;
    }
 
+   template <typename U>
+   AVLNodeOwner<U>* _get_owner(AVLNode<U>* n, AVLNodeOwner<U>* root) {
+      if (n->parent) {
+         if (n->parent->left.get() == n)
+            return &n->parent->left;
+         else if (n->parent->right.get() == n)
+            return &n->parent->right;
+         else
+            assert(false, 
+               "ParentChildError: "
+               << std::endl
+               << "child: " << _node_str(*n) 
+               << std::endl
+               << "parent: " << _node_str(*n->parent)
+               << std::endl
+            );
+      }
+      else
+         return root;
+   }
+
+   template <typename U>
+   void _remove_and_rebalance_iteratively(
+      AVLNode<U>* n, const Comparator& cmp, AVLNodeOwner<U>* root) {
+      AVLNodeOwner<U>* owner = _get_owner(n, root);
+      AVLNode<U>* next_node = n->parent;
+
+      _remove_and_rebalance<U>(n->data, owner, n->parent, cmp);
+
+      while (next_node) {
+         AVLNode<U>* parent = next_node->parent;
+         AVLNodeOwner<U>* subtree = _get_owner(next_node, root);
+         *subtree = _rebalance(subtree);
+         (*subtree)->height = _height(subtree->get());
+         (*subtree)->parent = parent;
+         next_node = parent;
+      }
+   }
+
 public:
    Vindex(const Extractor& get_member) NOEXCEPT: 
       _heads(_init_heads()),
@@ -2062,8 +2104,11 @@ public:
          auto it = _insertion_list.begin(); 
          it != _insertion_list.end(); 
          ++it) {
+
          AVLNodeOwner<T&> n = std::make_unique<AVLNode<T&>>((*it)->data);
-         _insert(&n, &head->second, head->first);
+         AVLNode<T&>* np = _insert(&n, &head->second, head->first);
+         _index.at(_get_member(np->data)).emplace_back(
+            np, head->first, &head->second);
       }
    }
 
@@ -2073,7 +2118,7 @@ public:
       std::list<NodeTracker<T&>> nodes = _insert_each_head(val);
       assert(!nodes.empty(), "EmptyListError");
       ++_size;
-      AVLNode<T&>* default_n = nodes.front().first;
+      AVLNode<T&>* default_n = std::get<0>(nodes.front());
       _insertion_list.emplace_back(default_n);
       _index[_get_member(default_n->data)] = std::move(nodes);
       return std::make_unique<ConstResultSuccess<T&>>(default_n->data);
@@ -2084,28 +2129,32 @@ public:
       return insert(T(std::forward<Args>(args)...));
    }
 
-   // TODO fix removal on multiple AVL trees by accessing the associated
-   // node in each tree at O(1) and removing it iteratively
    Result<T> remove(const T& val) NOEXCEPT {
-      for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it) {
-         AVLNodeOwner<T&> n = _remove_and_rebalance<T&>(
-            val, &head_it->second, nullptr, head_it->first);
-         if (n && head_it->first == _default_comparator()) {
-            _insertion_list.remove(n.get());
-            _index.erase(_get_member(n->data));
-         }
+      const KeyTy& key = _get_member(val);
+
+      if (!_index.count(key))
+         return std::make_unique<ResultFailure<T>>();
+
+      for (auto& node_tracker : _index.at(key)) {
+         AVLNode<T&>* n = std::get<0>(node_tracker);
+         const Comparator& cmp = std::get<1>(node_tracker);
+         AVLNodeOwner<T&>* root = std::get<2>(node_tracker);
+
+         _remove_and_rebalance_iteratively<T&>(n, cmp, root);
+
+         if (cmp == _default_comparator())
+            _insertion_list.remove(n);
       }
+      _index.erase(key);
 
       auto head = _heads.template
          get<_head_type::node_data>(_default_comparator());
       AVLNodeOwner<T> rm =
           _remove_and_rebalance<T>(val, &head->second, nullptr, head->first);
 
-      if (rm) {
-         --_size;
-         return std::make_unique<ResultSuccess<T>>(rm->data);
-      }
-      return std::make_unique<ResultFailure<T>>();
+      assert(rm, "NullPointerError");
+      --_size;
+      return std::make_unique<ResultSuccess<T>>(rm->data);
    }
 
    Result<T> remove(const KeyTy& key) NOEXCEPT {
@@ -2166,7 +2215,7 @@ public:
    }
 
    const T& at(const KeyTy& key) const {
-      return _index.at(key).front().first->data;
+      return std::get<0>(_index.at(key).front())->data;
    }
 
    size_t size() NOEXCEPT {

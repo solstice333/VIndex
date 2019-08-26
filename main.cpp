@@ -326,6 +326,7 @@ public:
       _vin.insert(40);
       _vin.insert(35);
       _vin.remove(30);
+
       res = _vin.remove(20);
       ress = dynamic_cast<ResultSuccess<BasicInt> *>(res.get());
       assert(ress);
@@ -541,6 +542,29 @@ public:
          assert(p->data().str() == "(10,12)");
       else
          assert(0);
+   }
+
+   void test_iterative_remove() {
+      auto vin = make_vindex(Point, x);
+      vin.emplace(1, 4);
+      vin.emplace(2, 4);
+      vin.emplace(3, 4);
+      vin.push_comparator(YCmp());
+
+      vin.remove(2);
+
+      assert(vin._bfs_str("|") == "(data: (3,4), height: 2, left: (1,4), right: null, parent: null)|(data: (1,4), height: 1, left: null, right: null, parent: (3,4)) (null)");
+      assert(vin._bfs_str("|", YCmp()) == "(data: (3,4), height: 2, left: (1,4), right: null, parent: null)|(data: (1,4), height: 1, left: null, right: null, parent: (3,4)) (null)");
+
+      vin.remove(3);
+
+      assert(vin._bfs_str("|") == "(data: (1,4), height: 1, left: null, right: null, parent: null)");
+      assert(vin._bfs_str("|", YCmp()) == "(data: (1,4), height: 1, left: null, right: null, parent: null)");
+
+      vin.remove(1);
+
+      assert(vin._bfs_str("|") == "");
+      assert(vin._bfs_str("|", YCmp()) == "");
    }
 
    void test_in_order_iter() {
@@ -1017,9 +1041,6 @@ public:
       assert(it == _vin.cend());
    }
 
-   // TODO add iterator tests for empty v-index
-
-   // TODO reverse iterator tests
    void test_in_order_rev_iter() {
       _vin.clear();
       _vin.insert(25);
@@ -1647,6 +1668,8 @@ public:
       _vin.clear();
       auto it = _vin.cbegin(OrderType::INORDER);
       assert(it == _vin.cend());
+      it = _vin.cbegin(OrderType::INSERTION);
+      assert(it == _vin.cend());
    }
 
    void test_multi_comparators() {
@@ -1766,7 +1789,7 @@ public:
          auto it = vin.cbegin(OrderType::INORDER, OccupationCmp()); 
          it != vin.cend(); 
          ++it)
-         std::cout << it->occupation << ", " << it->name << std::endl;
+            std::cout << it->occupation << ", " << it->name << std::endl;
 
       std::cout << std::endl;
 
@@ -1776,8 +1799,7 @@ public:
          ++it)
          std::cout << it->hp << ", " << it->name << std::endl;
 
-      // TODO the below is broken
-      // Result<Terran> res = vin.remove("Jim Raynor");
+      // Result<Terran> res = vin.remove("Tychus Findlay");
       // auto success = dynamic_cast<ResultSuccess<Terran>*>(res.get());
       // assert(success);
       // assert(success->data().name == "Tychus Findlay");
@@ -1795,6 +1817,7 @@ int main () {
    vin.test_one_child_removal();
    vin.test_two_children_removal();
    vin.test_removal_by_key();
+   vin.test_iterative_remove();
 
    vin.test_iter_on_empty_vin();
 
@@ -1822,4 +1845,3 @@ int main () {
    vin.test_multi_comparators_iter();
    vin.doc_example();
 }
-
