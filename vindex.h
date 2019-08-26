@@ -533,7 +533,7 @@ private:
    using TreeEditAction = std::function<AVLNodeOwner<U>(AVLNodeOwner<U>*)>;
 
    template <typename U>
-   using Index = std::unordered_map<KeyTy, AVLNode<U>*>;
+   using Index = std::unordered_map<KeyTy, std::list<AVLNode<U>*>>;
 
 public:
    class const_iterator;
@@ -1734,7 +1734,7 @@ private:
       return result;
    }
 
-   AVLNode<T&>* _insert_each_head(const T& val) {
+   std::list<AVLNode<T&>*> _insert_each_head(const T& val) {
       AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
       T& data = real_n->data;
       auto head = _heads.template
@@ -1742,18 +1742,18 @@ private:
       assert(head, "InvalidHeadError");
       _insert(&real_n, &head->second, head->first);
 
-      AVLNode<T&>* rtn = nullptr;
+      std::list<AVLNode<T&>*> rtn;
 
       for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it) {
          AVLNodeOwner<T&> ref_n = std::make_unique<AVLNode<T&>>(data); 
          AVLNode<T&>* n = _insert(&ref_n, &head_it->second, head_it->first);
 
-         if (head_it->first == _default_comparator())
-            rtn = n;
+         head_it->first == _default_comparator() ?
+            rtn.emplace_front(n) : rtn.emplace_back(n);
       }
 
-      assert(rtn, "NullPointerError");
-      return rtn;
+      assert(!rtn.empty(), "EmptyListError");
+      return std::move(rtn);
    }
 
    template <typename U>
@@ -2061,11 +2061,12 @@ public:
    ConstResult<T&> insert(const T& val) NOEXCEPT {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T&>>();
-      AVLNode<T&>* n = _insert_each_head(val);
+      std::list<AVLNode<T&>*> nodes = _insert_each_head(val);
+      assert(!nodes.empty(), "EmptyListError");
       ++_size;
-      _insertion_list.emplace_back(n);
-      _index[_get_member(n->data)] = n;
-      return std::make_unique<ConstResultSuccess<T&>>(n->data);
+      _insertion_list.emplace_back(nodes.front());
+      _index[_get_member(nodes.front()->data)] = nodes;
+      return std::make_unique<ConstResultSuccess<T&>>(nodes.front()->data);
    }
 
    template <typename... Args>
@@ -2161,7 +2162,7 @@ public:
    }
 
    const T& at(const KeyTy& key) const {
-      return _index.at(key)->data;
+      return _index.at(key).front()->data;
    }
 
    size_t size() NOEXCEPT {
