@@ -533,7 +533,13 @@ private:
    using TreeEditAction = std::function<AVLNodeOwner<U>(AVLNodeOwner<U>*)>;
 
    template <typename U>
-   using Index = std::unordered_map<KeyTy, std::list<AVLNode<U>*>>;
+   using NodeTracker = std::pair<AVLNode<U>*, const Comparator&>;
+
+   template <typename U>
+   using Index = std::unordered_map<
+      KeyTy, 
+      std::list<NodeTracker<U>>
+   >;
 
 public:
    class const_iterator;
@@ -1734,7 +1740,7 @@ private:
       return result;
    }
 
-   std::list<AVLNode<T&>*> _insert_each_head(const T& val) {
+   std::list<NodeTracker<T&>> _insert_each_head(const T& val) {
       AVLNodeOwner<T> real_n = std::make_unique<AVLNode<T>>(val);
       T& data = real_n->data;
       auto head = _heads.template
@@ -1742,14 +1748,17 @@ private:
       assert(head, "InvalidHeadError");
       _insert(&real_n, &head->second, head->first);
 
-      std::list<AVLNode<T&>*> rtn;
+      std::list<NodeTracker<T&>> rtn;
 
       for (auto head_it = _heads.begin(); head_it != _heads.end(); ++head_it) {
          AVLNodeOwner<T&> ref_n = std::make_unique<AVLNode<T&>>(data); 
          AVLNode<T&>* n = _insert(&ref_n, &head_it->second, head_it->first);
 
+         std::pair<AVLNode<T&>*, const Comparator&> p(n, head->first);
+
          head_it->first == _default_comparator() ?
-            rtn.emplace_front(n) : rtn.emplace_back(n);
+            rtn.emplace_front(std::move(p)) :
+            rtn.emplace_back(std::move(p));
       }
 
       assert(!rtn.empty(), "EmptyListError");
@@ -2061,12 +2070,13 @@ public:
    ConstResult<T&> insert(const T& val) NOEXCEPT {
       if (_index.find(_get_member(val)) != _index.end())
          return std::make_unique<ConstResultFailure<T&>>();
-      std::list<AVLNode<T&>*> nodes = _insert_each_head(val);
+      std::list<NodeTracker<T&>> nodes = _insert_each_head(val);
       assert(!nodes.empty(), "EmptyListError");
       ++_size;
-      _insertion_list.emplace_back(nodes.front());
-      _index[_get_member(nodes.front()->data)] = nodes;
-      return std::make_unique<ConstResultSuccess<T&>>(nodes.front()->data);
+      AVLNode<T&>* default_n = nodes.front().first;
+      _insertion_list.emplace_back(default_n);
+      _index[_get_member(default_n->data)] = std::move(nodes);
+      return std::make_unique<ConstResultSuccess<T&>>(default_n->data);
    }
 
    template <typename... Args>
@@ -2162,7 +2172,7 @@ public:
    }
 
    const T& at(const KeyTy& key) const {
-      return _index.at(key).front()->data;
+      return _index.at(key).front().first->data;
    }
 
    size_t size() NOEXCEPT {
