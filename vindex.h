@@ -1666,28 +1666,19 @@ private:
             [this, &bf](
                AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
 
-               if (_is_too_left_heavy(bf)) {
-                  if (_is_left_left(working_tree->get()))
-                     return std::move(_right_rotation(working_tree));
-                  else if (_is_left_right(working_tree->get()))
-                     return std::move(
-                        _left_right_double_rotation(working_tree));
-                  else
-                     assert(false, "InvalidHeavyStateError: " 
-                        << _bfs_str_immed("\n", *working_tree));
-               }
-               else if (_is_too_right_heavy(bf)) {
-                  if (_is_right_right(working_tree->get()))
-                     return std::move(_left_rotation(working_tree));
-                  else if (_is_right_left(working_tree->get()))
-                     return std::move(
-                        _right_left_double_rotation(working_tree));
-                  else
-                     assert(false, "InvalidHeavyStateError: "
-                        << _bfs_str_immed("\n", *working_tree));
-               }
+               if (_is_too_left_heavy(bf))
+                  return _is_left_right(working_tree->get()) ?
+                     std::move(
+                        _left_right_double_rotation(working_tree)) :
+                     std::move(_right_rotation(working_tree));
+               else if (_is_too_right_heavy(bf))
+                  return _is_right_left(working_tree->get()) ?
+                     std::move(
+                        _right_left_double_rotation(working_tree)) :
+                     std::move(_left_rotation(working_tree));
                else
-                  assert(false, "InvalidHeavyStateError");
+                  assert(false, "InvalidHeavyStateError: "
+                     << _bfs_str_immed("\n", *working_tree));
             }
          );
       }

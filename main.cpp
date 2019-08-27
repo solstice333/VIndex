@@ -1830,13 +1830,13 @@ public:
       std::cout << vin._bfs_str("\n");
       std::cout << std::endl;
 
-      // std::cout << std::endl;
-      // std::cout << vin._bfs_str("\n", HpCmp());
-      // std::cout << std::endl;
+      std::cout << std::endl;
+      std::cout << vin._bfs_str("\n", HpCmp());
+      std::cout << std::endl;
 
-      // std::cout << std::endl;
-      // std::cout << vin._bfs_str("\n", OccupationCmp());
-      // std::cout << std::endl;
+      std::cout << std::endl;
+      std::cout << vin._bfs_str("\n", OccupationCmp());
+      std::cout << std::endl;
    }
 };
 
