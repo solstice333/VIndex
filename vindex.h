@@ -1453,6 +1453,18 @@ private:
       return ss.str();
    }
 
+   template <typename U>
+   static std::string _node_str(AVLNode<U>* n) {
+      std::stringstream ss;
+
+      if (n)
+         return _node_str(*n);
+      else {
+         ss << "(null)";
+         return ss.str();
+      }
+   }
+
    static size_t _nodes_at_lv(size_t lv) {
       return 1ULL << (lv - 1);
    }
@@ -1661,7 +1673,8 @@ private:
                      return std::move(
                         _left_right_double_rotation(working_tree));
                   else
-                     assert(false, "InvalidHeavyStateError");
+                     assert(false, "InvalidHeavyStateError: " 
+                        << _bfs_str_immed("\n", *working_tree));
                }
                else if (_is_too_right_heavy(bf)) {
                   if (_is_right_right(working_tree->get()))
@@ -1670,7 +1683,8 @@ private:
                      return std::move(
                         _right_left_double_rotation(working_tree));
                   else
-                     assert(false, "InvalidHeavyStateError");
+                     assert(false, "InvalidHeavyStateError: "
+                        << _bfs_str_immed("\n", *working_tree));
                }
                else
                   assert(false, "InvalidHeavyStateError");
@@ -1924,38 +1938,44 @@ private:
       return *tree;
    }
 
-   bool _is_dq_all_nulls(const NodeDQ<T&>& dq) const {
+   template <typename U>
+   bool _is_dq_all_nulls(const NodeDQ<U>& dq) const {
       auto it = find_if(
-         dq.begin(), dq.end(), [](AVLNode<T&>* n) -> bool { return n != nullptr; });
+         dq.begin(), dq.end(), 
+            [](AVLNode<U>* n) -> bool { return n != nullptr; });
       return it == dq.end();
    }
 
-   void _on_max_nodes_per_line(NodeDQ<T&>* dq, const VoidFunc& func) const {
+   template <typename U>
+   void _on_max_nodes_per_line(NodeDQ<U>* dq, const VoidFunc& func) const {
       func();
       if (_is_dq_all_nulls(*dq))
          dq->clear();
    }
 
+   template <typename U>
    void _on_valid_node(
-      NodeDQ<T&>* dq, AVLNode<T&>* n, const NodeListener<T&>& func) const {
+      NodeDQ<U>* dq, AVLNode<U>* n, const NodeListener<U>& func) const {
       func(n);
       dq->push_back(n->left_raw());
       dq->push_back(n->right_raw());
    }
 
-   void _on_null_node(NodeDQ<T&>* dq, const NodeListener<T&>& func) const {
+   template <typename U>
+   void _on_null_node(NodeDQ<U>* dq, const NodeListener<U>& func) const {
       func(nullptr);
       dq->push_back(nullptr);
       dq->push_back(nullptr);
    }
 
-   void _gather_bfs(NodeDQ<T&>* dq, size_t* curr_depth,
-      size_t* node_cnt, const NodeListener<T&>& func) const {
+   template <typename U>
+   void _gather_bfs(NodeDQ<U>* dq, size_t* curr_depth,
+      size_t* node_cnt, const NodeListener<U>& func) const {
 
       if (dq->empty()) 
          return;
 
-      AVLNode<T&>* n = dq->front();
+      AVLNode<U>* n = dq->front();
       dq->pop_front();
 
       if (n) 
@@ -1972,32 +1992,31 @@ private:
       _gather_bfs(dq, curr_depth, node_cnt, func);
    }
 
-   template <typename CmpTy>
-   NodeList<T&> _gather_bfs_list(const CmpTy& cmp) const {
-      NodeDQ<T&> dq;
-      NodeList<T&> nl;
+   template <typename U>
+   NodeList<U> _gather_bfs_list(const AVLNodeOwner<U>& root) const {
+      NodeDQ<U> dq;
+      NodeList<U> nl;
       size_t curr_depth = 1;
       size_t node_cnt = 0;
-      auto head = _heads.template get<_head_type::node_ref>(cmp);
 
-      if (head->second)
-         dq.push_back(head->second.get());
+      if (root)
+         dq.push_back(root.get());
 
-      _gather_bfs(&dq, &curr_depth, &node_cnt,
-         [&nl](AVLNode<T&>* n) { nl.push_back(n); });
+      _gather_bfs<U>(&dq, &curr_depth, &node_cnt,
+         [&nl](AVLNode<U>* n) { nl.push_back(n); });
       return nl;
    }
 
-   template <typename CmpTy>
+   template <typename U>
    std::string _gather_bfs_str(
-      const std::string& delim, const CmpTy& cmp) const {
-      NodeList<T&> nl = _gather_bfs_list(cmp);
+      const std::string& delim, const AVLNodeOwner<U>& root) const {
+      NodeList<U> nl = _gather_bfs_list<U>(root);
       std::stringstream ss;
       int node_cnt = 0;
       int curr_depth = 1;
 
       for (auto nit = nl.begin(); nit != nl.end(); ++nit) {
-         AVLNode<T&>* n = *nit;
+         AVLNode<U>* n = *nit;
          bool last_node = ++node_cnt == _nodes_at_lv(curr_depth);
          ss << (n ? _node_str(*n) : "(null)") << (last_node ? "" : " ");
 
@@ -2015,13 +2034,28 @@ private:
    std::string _bfs_str(
       const std::string& delim = "|",
       const CmpTy& cmp=_default_comparator()) const {
-      return _gather_bfs_str(delim, cmp);
+
+      auto head = _heads.template get<_head_type::node_ref>(cmp);
+      return _gather_bfs_str<T&>(delim, head->second);
+   }
+
+   template <typename U>
+   std::string _bfs_str_immed(
+      const std::string& delim, const AVLNodeOwner<U>& subtree) const {
+      return _gather_bfs_str<U>(delim, subtree);
+   }
+
+   template <typename U>
+   std::string _bfs_str_immed(
+      const AVLNodeOwner<U>& subtree) const {
+      return _gather_bfs_str<U>("|", subtree);
    }
 
    std::string _index_str(const std::string& delim = "|") const {
       std::stringstream ss;
       for (auto it = _index.begin(); it != _index.end(); ++it) {
-         ss << it->first << ": " << _node_str(*it->second) << delim;
+         AVLNode<T&>* n = std::get<0>(it->second.front());
+         ss << it->first << ": "<< _node_str(*n) << delim;
       }
       return ss.str();
    }
