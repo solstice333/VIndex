@@ -506,6 +506,18 @@ public:
       _vin.insert(27);
       _vin.remove(35);
       assert(_vin._bfs_str() == "(data: 25, height: 3, left: 20, right: 30, parent: null)|(data: 20, height: 2, left: 15, right: null, parent: 25) (data: 30, height: 2, left: 27, right: 40, parent: 25)|(data: 15, height: 1, left: null, right: null, parent: 20) (null) (data: 27, height: 1, left: null, right: null, parent: 30) (data: 40, height: 1, left: null, right: null, parent: 30)");
+
+      _vin.clear();
+      _vin.insert(25);
+      _vin.insert(20);
+      _vin.insert(35);
+      _vin.insert(15);
+      _vin.insert(24);
+      _vin.insert(30);
+      _vin.insert(40);
+      _vin.insert(27);
+      _vin.remove(25);
+      assert(_vin._bfs_str("|") == "(data: 27, height: 3, left: 20, right: 35, parent: null)|(data: 20, height: 2, left: 15, right: 24, parent: 27) (data: 35, height: 2, left: 30, right: 40, parent: 27)|(data: 15, height: 1, left: null, right: null, parent: 20) (data: 24, height: 1, left: null, right: null, parent: 20) (data: 30, height: 1, left: null, right: null, parent: 35) (data: 40, height: 1, left: null, right: null, parent: 35)");
    }
 
    void test_removal_by_key() {
@@ -1799,10 +1811,32 @@ public:
          ++it)
          std::cout << it->hp << ", " << it->name << std::endl;
 
-      // Result<Terran> res = vin.remove("Tychus Findlay");
-      // auto success = dynamic_cast<ResultSuccess<Terran>*>(res.get());
-      // assert(success);
-      // assert(success->data().name == "Tychus Findlay");
+      assert(vin._bfs_str("|") == "(data: (Matt Horner,Battlecruiser,500), height: 3, left: (Jim Raynor,Marine,100), right: (Tychus Findlay,Marine,100), parent: null)|(data: (Jim Raynor,Marine,100), height: 2, left: (Gabriel Tosh,Ghost,90), right: (Lily Preston,Medic,75), parent: (Matt Horner,Battlecruiser,500)) (data: (Tychus Findlay,Marine,100), height: 2, left: (Rory Swann,Marauder,100), right: null, parent: (Matt Horner,Battlecruiser,500))|(data: (Gabriel Tosh,Ghost,90), height: 1, left: null, right: null, parent: (Jim Raynor,Marine,100)) (data: (Lily Preston,Medic,75), height: 1, left: null, right: null, parent: (Jim Raynor,Marine,100)) (data: (Rory Swann,Marauder,100), height: 1, left: null, right: null, parent: (Tychus Findlay,Marine,100)) (null)");
+      assert(vin._bfs_str("|", HpCmp()) == "(data: (Tychus Findlay,Marine,100), height: 3, left: (Gabriel Tosh,Ghost,90), right: (Matt Horner,Battlecruiser,500), parent: null)|(data: (Gabriel Tosh,Ghost,90), height: 2, left: (Lily Preston,Medic,75), right: (Jim Raynor,Marine,100), parent: (Tychus Findlay,Marine,100)) (data: (Matt Horner,Battlecruiser,500), height: 2, left: (Rory Swann,Marauder,100), right: null, parent: (Tychus Findlay,Marine,100))|(data: (Lily Preston,Medic,75), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (data: (Jim Raynor,Marine,100), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (data: (Rory Swann,Marauder,100), height: 1, left: null, right: null, parent: (Matt Horner,Battlecruiser,500)) (null)");
+      assert(vin._bfs_str("|", OccupationCmp()) == "(data: (Jim Raynor,Marine,100), height: 3, left: (Gabriel Tosh,Ghost,90), right: (Tychus Findlay,Marine,100), parent: null)|(data: (Gabriel Tosh,Ghost,90), height: 2, left: (Matt Horner,Battlecruiser,500), right: (Rory Swann,Marauder,100), parent: (Jim Raynor,Marine,100)) (data: (Tychus Findlay,Marine,100), height: 2, left: null, right: (Lily Preston,Medic,75), parent: (Jim Raynor,Marine,100))|(data: (Matt Horner,Battlecruiser,500), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (data: (Rory Swann,Marauder,100), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (null) (data: (Lily Preston,Medic,75), height: 1, left: null, right: null, parent: (Tychus Findlay,Marine,100))");
+
+      Result<Terran> res = vin.remove("Tychus Findlay");
+      auto success = dynamic_cast<ResultSuccess<Terran>*>(res.get());
+      assert(success);
+      assert(success->data().name == "Tychus Findlay");
+
+      assert(vin._bfs_str("|") == "(data: (Matt Horner,Battlecruiser,500), height: 3, left: (Jim Raynor,Marine,100), right: (Rory Swann,Marauder,100), parent: null)|(data: (Jim Raynor,Marine,100), height: 2, left: (Gabriel Tosh,Ghost,90), right: (Lily Preston,Medic,75), parent: (Matt Horner,Battlecruiser,500)) (data: (Rory Swann,Marauder,100), height: 1, left: null, right: null, parent: (Matt Horner,Battlecruiser,500))|(data: (Gabriel Tosh,Ghost,90), height: 1, left: null, right: null, parent: (Jim Raynor,Marine,100)) (data: (Lily Preston,Medic,75), height: 1, left: null, right: null, parent: (Jim Raynor,Marine,100)) (null) (null)");
+      assert(vin._bfs_str("|", HpCmp()) == "(data: (Rory Swann,Marauder,100), height: 3, left: (Gabriel Tosh,Ghost,90), right: (Matt Horner,Battlecruiser,500), parent: null)|(data: (Gabriel Tosh,Ghost,90), height: 2, left: (Lily Preston,Medic,75), right: (Jim Raynor,Marine,100), parent: (Rory Swann,Marauder,100)) (data: (Matt Horner,Battlecruiser,500), height: 1, left: null, right: null, parent: (Rory Swann,Marauder,100))|(data: (Lily Preston,Medic,75), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (data: (Jim Raynor,Marine,100), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (null) (null)");
+      assert(vin._bfs_str("|", OccupationCmp()) == "(data: (Jim Raynor,Marine,100), height: 3, left: (Gabriel Tosh,Ghost,90), right: (Lily Preston,Medic,75), parent: null)|(data: (Gabriel Tosh,Ghost,90), height: 2, left: (Matt Horner,Battlecruiser,500), right: (Rory Swann,Marauder,100), parent: (Jim Raynor,Marine,100)) (data: (Lily Preston,Medic,75), height: 1, left: null, right: null, parent: (Jim Raynor,Marine,100))|(data: (Matt Horner,Battlecruiser,500), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (data: (Rory Swann,Marauder,100), height: 1, left: null, right: null, parent: (Gabriel Tosh,Ghost,90)) (null) (null)");
+
+      vin.remove("Lily Preston"); 
+
+      std::cout << std::endl;
+      std::cout << vin._bfs_str("\n");
+      std::cout << std::endl;
+
+      // std::cout << std::endl;
+      // std::cout << vin._bfs_str("\n", HpCmp());
+      // std::cout << std::endl;
+
+      // std::cout << std::endl;
+      // std::cout << vin._bfs_str("\n", OccupationCmp());
+      // std::cout << std::endl;
    }
 };
 

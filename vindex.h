@@ -1430,7 +1430,8 @@ private:
       return ss.str();
    }
 
-   static std::string _node_data_str(AVLNode<T&>* n) {
+   template <typename U>
+   static std::string _node_data_str(AVLNode<U>* n) {
       std::stringstream ss;
       if (n)
          ss << n->data;
@@ -1439,7 +1440,8 @@ private:
       return ss.str();
    }
 
-   static std::string _node_str(const AVLNode<T&>& n) {
+   template <typename U>
+   static std::string _node_str(const AVLNode<U>& n) {
       std::stringstream ss;
       ss << "(" 
          << "data: " << n.data 
@@ -1651,6 +1653,7 @@ private:
             subtree,
             [this, &bf](
                AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
+
                if (_is_too_left_heavy(bf)) {
                   if (_is_left_left(working_tree->get()))
                      return std::move(_right_rotation(working_tree));
@@ -1824,22 +1827,28 @@ private:
    template <typename U>
    AVLNodeOwner<U> _rm_next_in_order(
       AVLNodeOwner<U>* tree, AVLNodeOwner<U>* next) {
-      if ((*tree)->left) {
-         return std::move(_modify_proxy_tree<U>(&(*tree)->left,
-            [this, &next](
-               AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
-               *working_tree = std::move(_rm_next_in_order(working_tree, next));
-               (*working_tree)->height = _height(working_tree->get());
+      _modify_proxy_tree<U>(
+         tree,
+         [this, &next](
+            AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
+
+            if ((*working_tree)->left) {
+               (*working_tree)->left = 
+                  std::move(_rm_next_in_order(&(*working_tree)->left, next));
+               if (*working_tree)
+                  (*working_tree)->height = _height(working_tree->get());
                return std::move(*working_tree);
             }
-         ));
-      }
-      else {
-         if ((*tree)->right)
-            return std::move(_on_removal_one_child(tree, next));
-         else
-            return std::move(_on_removal_leaf(tree, next));
-      }
+            else {
+               if ((*working_tree)->right)
+                  return std::move(_on_removal_one_child(working_tree, next));
+               else
+                  return std::move(_on_removal_leaf(working_tree, next));
+            }
+         }
+      );
+
+      return std::move(*tree);
    }
 
    template <typename U>
@@ -1848,7 +1857,7 @@ private:
       assert(n, "NullPointerError");
 
       return  _modify_proxy_tree<U>(n, 
-         [this, &n, &rm](
+         [this, &rm](
             AVLNodeOwner<U>* working_tree) -> AVLNodeOwner<U> {
             AVLNodeOwner<U> next;
             AVLNodeOwner<U> tmp;
@@ -1856,8 +1865,9 @@ private:
                rm = &tmp;
 
             (*working_tree)->right = 
-               std::move(_rm_next_in_order(&(*working_tree)->right, &next));
+               _rm_next_in_order(&(*working_tree)->right, &next);
             (*working_tree)->height = _height(working_tree->get());
+
             _transfer_to_next(&next, working_tree);
             *rm = std::move(*working_tree);
             return next;
