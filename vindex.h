@@ -220,22 +220,6 @@ struct IComparator {
       return lt(b, a); 
    }
 
-   virtual bool lte(const T& a, const T& b) const { 
-      return !gt(a, b); 
-   }
-
-   virtual bool gte(const T& a, const T& b) const { 
-      return !lt(a, b); 
-   }
-
-   virtual bool eq(const T& a, const T& b) const { 
-      return !lt(a, b) && !gt(a, b); 
-   }
-
-   virtual bool ne(const T& a, const T& b) const { 
-      return !eq(a, b); 
-   }
-
    virtual size_t hash() const { 
       return typeid(*this).hash_code(); 
    }
@@ -723,6 +707,9 @@ private:
 
       AVLNode<T&>* _retrace_while_child(
          AVLNode<T&>* n, Direction dir, int* parent_distance=nullptr) {
+         if (!n->parent)
+            return nullptr;
+         
          assert(n && n->parent, "NullPointerError");
 
          int dist = 0;
